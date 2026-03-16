@@ -4,11 +4,13 @@ import '../models/prenotazione.dart';
 import '../models/utente.dart';
 import '../services/veicolo_service.dart';
 import '../services/prenotazione_service.dart';
+import '../services/auth_service.dart';
 
 class FleetProvider with ChangeNotifier {
   // Istanze dei Service
   final VeicoloService _veicoloService = VeicoloService();
   final PrenotazioneService _prenotazioneService = PrenotazioneService();
+  final AuthService _authService = AuthService();
 
   // Stato dell'app
   List<Veicolo> _veicoli = [];
@@ -38,10 +40,35 @@ class FleetProvider with ChangeNotifier {
         _prenotazioni = await _prenotazioneService.fetchPrenotazioni(idUtente: _utenteLoggato?.idUtente);
       }
     } catch (e) {
-      print("Errore nel caricamento dati: $e");
+      debugPrint("Errore nel caricamento dati: $e");
     } finally {
       _isLoading = false;
       notifyListeners(); // Diciamo alla UI di nascondere il caricamento e mostrare i dati
+    }
+  }
+
+  // Metodo per fare il login
+  Future<bool> login(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final utente = await _authService.login(email, password);
+      if (utente != null) {
+        setUtente(utente);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      debugPrint("Errore durante il login: $e");
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 
@@ -49,6 +76,15 @@ class FleetProvider with ChangeNotifier {
   void setUtente(Utente utente) {
     _utenteLoggato = utente;
     inizializzaDati(); // Appena loggato, carica subito i dati giusti per lui
+    notifyListeners();
+  }
+
+  // Metodo per fare il logout
+  void logout() {
+    _utenteLoggato = null;
+    _veicoli = [];
+    _prenotazioni = [];
+    _isLoading = false;
     notifyListeners();
   }
 }
