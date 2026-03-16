@@ -1,0 +1,1 @@
+enum TipoNotifica { info, alert, scadenza }

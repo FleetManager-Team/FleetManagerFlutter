@@ -1,0 +1,1 @@
+enum TipoVeicolo { auto, furgone, moto }

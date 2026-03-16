@@ -1,0 +1,1 @@
+enum TipoManutenzione { ordinaria, straordinaria, riparazione }

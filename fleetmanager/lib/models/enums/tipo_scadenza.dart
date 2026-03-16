@@ -1,0 +1,1 @@
+enum TipoScadenza { assicurazione, bollo, revisione, tagliando }

@@ -1,0 +1,1 @@
+enum TipoPrenotazione { aziendale, privata }
