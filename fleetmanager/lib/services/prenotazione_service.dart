@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:fleetmanager/mock/mock_data.dart';
 import '../models/prenotazione.dart';
 
 class PrenotazioneService {
@@ -12,8 +13,9 @@ class PrenotazioneService {
       final response = await _dio.get(path);
       List<dynamic> data = response.data;
       return data.map((json) => Prenotazione.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('Errore nel caricamento prenotazioni');
+    } catch (_) {
+      // Fallback mock per sviluppo/offline
+      return MockData.prenotazioniPerUtente(idUtente);
     }
   }
 

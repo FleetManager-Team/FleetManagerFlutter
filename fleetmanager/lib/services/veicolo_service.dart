@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:fleetmanager/mock/mock_data.dart';
 import '../models/veicolo.dart';
 import '../models/enums/stato_veicolo.dart';
 
@@ -20,9 +21,9 @@ class VeicoloService {
       } else {
         throw Exception('Errore del server: ${response.statusCode}');
       }
-    } on DioException catch (e) {
-      // Gestione professionale dell'errore di rete
-      throw Exception('Errore di connessione: ${e.message}');
+    } catch (_) {
+      // Fallback mock per sviluppo/offline
+      return MockData.veicoli;
     }
   }
 
