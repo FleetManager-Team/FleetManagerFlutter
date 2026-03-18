@@ -17,7 +17,7 @@ class MockData {
       cognome: 'Mock',
       email: 'a',
       password: 'a',
-      ruoloUtente: RuoloUtente.admin,
+      ruoloUtente: RuoloUtente.manager,
       patente: 'B',
     ),
     Utente(

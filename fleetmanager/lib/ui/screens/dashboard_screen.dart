@@ -1,4 +1,5 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/ui/screens/veicoli/vehicle_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -50,33 +51,33 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.grey[100],
       appBar: _buildAppBar(context, utente),
       drawer: _buildDrawer(context, utente),
-      body: provider.isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : RefreshIndicator(
-            onRefresh: () => provider.inizializzaDati(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(utente),
-                  const SizedBox(height: 25),
-                  if (isManager) ...[
-                    _buildAdminStats(provider),
+      body: provider.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () => provider.inizializzaDati(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(utente),
                     const SizedBox(height: 25),
-                    _buildSectionTitle("Prenotazioni"),
-                    _buildManagerPrenotazioni(provider, utente),
-                  ] else ...[
-                    _buildDriverActionCard(context),
-                    const SizedBox(height: 25),
-                    _buildSectionTitle("Le Mie Prenotazioni"),
-                    _buildDriverPrenotazioni(provider),
+                    if (isManager) ...[
+                      _buildAdminStats(provider),
+                      const SizedBox(height: 25),
+                      _buildSectionTitle("Prenotazioni"),
+                      _buildManagerPrenotazioni(provider, utente),
+                    ] else ...[
+                      _buildDriverActionCard(context),
+                      const SizedBox(height: 25),
+                      _buildSectionTitle("Le Mie Prenotazioni"),
+                      _buildDriverPrenotazioni(provider),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
     );
   }
 
@@ -87,11 +88,16 @@ class _HomeScreenState extends State<HomeScreen> {
       elevation: 0,
       backgroundColor: Colors.blue[800],
       foregroundColor: Colors.white,
-      title: const Text("FleetManager Pro", style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text(
+        "FleetManager Pro",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_none),
-          onPressed: () { /* Naviga a Notifiche */ },
+          onPressed: () {
+            /* Naviga a Notifiche */
+          },
         ),
       ],
     );
@@ -115,14 +121,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Dashboard per MANAGER: Statistiche rapide
   Widget _buildAdminStats(FleetProvider provider) {
-    final veicoliInManutenzione = provider.veicoli.where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione).length;
-    final prenotazioniAttive = provider.prenotazioni.where((p) => p.statoPrenotazione == StatoPrenotazione.attiva).length;
+    final prenotazioniAttive = provider.prenotazioni
+        .where((p) => p.statoPrenotazione == StatoPrenotazione.attiva)
+        .length;
+
+    final veicoliInManutenzione = provider.veicoli
+        .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
+        .length;
 
     return Row(
       children: [
-        _statCard("Totale Veicoli", provider.veicoli.length.toString(), Icons.directions_car, Colors.blue),
-        _statCard("Prenotazioni Attive", prenotazioniAttive.toString(), Icons.play_arrow, Colors.green),
-        _statCard("In Manutenzione", veicoliInManutenzione.toString(), Icons.build, Colors.orange),
+        _statCard(
+          "Totale Veicoli",
+          provider.veicoli.length.toString(),
+          Icons.directions_car,
+          Colors.blue,
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const VehicleListScreen(),
+              ),
+            );
+          },
+        ),
+        _statCard(
+          "Prenotazioni Attive",
+          prenotazioniAttive.toString(),
+          Icons.play_arrow,
+          Colors.green,
+          () {},
+        ),
+        _statCard(
+          "In Manutenzione",
+          veicoliInManutenzione.toString(),
+          Icons.build,
+          Colors.orange,
+          () {},
+        ),
       ],
     );
   }
@@ -133,13 +169,22 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.blue[700]!, Colors.blue[500]!]),
+        gradient: LinearGradient(
+          colors: [Colors.blue[700]!, Colors.blue[500]!],
+        ),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Hai bisogno di un'auto?", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            "Hai bisogno di un'auto?",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 10),
           ElevatedButton(
             onPressed: () {
@@ -148,9 +193,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen()),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue[700]),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.blue[700],
+            ),
             child: const Text("PRENOTA ORA"),
-          )
+          ),
         ],
       ),
     );
@@ -165,11 +213,19 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: ListTile(
-          leading: const CircleAvatar(backgroundColor: Colors.blueGrey, child: Icon(Icons.car_repair, color: Colors.white)),
-          title: Text("${veicoli[index].marca} ${veicoli[index].modello}", style: const TextStyle(fontWeight: FontWeight.bold)),
+          leading: const CircleAvatar(
+            backgroundColor: Colors.blueGrey,
+            child: Icon(Icons.car_repair, color: Colors.white),
+          ),
+          title: Text(
+            "${veicoli[index].marca} ${veicoli[index].modello}",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           subtitle: Text("Targa: ${veicoli[index].targa}"),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () { /* Dettaglio veicolo */ },
+          onTap: () {
+            /* Dettaglio veicolo */
+          },
         ),
       ),
     );
@@ -177,27 +233,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildManagerPrenotazioni(FleetProvider provider, Utente? utente) {
     if (utente == null) return const SizedBox.shrink();
-    return FutureBuilder<List<Prenotazione>>(
-      future: _prenotazioniFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final prenotazioni = snapshot.data ?? [];
-        if (prenotazioni.isEmpty) return const Center(child: Text("Nessuna prenotazione trovata"));
-        return _buildPrenotazioniList(prenotazioni, true, provider, utente);
-      },
-    );
+
+    // USA DIRETTAMENTE IL PROVIDER, NON IL FUTUREBUILDER
+    final prenotazioni = provider.prenotazioni;
+
+    if (prenotazioni.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text("Nessuna prenotazione trovata"),
+        ),
+      );
+    }
+
+    return _buildPrenotazioniList(prenotazioni, true, provider, utente);
   }
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
     final prenotazioni = provider.prenotazioni;
-    if (prenotazioni.isEmpty) return const Center(child: Text("Nessuna prenotazione trovata"));
-    return _buildPrenotazioniList(prenotazioni, false, provider, provider.utenteLoggato);
+    if (prenotazioni.isEmpty)
+      return const Center(child: Text("Nessuna prenotazione trovata"));
+    return _buildPrenotazioniList(
+      prenotazioni,
+      false,
+      provider,
+      provider.utenteLoggato,
+    );
   }
 
-  Widget _buildPrenotazioniList(List<Prenotazione> prenotazioni, bool isManager, FleetProvider provider, Utente? utente) {
-    if (prenotazioni.isEmpty) return const Center(child: Text("Nessuna prenotazione trovata"));
+  Widget _buildPrenotazioniList(
+    List<Prenotazione> prenotazioni,
+    bool isManager,
+    FleetProvider provider,
+    Utente? utente,
+  ) {
+    if (prenotazioni.isEmpty)
+      return const Center(child: Text("Nessuna prenotazione trovata"));
 
     String formatDate(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
     Color statusColor(StatoPrenotazione stato) {
@@ -219,51 +290,70 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<Widget> actions = [];
       if (isManager) {
         if (p.statoPrenotazione == StatoPrenotazione.richiesta) {
-          actions.add(IconButton(
-            icon: const Icon(Icons.check_circle, color: Colors.green),
-            tooltip: 'Conferma',
-            onPressed: () async {
-              await provider.confermaPrenotazione(p.idPrenotazione);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione confermata')));
-              setState(() {
-                _prenotazioniFuture = provider.getPrenotazioniVisibiliOrdinare(utente!);
-              });
-            },
-          ));
-          actions.add(IconButton(
-            icon: const Icon(Icons.cancel, color: Colors.red),
-            tooltip: 'Annulla',
-            onPressed: () async {
-              await provider.annullaPrenotazione(p.idPrenotazione);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione annullata')));
-              setState(() {
-                _prenotazioniFuture = provider.getPrenotazioniVisibiliOrdinare(utente!);
-              });
-            },
-          ));
+          actions.add(
+            IconButton(
+              icon: const Icon(Icons.check_circle, color: Colors.green),
+              tooltip: 'Conferma',
+              onPressed: () async {
+                await provider.confermaPrenotazione(p.idPrenotazione);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Prenotazione confermata')),
+                );
+                setState(() {
+                  _prenotazioniFuture = provider
+                      .getPrenotazioniVisibiliOrdinare(utente!);
+                });
+              },
+            ),
+          );
+          actions.add(
+            IconButton(
+              icon: const Icon(Icons.cancel, color: Colors.red),
+              tooltip: 'Annulla',
+              onPressed: () async {
+                await provider.annullaPrenotazione(p.idPrenotazione);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Prenotazione annullata')),
+                );
+                setState(() {
+                  _prenotazioniFuture = provider
+                      .getPrenotazioniVisibiliOrdinare(utente!);
+                });
+              },
+            ),
+          );
         }
       } else {
-        if (p.statoPrenotazione == StatoPrenotazione.richiesta || p.statoPrenotazione == StatoPrenotazione.confermata) {
-          actions.add(IconButton(
-            icon: const Icon(Icons.cancel, color: Colors.red),
-            tooltip: 'Annulla',
-            onPressed: () async {
-              await provider.annullaPrenotazione(p.idPrenotazione);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione annullata')));
-              await provider.inizializzaDati();
-            },
-          ));
+        if (p.statoPrenotazione == StatoPrenotazione.richiesta ||
+            p.statoPrenotazione == StatoPrenotazione.confermata) {
+          actions.add(
+            IconButton(
+              icon: const Icon(Icons.cancel, color: Colors.red),
+              tooltip: 'Annulla',
+              onPressed: () async {
+                await provider.annullaPrenotazione(p.idPrenotazione);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Prenotazione annullata')),
+                );
+                await provider.inizializzaDati();
+              },
+            ),
+          );
         }
         if (p.statoPrenotazione == StatoPrenotazione.attiva) {
-          actions.add(IconButton(
-            icon: const Icon(Icons.check_circle, color: Colors.green),
-            tooltip: 'Completa',
-            onPressed: () async {
-              await provider.completaPrenotazione(p.idPrenotazione);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione completata')));
-              await provider.inizializzaDati();
-            },
-          ));
+          actions.add(
+            IconButton(
+              icon: const Icon(Icons.check_circle, color: Colors.green),
+              tooltip: 'Completa',
+              onPressed: () async {
+                await provider.completaPrenotazione(p.idPrenotazione);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Prenotazione completata')),
+                );
+                await provider.inizializzaDati();
+              },
+            ),
+          );
         }
       }
       return Row(mainAxisSize: MainAxisSize.min, children: actions);
@@ -279,25 +369,25 @@ class _HomeScreenState extends State<HomeScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             title: Text("Prenotazione #${p.idPrenotazione}"),
-            subtitle: Text(
-              "Veicolo: ${p.targa}\n" +
-                  "Da: ${formatDate(p.dataInizio)}\n" +
-                  "A: ${formatDate(p.dataFine)}",
-            ),
-            isThreeLine: true,
-            trailing: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            subtitle: Column(
+              // Usiamo una Column per aggiungere più info
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Chip(
-                  label: Text(p.statoPrenotazione.name),
-                  backgroundColor: statusColor(p.statoPrenotazione).withOpacity(0.15),
-                  labelStyle: TextStyle(color: statusColor(p.statoPrenotazione)),
-                ),
-                const SizedBox(height: 6),
-                buildActions(p),
+                if (isManager) // Solo il manager vede di chi è la prenotazione
+                  Text(
+                    "Driver ID: ${p.idUtente}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
+                Text("Veicolo: ${p.targa}"),
+                Text("Dal: ${formatDate(p.dataInizio)}"),
+                Text("Al: ${formatDate(p.dataFine)}"),
               ],
             ),
+            isThreeLine: true,
+            // ... resto del codice (Chip e azioni)
           ),
         );
       },
@@ -305,18 +395,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Helper UI
-  Widget _statCard(String label, String value, IconData icon, Color color) {
+  Widget _statCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Expanded(
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          child: Column(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 8),
-              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center),
-            ],
+        clipBehavior:
+            Clip.antiAlias, // Serve per far vedere l'effetto onda del tocco
+        child: InkWell(
+          onTap: onTap, // Qui passiamo la funzione di navigazione
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            child: Column(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(height: 8),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -326,7 +437,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 15),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -337,11 +451,26 @@ class _HomeScreenState extends State<HomeScreen> {
           UserAccountsDrawerHeader(
             accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
             accountEmail: Text(utente?.email ?? ''),
-            currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person, size: 40)),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 40),
+            ),
           ),
-          ListTile(leading: const Icon(Icons.home), title: const Text("Dashboard"), onTap: () {}),
-          ListTile(leading: const Icon(Icons.directions_car), title: const Text("Flotta"), onTap: () {}),
-          ListTile(leading: const Icon(Icons.history), title: const Text("Storico"), onTap: () {}),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text("Dashboard"),
+            onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.directions_car),
+            title: const Text("Flotta"),
+            onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text("Storico"),
+            onTap: () {},
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.exit_to_app, color: Colors.red),

@@ -73,7 +73,9 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  Future<List<Prenotazione>> getPrenotazioniVisibiliOrdinare(Utente utenteLoggato) async {
+  Future<List<Prenotazione>> getPrenotazioniVisibiliOrdinare(
+    Utente utenteLoggato,
+  ) async {
     List<Prenotazione> tutte = List.from(_prenotazioni);
 
     if (utenteLoggato.ruoloUtente != RuoloUtente.manager) {
@@ -81,7 +83,10 @@ class FleetProvider with ChangeNotifier {
     }
 
     tutte.sort((a, b) {
-      int cmp = _priorita(a, utenteLoggato).compareTo(_priorita(b, utenteLoggato));
+      int cmp = _priorita(
+        a,
+        utenteLoggato,
+      ).compareTo(_priorita(b, utenteLoggato));
       return cmp != 0 ? cmp : _confrontoTemporale(a, b);
     });
 
@@ -129,14 +134,16 @@ class FleetProvider with ChangeNotifier {
   }
 
   // --- 1. LOGICA GESTORE PRENOTAZIONI (da GestorePrenotazioniImpl.java) ---
-  
+
   Future<void> aggiungiPrenotazione(Prenotazione nuova) async {
     // Check Overlap: La stessa logica che avevi in Java
-    bool occupato = _prenotazioni.any((p) =>
-        p.targa == nuova.targa &&
-        p.statoPrenotazione != StatoPrenotazione.annullata &&
-        nuova.dataInizio.isBefore(p.dataFine) &&
-        nuova.dataFine.isAfter(p.dataInizio));
+    bool occupato = _prenotazioni.any(
+      (p) =>
+          p.targa == nuova.targa &&
+          p.statoPrenotazione != StatoPrenotazione.annullata &&
+          nuova.dataInizio.isBefore(p.dataFine) &&
+          nuova.dataFine.isAfter(p.dataInizio),
+    );
 
     if (occupato) {
       throw Exception("Veicolo già occupato in queste date!");
@@ -156,13 +163,19 @@ class FleetProvider with ChangeNotifier {
     for (var veicolo in _veicoli) {
       // Cerchiamo le scadenze per questa targa
       var scadenzeVeicolo = _scadenze.where((s) => s.targa == veicolo.targa);
-      
+
       for (var s in scadenzeVeicolo) {
-        if (s.data.isBefore(oggi) && veicolo.statoVeicolo != StatoVeicolo.fuoriServizio) {
+        if (s.data.isBefore(oggi) &&
+            veicolo.statoVeicolo != StatoVeicolo.fuoriServizio) {
           // Logica Java: veicolo.setStatoVeicolo(StatoVeicolo.NON_DISPONIBILE)
-          _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.fuoriServizio);
+          _aggiornaStatoLocaleVeicolo(
+            veicolo.targa,
+            StatoVeicolo.fuoriServizio,
+          );
           cambiamenti = true;
-          debugPrint("Veicolo ${veicolo.targa} bloccato per scadenza ${s.tipoScadenza}");
+          debugPrint(
+            "Veicolo ${veicolo.targa} bloccato per scadenza ${s.tipoScadenza}",
+          );
         }
       }
     }
@@ -174,17 +187,19 @@ class FleetProvider with ChangeNotifier {
   void segnalaGuasto(String targa, String descrizione) {
     // 1. Cambia stato veicolo
     _aggiornaStatoLocaleVeicolo(targa, StatoVeicolo.inManutenzione);
-    
+
     // 2. Crea notifica per il Manager (ID 1 come nel tuo Java)
-    _notifiche.add(Notifica(
-      idNotifica: _notifiche.length + 1,
-      tipoNotifica: TipoNotifica.manutenzione,
-      messaggio: "GUASTO su $targa: $descrizione",
-      dataInvio: DateTime.now(),
-      letta: false,
-      idUtente: 1, // Manager
-    ));
-    
+    _notifiche.add(
+      Notifica(
+        idNotifica: _notifiche.length + 1,
+        tipoNotifica: TipoNotifica.manutenzione,
+        messaggio: "GUASTO su $targa: $descrizione",
+        dataInvio: DateTime.now(),
+        letta: false,
+        idUtente: 1, // Manager
+      ),
+    );
+
     notifyListeners();
   }
 
@@ -209,11 +224,26 @@ class FleetProvider with ChangeNotifier {
   // --- METODI DA UIFACADEIMPL ---
 
   // Prenotazioni
-  Future<void> creaPrenotazione(Utente driver, Veicolo veicolo, DateTime dataInizio, DateTime dataFine) async {
+  Future<void> creaPrenotazione(
+    Utente driver,
+    Veicolo veicolo,
+    DateTime dataInizio,
+    DateTime dataFine,
+  ) async {
+    if (driver.ruoloUtente == RuoloUtente.manager) {
+      throw Exception(
+        'I Manager non possono effettuare prenotazioni. Accedi come Driver.',
+      );
+    }
+
     if (driver.patente == null) {
       throw Exception('L\'utente non ha la patente.');
     }
-    bool disponibile = await _prenotazioneService.validaDisponibilita(veicolo.targa, dataInizio, dataFine);
+    bool disponibile = await _prenotazioneService.validaDisponibilita(
+      veicolo.targa,
+      dataInizio,
+      dataFine,
+    );
     if (!disponibile) {
       throw Exception('Veicolo non disponibile.');
     }
@@ -229,7 +259,12 @@ class FleetProvider with ChangeNotifier {
     );
     await _prenotazioneService.creaPrenotazione(p);
     // Notifica richiesta
-    await _notificaService.notificaRichiestaPrenotazione(driver.idUtente, veicolo.targa, dataInizio, dataFine);
+    await _notificaService.notificaRichiestaPrenotazione(
+      driver.idUtente,
+      veicolo.targa,
+      dataInizio,
+      dataFine,
+    );
     notifyListeners();
   }
 
@@ -239,9 +274,17 @@ class FleetProvider with ChangeNotifier {
     }
     await _prenotazioneService.confermaPrenotazione(idPrenotazione);
     // Trova prenotazione e notifica driver
-    Prenotazione? p = _prenotazioni.cast<Prenotazione?>().firstWhere((pr) => pr?.idPrenotazione == idPrenotazione, orElse: () => null);
+    Prenotazione? p = _prenotazioni.cast<Prenotazione?>().firstWhere(
+      (pr) => pr?.idPrenotazione == idPrenotazione,
+      orElse: () => null,
+    );
     if (p != null) {
-      await _notificaService.notificaConfermaPrenotazione(p.idUtente, p.targa, p.dataInizio, p.dataFine);
+      await _notificaService.notificaConfermaPrenotazione(
+        p.idUtente,
+        p.targa,
+        p.dataInizio,
+        p.dataFine,
+      );
     }
     notifyListeners();
   }
@@ -249,12 +292,23 @@ class FleetProvider with ChangeNotifier {
   Future<void> annullaPrenotazione(int idPrenotazione) async {
     await _prenotazioneService.annullaPrenotazione(idPrenotazione);
     // Trova prenotazione e notifica
-    Prenotazione? p = _prenotazioni.cast<Prenotazione?>().firstWhere((pr) => pr?.idPrenotazione == idPrenotazione, orElse: () => null);
+    Prenotazione? p = _prenotazioni.cast<Prenotazione?>().firstWhere(
+      (pr) => pr?.idPrenotazione == idPrenotazione,
+      orElse: () => null,
+    );
     if (p != null) {
       if (_utenteLoggato?.ruoloUtente == RuoloUtente.manager) {
-        await _notificaService.notificaRifiutoPrenotazione(p.idUtente, p.targa, p.dataInizio, p.dataFine);
+        await _notificaService.notificaRifiutoPrenotazione(
+          p.idUtente,
+          p.targa,
+          p.dataInizio,
+          p.dataFine,
+        );
       } else {
-        await _notificaService.notificaAnnullamentoPrenotazioneDaDriver(p.idUtente, p.targa);
+        await _notificaService.notificaAnnullamentoPrenotazioneDaDriver(
+          p.idUtente,
+          p.targa,
+        );
       }
     }
     notifyListeners();
@@ -271,15 +325,35 @@ class FleetProvider with ChangeNotifier {
   }
 
   // Manutenzioni
-  Future<void> programmareManutenzione(Veicolo veicolo, DateTime inizio, TipoManutenzione tipo, String descrizione) async {
-    await _manutenzioneService.programmareManutenzione(veicolo.targa, inizio, tipo, descrizione);
+  Future<void> programmareManutenzione(
+    Veicolo veicolo,
+    DateTime inizio,
+    TipoManutenzione tipo,
+    String descrizione,
+  ) async {
+    await _manutenzioneService.programmareManutenzione(
+      veicolo.targa,
+      inizio,
+      tipo,
+      descrizione,
+    );
     _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.inManutenzione);
-    await _notificaService.notificaManutenzioneProgrammata(1, veicolo.targa, inizio); // ID Manager
+    await _notificaService.notificaManutenzioneProgrammata(
+      1,
+      veicolo.targa,
+      inizio,
+    ); // ID Manager
     notifyListeners();
   }
 
-  Future<void> segnalareInterventoStraordinario(Veicolo veicolo, String descrizione) async {
-    await _manutenzioneService.segnalareInterventoStraordinario(veicolo.targa, descrizione);
+  Future<void> segnalareInterventoStraordinario(
+    Veicolo veicolo,
+    String descrizione,
+  ) async {
+    await _manutenzioneService.segnalareInterventoStraordinario(
+      veicolo.targa,
+      descrizione,
+    );
     _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.inManutenzione);
     await _notificaService.notificaInterventoStraordinario(1, veicolo.targa);
     notifyListeners();
@@ -300,7 +374,12 @@ class FleetProvider with ChangeNotifier {
 
     for (Scadenza s in scadenze) {
       if (!s.notificata && !s.data.isAfter(limite)) {
-        await _notificaService.inviaNotificaScadenza(s.idScadenza, s.targa, s.tipoScadenza.name, s.data);
+        await _notificaService.inviaNotificaScadenza(
+          s.idScadenza,
+          s.targa,
+          s.tipoScadenza.name,
+          s.data,
+        );
         // Crea nuova Scadenza con notificata true
         Scadenza aggiornata = Scadenza(
           idScadenza: s.idScadenza,
@@ -345,7 +424,9 @@ class FleetProvider with ChangeNotifier {
   // Notifiche
   Future<List<Notifica>> getNotifichePerUtente() async {
     if (_utenteLoggato?.ruoloUtente == RuoloUtente.manager) {
-      return await _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente); // Tutti per manager
+      return await _notificaService.fetchMieNotifiche(
+        _utenteLoggato!.idUtente,
+      ); // Tutti per manager
     }
     return await _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente);
   }

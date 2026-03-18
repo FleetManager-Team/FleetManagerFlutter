@@ -1,1 +1,0 @@
-// Schermate veicoli (placeholder)
