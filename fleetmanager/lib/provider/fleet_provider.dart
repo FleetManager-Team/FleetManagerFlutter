@@ -2,89 +2,151 @@ import 'package:flutter/material.dart';
 import '../models/veicolo.dart';
 import '../models/prenotazione.dart';
 import '../models/utente.dart';
-import '../services/veicolo_service.dart';
-import '../services/prenotazione_service.dart';
+import '../models/scadenza.dart';
+import '../models/notifica.dart';
+import '../models/enums/stato_veicolo.dart';
+import '../models/enums/stato_prenotazione.dart';
+import '../models/enums/tipo_notifica.dart';
 import '../services/auth_service.dart';
+import '../mock/mock_data.dart';
 
 class FleetProvider with ChangeNotifier {
-  // Istanze dei Service
-  final VeicoloService _veicoloService = VeicoloService();
-  final PrenotazioneService _prenotazioneService = PrenotazioneService();
+  // Service (Simulati o Reali)
   final AuthService _authService = AuthService();
+  // final _service = MockService(); // Esempio
 
-  // Stato dell'app
   List<Veicolo> _veicoli = [];
   List<Prenotazione> _prenotazioni = [];
+  List<Scadenza> _scadenze = [];
+  List<Notifica> _notifiche = [];
   Utente? _utenteLoggato;
   bool _isLoading = false;
 
-  // Getter per leggere i dati dalla UI
+  // Getter
   List<Veicolo> get veicoli => _veicoli;
   List<Prenotazione> get prenotazioni => _prenotazioni;
+  List<Notifica> get notifiche => _notifiche;
   Utente? get utenteLoggato => _utenteLoggato;
   bool get isLoading => _isLoading;
 
-  // Caricamento iniziale dei dati
-  Future<void> inizializzaDati() async {
-    _isLoading = true;
-    notifyListeners(); // Diciamo alla UI di mostrare il caricamento
-
-    try {
-      _veicoli = await _veicoloService.fetchAllVeicoli();
-      
-      // Logica presa da GestorePrenotazioniImpl.java: 
-      // Se è admin vede tutto, se è driver vede solo le sue
-      if (_utenteLoggato?.ruoloUtente.name == 'admin') {
-        _prenotazioni = await _prenotazioneService.fetchPrenotazioni();
-      } else {
-        _prenotazioni = await _prenotazioneService.fetchPrenotazioni(idUtente: _utenteLoggato?.idUtente);
-      }
-    } catch (e) {
-      debugPrint("Errore nel caricamento dati: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners(); // Diciamo alla UI di nascondere il caricamento e mostrare i dati
-    }
-  }
-
-  // Metodo per fare il login
+  // Login method
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
-
     try {
-      final utente = await _authService.login(email, password);
-      if (utente != null) {
-        setUtente(utente);
-        _isLoading = false;
-        notifyListeners();
+      final user = await _authService.login(email, password);
+      if (user != null) {
+        _utenteLoggato = user;
         return true;
-      } else {
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
-    } catch (e) {
-      debugPrint("Errore durante il login: $e");
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return false;
     }
+    return false;
   }
 
-  // Metodo per fare il login (settando l'utente globale)
-  void setUtente(Utente utente) {
-    _utenteLoggato = utente;
-    inizializzaDati(); // Appena loggato, carica subito i dati giusti per lui
+  // --- 1. LOGICA GESTORE PRENOTAZIONI (da GestorePrenotazioniImpl.java) ---
+  
+  Future<void> aggiungiPrenotazione(Prenotazione nuova) async {
+    // Check Overlap: La stessa logica che avevi in Java
+    bool occupato = _prenotazioni.any((p) =>
+        p.targa == nuova.targa &&
+        p.statoPrenotazione != StatoPrenotazione.annullata &&
+        nuova.dataInizio.isBefore(p.dataFine) &&
+        nuova.dataFine.isAfter(p.dataInizio));
+
+    if (occupato) {
+      throw Exception("Veicolo già occupato in queste date!");
+    }
+
+    // In Java facevi: prenotazioneDAO.save(p)
+    _prenotazioni.add(nuova);
     notifyListeners();
   }
 
-  // Metodo per fare il logout
+  // --- 2. LOGICA GESTORE SCADENZE (da GestoreScadenzeImpl.java) ---
+
+  void verificaE_BloccaVeicoliScaduti() {
+    final oggi = DateTime.now();
+    bool cambiamenti = false;
+
+    for (var veicolo in _veicoli) {
+      // Cerchiamo le scadenze per questa targa
+      var scadenzeVeicolo = _scadenze.where((s) => s.targa == veicolo.targa);
+      
+      for (var s in scadenzeVeicolo) {
+        if (s.data.isBefore(oggi) && veicolo.statoVeicolo != StatoVeicolo.fuoriServizio) {
+          // Logica Java: veicolo.setStatoVeicolo(StatoVeicolo.NON_DISPONIBILE)
+          _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.fuoriServizio);
+          cambiamenti = true;
+          debugPrint("Veicolo ${veicolo.targa} bloccato per scadenza ${s.tipoScadenza}");
+        }
+      }
+    }
+    if (cambiamenti) notifyListeners();
+  }
+
+  // --- 3. LOGICA GESTORE MANUTENZIONI (da GestoreManutenzioniImpl.java) ---
+
+  void segnalaGuasto(String targa, String descrizione) {
+    // 1. Cambia stato veicolo
+    _aggiornaStatoLocaleVeicolo(targa, StatoVeicolo.inManutenzione);
+    
+    // 2. Crea notifica per il Manager (ID 1 come nel tuo Java)
+    _notifiche.add(Notifica(
+      idNotifica: _notifiche.length + 1,
+      tipoNotifica: TipoNotifica.manutenzione,
+      messaggio: "GUASTO su $targa: $descrizione",
+      dataInvio: DateTime.now(),
+      letta: false,
+      idUtente: 1, // Manager
+    ));
+    
+    notifyListeners();
+  }
+
+  // Helper per aggiornare lo stato di un veicolo nella lista locale
+  void _aggiornaStatoLocaleVeicolo(String targa, StatoVeicolo nuovoStato) {
+    int index = _veicoli.indexWhere((v) => v.targa == targa);
+    if (index != -1) {
+      // In Flutter/Dart gli oggetti sono spesso final, ne creiamo uno nuovo (Immutabilità)
+      var v = _veicoli[index];
+      _veicoli[index] = Veicolo(
+        targa: v.targa,
+        marca: v.marca,
+        modello: v.modello,
+        tipoVeicolo: v.tipoVeicolo,
+        annoImmatricolazione: v.annoImmatricolazione,
+        km: v.km,
+        statoVeicolo: nuovoStato,
+      );
+    }
+  }
+
+  // --- METODI ESISTENTI (Inizializzazione e Login) ---
+
+  Future<void> inizializzaDati() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      // Carica dati mock per sviluppo
+      _veicoli = MockData.veicoli;
+      _prenotazioni = MockData.prenotazioni;
+      // _scadenze = await _scadenzaService.fetchAll();
+      
+      // Dopo il caricamento, eseguiamo subito il controllo scadenze (come facevi nel main Java)
+      verificaE_BloccaVeicoliScaduti();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void logout() {
     _utenteLoggato = null;
     _veicoli = [];
     _prenotazioni = [];
-    _isLoading = false;
     notifyListeners();
   }
 }

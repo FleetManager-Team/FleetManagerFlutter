@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/ui/screens/home_screen.dart';
+import 'package:fleetmanager/ui/screens/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

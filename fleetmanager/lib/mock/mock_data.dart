@@ -58,6 +58,33 @@ class MockData {
       statoVeicolo: StatoVeicolo.prenotato,
       km: 15000,
     ),
+    Veicolo(
+      targa: 'MN012OP',
+      tipoVeicolo: TipoVeicolo.auto,
+      marca: 'Volkswagen',
+      modello: 'Golf',
+      annoImmatricolazione: 2019,
+      statoVeicolo: StatoVeicolo.disponibile,
+      km: 45000,
+    ),
+    Veicolo(
+      targa: 'QR345ST',
+      tipoVeicolo: TipoVeicolo.auto,
+      marca: 'Ford',
+      modello: 'Focus',
+      annoImmatricolazione: 2021,
+      statoVeicolo: StatoVeicolo.disponibile,
+      km: 30000,
+    ),
+    Veicolo(
+      targa: 'UV678WX',
+      tipoVeicolo: TipoVeicolo.furgone,
+      marca: 'Mercedes',
+      modello: 'Vito',
+      annoImmatricolazione: 2017,
+      statoVeicolo: StatoVeicolo.fuoriServizio,
+      km: 120000,
+    ),
   ];
 
   static final List<Prenotazione> prenotazioni = [

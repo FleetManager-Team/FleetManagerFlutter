@@ -41,6 +41,11 @@ dependencies:
   # HTTP client
   dio: ^5.7.0
 
+  # Internationalization
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

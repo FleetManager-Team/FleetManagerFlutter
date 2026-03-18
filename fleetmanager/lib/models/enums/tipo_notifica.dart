@@ -1,1 +1,1 @@
-enum TipoNotifica { info, alert, scadenza }
+enum TipoNotifica { info, alert, scadenza, manutenzione }

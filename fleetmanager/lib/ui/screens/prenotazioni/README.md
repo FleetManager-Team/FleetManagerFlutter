@@ -1,1 +1,0 @@
-// Schermate prenotazioni (placeholder)
