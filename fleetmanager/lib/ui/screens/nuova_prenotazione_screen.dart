@@ -100,27 +100,28 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
             Spacer(),
             
             ElevatedButton(
-              onPressed: _targaSelezionata == null || _fine.isBefore(_inizio) ? null : () {
-                try {
-                  final p = Prenotazione(
-                    idPrenotazione: DateTime.now().millisecondsSinceEpoch,
-                    dataInizio: _inizio,
-                    dataFine: _fine,
-                    statoPrenotazione: StatoPrenotazione.confermata,
-                    tipoPrenotazione: TipoPrenotazione.aziendale,
-                    idUtente: provider.utenteLoggato!.idUtente,
-                    targa: _targaSelezionata!,
-                  );
-                  
-                  provider.aggiungiPrenotazione(p);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Prenotazione confermata!")));
-                  Navigator.pop(context);
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Errore: ${e.toString()}")));
-                }
-              },
-              child: Text("CONFERMA PRENOTAZIONE"),
-              style: ElevatedButton.styleFrom(minimumSize: Size(double.infinity, 50)),
+              onPressed: _targaSelezionata == null || _fine.isBefore(_inizio)
+                  ? null
+                  : () async {
+                      try {
+                        await provider.creaPrenotazione(
+                          provider.utenteLoggato!,
+                          veicoliDisponibili.firstWhere((v) => v.targa == _targaSelezionata!),
+                          _inizio,
+                          _fine,
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Prenotazione creata con successo!")),
+                        );
+                        Navigator.pop(context);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Errore: ${e.toString()}")),
+                        );
+                      }
+                    },
+              child: const Text("CONFERMA PRENOTAZIONE"),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
             )
           ],
         ),

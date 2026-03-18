@@ -1,4 +1,6 @@
+import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
@@ -17,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Future<List<Prenotazione>>? _prenotazioniFuture;
+
   @override
   void initState() {
     super.initState();
@@ -27,10 +31,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<FleetProvider>();
+    final utente = provider.utenteLoggato;
+    if (utente != null && _prenotazioniFuture == null) {
+      _prenotazioniFuture = provider.getPrenotazioniVisibiliOrdinare(utente);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
     final utente = provider.utenteLoggato;
-    final bool isAdmin = utente?.ruoloUtente == RuoloUtente.admin;
+    final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -48,16 +62,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildHeader(utente),
                   const SizedBox(height: 25),
-                  if (isAdmin) ...[
+                  if (isManager) ...[
                     _buildAdminStats(provider),
                     const SizedBox(height: 25),
-                    _buildSectionTitle("Stato Flotta Real-Time"),
-                    _buildVeicoliList(provider.veicoli),
+                    _buildSectionTitle("Prenotazioni"),
+                    _buildManagerPrenotazioni(provider, utente),
                   ] else ...[
                     _buildDriverActionCard(context),
                     const SizedBox(height: 25),
                     _buildSectionTitle("Le Mie Prenotazioni"),
-                    _buildPrenotazioniList(provider.prenotazioni),
+                    _buildDriverPrenotazioni(provider),
                   ],
                 ],
               ),
@@ -99,13 +113,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Dashboard per ADMIN: Statistiche rapide
+  // Dashboard per MANAGER: Statistiche rapide
   Widget _buildAdminStats(FleetProvider provider) {
+    final veicoliInManutenzione = provider.veicoli.where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione).length;
+    final prenotazioniAttive = provider.prenotazioni.where((p) => p.statoPrenotazione == StatoPrenotazione.attiva).length;
+
     return Row(
       children: [
         _statCard("Totale Veicoli", provider.veicoli.length.toString(), Icons.directions_car, Colors.blue),
-        _statCard("Attive", provider.prenotazioni.where((p) => p.statoPrenotazione == StatoPrenotazione.inCorso).length.toString(), Icons.play_arrow, Colors.green),
-        _statCard("In Manutenzione", "2", Icons.build, Colors.orange), // Dato simulato
+        _statCard("Prenotazioni Attive", prenotazioniAttive.toString(), Icons.play_arrow, Colors.green),
+        _statCard("In Manutenzione", veicoliInManutenzione.toString(), Icons.build, Colors.orange),
       ],
     );
   }
@@ -158,8 +175,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPrenotazioniList(List<Prenotazione> prenotazioni) {
+  Widget _buildManagerPrenotazioni(FleetProvider provider, Utente? utente) {
+    if (utente == null) return const SizedBox.shrink();
+    return FutureBuilder<List<Prenotazione>>(
+      future: _prenotazioniFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final prenotazioni = snapshot.data ?? [];
+        if (prenotazioni.isEmpty) return const Center(child: Text("Nessuna prenotazione trovata"));
+        return _buildPrenotazioniList(prenotazioni, true, provider, utente);
+      },
+    );
+  }
+
+  Widget _buildDriverPrenotazioni(FleetProvider provider) {
+    final prenotazioni = provider.prenotazioni;
     if (prenotazioni.isEmpty) return const Center(child: Text("Nessuna prenotazione trovata"));
+    return _buildPrenotazioniList(prenotazioni, false, provider, provider.utenteLoggato);
+  }
+
+  Widget _buildPrenotazioniList(List<Prenotazione> prenotazioni, bool isManager, FleetProvider provider, Utente? utente) {
+    if (prenotazioni.isEmpty) return const Center(child: Text("Nessuna prenotazione trovata"));
+
+    String formatDate(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
+    Color statusColor(StatoPrenotazione stato) {
+      switch (stato) {
+        case StatoPrenotazione.richiesta:
+          return Colors.orange;
+        case StatoPrenotazione.confermata:
+          return Colors.blue;
+        case StatoPrenotazione.attiva:
+          return Colors.green;
+        case StatoPrenotazione.completata:
+          return Colors.grey;
+        case StatoPrenotazione.annullata:
+          return Colors.red;
+      }
+    }
+
+    Widget buildActions(Prenotazione p) {
+      final List<Widget> actions = [];
+      if (isManager) {
+        if (p.statoPrenotazione == StatoPrenotazione.richiesta) {
+          actions.add(IconButton(
+            icon: const Icon(Icons.check_circle, color: Colors.green),
+            tooltip: 'Conferma',
+            onPressed: () async {
+              await provider.confermaPrenotazione(p.idPrenotazione);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione confermata')));
+              setState(() {
+                _prenotazioniFuture = provider.getPrenotazioniVisibiliOrdinare(utente!);
+              });
+            },
+          ));
+          actions.add(IconButton(
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            tooltip: 'Annulla',
+            onPressed: () async {
+              await provider.annullaPrenotazione(p.idPrenotazione);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione annullata')));
+              setState(() {
+                _prenotazioniFuture = provider.getPrenotazioniVisibiliOrdinare(utente!);
+              });
+            },
+          ));
+        }
+      } else {
+        if (p.statoPrenotazione == StatoPrenotazione.richiesta || p.statoPrenotazione == StatoPrenotazione.confermata) {
+          actions.add(IconButton(
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            tooltip: 'Annulla',
+            onPressed: () async {
+              await provider.annullaPrenotazione(p.idPrenotazione);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione annullata')));
+              await provider.inizializzaDati();
+            },
+          ));
+        }
+        if (p.statoPrenotazione == StatoPrenotazione.attiva) {
+          actions.add(IconButton(
+            icon: const Icon(Icons.check_circle, color: Colors.green),
+            tooltip: 'Completa',
+            onPressed: () async {
+              await provider.completaPrenotazione(p.idPrenotazione);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Prenotazione completata')));
+              await provider.inizializzaDati();
+            },
+          ));
+        }
+      }
+      return Row(mainAxisSize: MainAxisSize.min, children: actions);
+    }
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -170,9 +279,25 @@ class _HomeScreenState extends State<HomeScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             title: Text("Prenotazione #${p.idPrenotazione}"),
-            subtitle: Text("Veicolo: ${p.targa}\nFino al: ${p.dataFine.day}/${p.dataFine.month}"),
+            subtitle: Text(
+              "Veicolo: ${p.targa}\n" +
+                  "Da: ${formatDate(p.dataInizio)}\n" +
+                  "A: ${formatDate(p.dataFine)}",
+            ),
             isThreeLine: true,
-            trailing: Chip(label: Text(p.statoPrenotazione.name), backgroundColor: Colors.green[100]),
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Chip(
+                  label: Text(p.statoPrenotazione.name),
+                  backgroundColor: statusColor(p.statoPrenotazione).withOpacity(0.15),
+                  labelStyle: TextStyle(color: statusColor(p.statoPrenotazione)),
+                ),
+                const SizedBox(height: 6),
+                buildActions(p),
+              ],
+            ),
           ),
         );
       },

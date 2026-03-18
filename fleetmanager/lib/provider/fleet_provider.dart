@@ -15,6 +15,7 @@ import '../services/prenotazione_service.dart';
 import '../services/manutenzione_service.dart';
 import '../services/scadenza_service.dart';
 import '../services/notifica_service.dart';
+import '../mock/mock_data.dart';
 
 class FleetProvider with ChangeNotifier {
   // Service
@@ -55,6 +56,78 @@ class FleetProvider with ChangeNotifier {
     return false;
   }
 
+  // Carica dati iniziali (mock/back-end)
+  Future<void> inizializzaDati() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Caricamento mock / placeholder
+      _veicoli = MockData.veicoli;
+      _prenotazioni = MockData.prenotazioni;
+      _scadenze = []; // Implementa se hai mock per le scadenze
+      _notifiche = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<Prenotazione>> getPrenotazioniVisibiliOrdinare(Utente utenteLoggato) async {
+    List<Prenotazione> tutte = List.from(_prenotazioni);
+
+    if (utenteLoggato.ruoloUtente != RuoloUtente.manager) {
+      tutte = tutte.where((p) => p.idUtente == utenteLoggato.idUtente).toList();
+    }
+
+    tutte.sort((a, b) {
+      int cmp = _priorita(a, utenteLoggato).compareTo(_priorita(b, utenteLoggato));
+      return cmp != 0 ? cmp : _confrontoTemporale(a, b);
+    });
+
+    return tutte;
+  }
+
+  int _priorita(Prenotazione p, Utente utenteLoggato) {
+    final s = p.statoPrenotazione;
+    final isManager = utenteLoggato.ruoloUtente == RuoloUtente.manager;
+
+    if (isManager) {
+      switch (s) {
+        case StatoPrenotazione.richiesta:
+          return 1;
+        case StatoPrenotazione.attiva:
+          return 2;
+        case StatoPrenotazione.confermata:
+          return 3;
+        case StatoPrenotazione.completata:
+          return 4;
+        case StatoPrenotazione.annullata:
+          return 5;
+      }
+    }
+
+    switch (s) {
+      case StatoPrenotazione.attiva:
+        return 1;
+      case StatoPrenotazione.richiesta:
+        return 2;
+      case StatoPrenotazione.confermata:
+        return 3;
+      case StatoPrenotazione.completata:
+        return 4;
+      case StatoPrenotazione.annullata:
+        return 5;
+    }
+  }
+
+  int _confrontoTemporale(Prenotazione a, Prenotazione b) {
+    final now = DateTime.now();
+    final ta = a.dataInizio.isAfter(now) ? a.dataInizio : a.dataFine;
+    final tb = b.dataInizio.isAfter(now) ? b.dataInizio : b.dataFine;
+    return ta.compareTo(tb);
+  }
+
   // --- 1. LOGICA GESTORE PRENOTAZIONI (da GestorePrenotazioniImpl.java) ---
   
   Future<void> aggiungiPrenotazione(Prenotazione nuova) async {
@@ -76,7 +149,7 @@ class FleetProvider with ChangeNotifier {
 
   // --- 2. LOGICA GESTORE SCADENZE (da GestoreScadenzeImpl.java) ---
 
-  void verificaE_BloccaVeicoliScaduti() {
+  void verificaEbloccaVeicoliScaduti() {
     final oggi = DateTime.now();
     bool cambiamenti = false;
 

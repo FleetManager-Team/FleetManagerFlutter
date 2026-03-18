@@ -1,3 +1,4 @@
+import 'package:fleetmanager/ui/screens/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
@@ -57,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       // Navigazione alla dashboard con animazione
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => Container(), // Placeholder per dashboard
+          pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(), // Placeholder per dashboard
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
@@ -127,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Fleet Manager Pro',
+                              'Fleet Manager',
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.primary,
