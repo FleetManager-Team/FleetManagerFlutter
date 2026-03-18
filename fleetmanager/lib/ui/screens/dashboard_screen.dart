@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (isManager) ...[
                       _buildAdminStats(provider),
                       const SizedBox(height: 25),
-                      _buildSectionTitle("Prenotazioni"),
+                      _buildSectionTitle("Prenotazioni Attive"),
                       _buildManagerPrenotazioni(provider, utente),
                     ] else ...[
                       _buildDriverActionCard(context),
@@ -121,9 +121,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Dashboard per MANAGER: Statistiche rapide
   Widget _buildAdminStats(FleetProvider provider) {
-    final prenotazioniAttive = provider.prenotazioni
-        .where((p) => p.statoPrenotazione == StatoPrenotazione.attiva)
-        .length;
+    // Conteggio totale di tutte le prenotazioni nel database/mock
+    final totalePrenotazioni = provider.prenotazioni.length;
 
     final veicoliInManutenzione = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
@@ -145,11 +144,12 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
+
         _statCard(
-          "Prenotazioni Attive",
-          prenotazioniAttive.toString(),
-          Icons.play_arrow,
-          Colors.green,
+          "Prenotazioni",
+          provider.prenotazioni.length.toString(),
+          Icons.assignment,
+          Colors.purple,
           () {},
         ),
         _statCard(
@@ -234,19 +234,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildManagerPrenotazioni(FleetProvider provider, Utente? utente) {
     if (utente == null) return const SizedBox.shrink();
 
-    // USA DIRETTAMENTE IL PROVIDER, NON IL FUTUREBUILDER
-    final prenotazioni = provider.prenotazioni;
+    // Filtriamo: mostriamo solo chi è "In corso"
+    final attive = provider.prenotazioni
+        .where((p) => p.statoPrenotazione == StatoPrenotazione.attiva)
+        .toList();
 
-    if (prenotazioni.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text("Nessuna prenotazione trovata"),
+    if (attive.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Text(
+          "Nessun veicolo attualmente fuori sede.",
+          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
         ),
       );
     }
 
-    return _buildPrenotazioniList(prenotazioni, true, provider, utente);
+    // Restituisce la lista (senza altri titoli interni)
+    return _buildPrenotazioniList(attive, true, provider, utente);
   }
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
