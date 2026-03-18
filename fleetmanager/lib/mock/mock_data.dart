@@ -10,10 +10,11 @@ import 'package:fleetmanager/models/veicolo.dart';
 /// Dati fittizi utili per sviluppare e testare l'app senza un backend.
 class MockData {
   static final List<Utente> utenti = [
+    // Credenziali semplici per test rapido (a/a e b/b)
     Utente(
       idUtente: 1,
-      nome: 'Pietro',
-      cognome: 'Plati',
+      nome: 'Test Admin',
+      cognome: 'Mock',
       email: 'a',
       password: 'a',
       ruoloUtente: RuoloUtente.admin,
@@ -21,10 +22,30 @@ class MockData {
     ),
     Utente(
       idUtente: 2,
-      nome: 'Francesco',
-      cognome: 'Basis',
+      nome: 'Test Driver',
+      cognome: 'Mock',
       email: 'b',
       password: 'b',
+      ruoloUtente: RuoloUtente.driver,
+      patente: 'B',
+    ),
+
+    // Credenziali più realistiche per test avanzato
+    Utente(
+      idUtente: 3,
+      nome: 'Pietro',
+      cognome: 'Plati',
+      email: 'admin@fleetmanager.com',
+      password: 'Password1',
+      ruoloUtente: RuoloUtente.admin,
+      patente: 'B',
+    ),
+    Utente(
+      idUtente: 4,
+      nome: 'Francesco',
+      cognome: 'Basis',
+      email: 'driver@fleetmanager.com',
+      password: 'Password1',
       ruoloUtente: RuoloUtente.driver,
       patente: 'B',
     ),
@@ -92,8 +113,8 @@ class MockData {
       idPrenotazione: 1,
       dataInizio: DateTime.now().subtract(const Duration(days: 2)),
       dataFine: DateTime.now().add(const Duration(days: 1)),
-      statoPrenotazione: StatoPrenotazione.inCorso,
-      tipoPrenotazione: TipoPrenotazione.aziendale,
+      statoPrenotazione: StatoPrenotazione.attiva,
+      tipoPrenotazione: TipoPrenotazione.utente,
       idUtente: 2,
       targa: 'IJ789KL',
     ),
@@ -119,5 +140,15 @@ class MockData {
   static List<Prenotazione> prenotazioniPerUtente(int? idUtente) {
     if (idUtente == null) return prenotazioni;
     return prenotazioni.where((p) => p.idUtente == idUtente).toList();
+  }
+
+  static bool validaDisponibilita(String targa, DateTime dataInizio, DateTime dataFine) {
+    for (var p in prenotazioni) {
+      if (p.targa == targa && p.statoPrenotazione != StatoPrenotazione.annullata) {
+        bool overlap = dataInizio.isBefore(p.dataFine) && dataFine.isAfter(p.dataInizio);
+        if (overlap) return false;
+      }
+    }
+    return true;
   }
 }

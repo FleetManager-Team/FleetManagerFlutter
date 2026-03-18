@@ -1,1 +1,1 @@
-enum StatoPrenotazione { confermata, inCorso, completata, annullata }
+enum StatoPrenotazione { richiesta, attiva, confermata, completata, annullata }

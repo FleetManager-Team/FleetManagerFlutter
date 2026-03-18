@@ -1,1 +1,1 @@
-enum TipoPrenotazione { aziendale, privata }
+enum TipoPrenotazione { utente, aziendale, privata }
