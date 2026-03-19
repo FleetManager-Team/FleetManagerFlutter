@@ -10,6 +10,8 @@ class Prenotazione {
   final int idUtente;
   final String targa;
 
+  var inizio;
+
   Prenotazione({
     required this.idPrenotazione,
     required this.dataInizio,
@@ -31,6 +33,8 @@ class Prenotazione {
       targa: json['targa'],
     );
   }
+
+  get veicoloId => null;
 
   Map<String, dynamic> toJson() {
     return {

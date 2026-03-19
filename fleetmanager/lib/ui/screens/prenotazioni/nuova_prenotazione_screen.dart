@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../provider/fleet_provider.dart';
-import '../../models/prenotazione.dart';
-import '../../models/enums/tipo_prenotazione.dart';
-import '../../models/enums/stato_prenotazione.dart';
-import '../../models/enums/stato_veicolo.dart';
+import '../../../provider/fleet_provider.dart';
+import '../../../models/enums/stato_veicolo.dart';
 
 class NuovaPrenotazioneScreen extends StatefulWidget {
   @override

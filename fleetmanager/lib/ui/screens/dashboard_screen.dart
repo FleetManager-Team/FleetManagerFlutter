@@ -1,4 +1,5 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/booking_list_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/vehicle_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,11 +7,10 @@ import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
-import 'package:fleetmanager/models/veicolo.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/ui/screens/login_screen.dart';
-import 'package:fleetmanager/ui/screens/nuova_prenotazione_screen.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -121,9 +121,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Dashboard per MANAGER: Statistiche rapide
   Widget _buildAdminStats(FleetProvider provider) {
-    // Conteggio totale di tutte le prenotazioni nel database/mock
-    final totalePrenotazioni = provider.prenotazioni.length;
-
     final veicoliInManutenzione = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
         .length;
@@ -150,7 +147,14 @@ class _HomeScreenState extends State<HomeScreen> {
           provider.prenotazioni.length.toString(),
           Icons.assignment,
           Colors.purple,
-          () {},
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const BookingListScreen(),
+              ),
+            );
+          },
         ),
         _statCard(
           "In Manutenzione",
@@ -204,33 +208,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildVeicoliList(List<Veicolo> veicoli) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: veicoli.length,
-      itemBuilder: (context, index) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Colors.blueGrey,
-            child: Icon(Icons.car_repair, color: Colors.white),
-          ),
-          title: Text(
-            "${veicoli[index].marca} ${veicoli[index].modello}",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text("Targa: ${veicoli[index].targa}"),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            /* Dettaglio veicolo */
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildManagerPrenotazioni(FleetProvider provider, Utente? utente) {
     if (utente == null) return const SizedBox.shrink();
 
@@ -275,93 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: Text("Nessuna prenotazione trovata"));
 
     String formatDate(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
-    Color statusColor(StatoPrenotazione stato) {
-      switch (stato) {
-        case StatoPrenotazione.richiesta:
-          return Colors.orange;
-        case StatoPrenotazione.confermata:
-          return Colors.blue;
-        case StatoPrenotazione.attiva:
-          return Colors.green;
-        case StatoPrenotazione.completata:
-          return Colors.grey;
-        case StatoPrenotazione.annullata:
-          return Colors.red;
-      }
-    }
-
-    Widget buildActions(Prenotazione p) {
-      final List<Widget> actions = [];
-      if (isManager) {
-        if (p.statoPrenotazione == StatoPrenotazione.richiesta) {
-          actions.add(
-            IconButton(
-              icon: const Icon(Icons.check_circle, color: Colors.green),
-              tooltip: 'Conferma',
-              onPressed: () async {
-                await provider.confermaPrenotazione(p.idPrenotazione);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prenotazione confermata')),
-                );
-                setState(() {
-                  _prenotazioniFuture = provider
-                      .getPrenotazioniVisibiliOrdinare(utente!);
-                });
-              },
-            ),
-          );
-          actions.add(
-            IconButton(
-              icon: const Icon(Icons.cancel, color: Colors.red),
-              tooltip: 'Annulla',
-              onPressed: () async {
-                await provider.annullaPrenotazione(p.idPrenotazione);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prenotazione annullata')),
-                );
-                setState(() {
-                  _prenotazioniFuture = provider
-                      .getPrenotazioniVisibiliOrdinare(utente!);
-                });
-              },
-            ),
-          );
-        }
-      } else {
-        if (p.statoPrenotazione == StatoPrenotazione.richiesta ||
-            p.statoPrenotazione == StatoPrenotazione.confermata) {
-          actions.add(
-            IconButton(
-              icon: const Icon(Icons.cancel, color: Colors.red),
-              tooltip: 'Annulla',
-              onPressed: () async {
-                await provider.annullaPrenotazione(p.idPrenotazione);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prenotazione annullata')),
-                );
-                await provider.inizializzaDati();
-              },
-            ),
-          );
-        }
-        if (p.statoPrenotazione == StatoPrenotazione.attiva) {
-          actions.add(
-            IconButton(
-              icon: const Icon(Icons.check_circle, color: Colors.green),
-              tooltip: 'Completa',
-              onPressed: () async {
-                await provider.completaPrenotazione(p.idPrenotazione);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prenotazione completata')),
-                );
-                await provider.inizializzaDati();
-              },
-            ),
-          );
-        }
-      }
-      return Row(mainAxisSize: MainAxisSize.min, children: actions);
-    }
 
     return ListView.builder(
       shrinkWrap: true,
