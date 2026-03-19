@@ -1,6 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/booking_list_screen.dart';
-import 'package:fleetmanager/ui/screens/veicoli/vehicle_list_screen.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
+import 'package:fleetmanager/ui/screens/veicoli/lista_veicoli_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
