@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/storico_prenotazioni_screen.dart';
 import 'package:fleetmanager/ui/screens/utenti/lista_utenti_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_veicoli_screen.dart';
@@ -143,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-
         _statCard(
           "Prenotazioni",
           provider.prenotazioni.length.toString(),
@@ -240,14 +240,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
-    final prenotazioni = provider.prenotazioni;
-    if (prenotazioni.isEmpty)
-      return const Center(child: Text("Nessuna prenotazione trovata"));
+    final utente = provider.utenteLoggato;
+    final miePrenotazioni = provider.prenotazioni
+        .where((p) => p.idUtente == utente?.idUtente)
+        .toList();
+
+    if (miePrenotazioni.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            "Non hai ancora effettuato prenotazioni.",
+            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+          ),
+        ),
+      );
+    }
+
     return _buildPrenotazioniList(
-      prenotazioni,
+      miePrenotazioni, // Passiamo solo la lista filtrata
       false,
       provider,
-      provider.utenteLoggato,
+      utente,
     );
   }
 
@@ -366,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
             title: const Text("Dashboard"),
             onTap: () => Navigator.pop(context), // Chiude il drawer
           ),
-          
+
           // MOSTRA "GESTIONE UTENTI" SOLO SE L'UTENTE È UN MANAGER
           if (isManager)
             ListTile(
@@ -375,7 +389,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 Navigator.pop(context); // Chiude il drawer
                 // Qui dovrai navigare alla tua schermata di gestione utenti
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const UserManagementScreen()));
               },
             ),
 
@@ -383,8 +400,12 @@ class _HomeScreenState extends State<HomeScreen> {
             leading: const Icon(Icons.history),
             title: const Text("Storico"),
             onTap: () {
-               Navigator.pop(context);
-               // Navigazione allo storico...
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const BookingHistoryScreen()),
+              );
             },
           ),
           const Divider(),

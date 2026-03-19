@@ -13,13 +13,46 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   RuoloUtente? filtroRuolo;
+  List<Utente> cacheUtenti = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _caricaDati();
+  }
+
+  // Carica i dati dal provider e aggiorna la cache locale
+  Future<void> _caricaDati() async {
+    try {
+      final provider = context.read<FleetProvider>();
+      // Recupera la lista completa (Driver + Manager)
+      final dati = await provider.getTuttiDriver(); 
+      if (mounted) {
+        setState(() {
+          cacheUtenti = dati;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Errore nel caricamento: $e")),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<FleetProvider>();
-    final listaDaMostrare = provider.utenti
-        .where((u) => u.ruoloUtente != RuoloUtente.admin)
-        .toList();
+    // LOGICA DI FILTRO REATTIVA
+    final listaFiltrata = cacheUtenti.where((u) {
+      // Se filtroRuolo è null (TUTTI), l'utente passa sempre.
+      // Altrimenti passa solo se il suo ruolo coincide con quello selezionato.
+      return filtroRuolo == null || u.ruoloUtente == filtroRuolo;
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -28,42 +61,39 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => isLoading = true);
+              _caricaDati();
+            },
+          )
+        ],
       ),
       body: Column(
         children: [
           _buildFilterBar(),
           Expanded(
-            child: FutureBuilder<List<Utente>>(
-              future: provider
-                  .getTuttiDriver(), // Assicurati che nel provider restituisca tutti
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final utenti = snapshot.data ?? [];
-                // Applichiamo il filtro driver/manager
-                final mostrati = filtroRuolo == null
-                    ? utenti
-                    : utenti
-                        .where((u) => u.ruoloUtente == filtroRuolo)
-                        .toList();
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: listaDaMostrare.length,
-                  itemBuilder: (context, index) =>
-                      _buildUserCard(listaDaMostrare[index]),
-                );
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : listaFiltrata.isEmpty
+                    ? const Center(
+                        child: Text("Nessun utente trovato per questo filtro"),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: listaFiltrata.length,
+                        itemBuilder: (context, index) =>
+                            _buildUserCard(listaFiltrata[index]),
+                      ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue[900],
         child: const Icon(Icons.person_add, color: Colors.white),
-        onPressed: () => _showUserForm(context), // Nuovo utente (vuoto)
+        onPressed: () => _showUserForm(context),
       ),
     );
   }
@@ -96,28 +126,29 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 color: isSelected ? Colors.white : Colors.blue[900])),
         selected: isSelected,
         selectedColor: Colors.blue[900],
-        onSelected: (val) => setState(() => filtroRuolo = val ? ruolo : null),
+        onSelected: (val) {
+          setState(() {
+            filtroRuolo = val ? ruolo : null;
+          });
+        },
       ),
     );
   }
 
   Widget _buildUserCard(Utente u) {
+    final bool isManager = u.ruoloUtente == RuoloUtente.manager;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: () => _showUserDetails(u),
         leading: CircleAvatar(
-          backgroundColor: u.ruoloUtente == RuoloUtente.manager
-              ? Colors.orange[100]
-              : Colors.blue[100],
+          backgroundColor: isManager ? Colors.orange[100] : Colors.blue[100],
           child: Icon(Icons.person,
-              color: u.ruoloUtente == RuoloUtente.manager
-                  ? Colors.orange[800]
-                  : Colors.blue[800]),
+              color: isManager ? Colors.orange[800] : Colors.blue[800]),
         ),
         title: Text("${u.nome} ${u.cognome}"),
-        subtitle: Text(u.email),
+        subtitle: Text("${u.email} • ${u.ruoloUtente.name.toUpperCase()}"),
         trailing: const Icon(Icons.chevron_right),
       ),
     );
@@ -133,7 +164,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             _infoRow(Icons.email, "Email", u.email),
             _infoRow(Icons.work, "Ruolo", u.ruoloUtente.name.toUpperCase()),
-            if (u.patente != null)
+            if (u.patente != null && u.patente!.isNotEmpty)
               _infoRow(Icons.credit_card, "Patente", u.patente!),
           ],
         ),
@@ -148,8 +179,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _showUserForm(
-                  context, u); // MODIFICA: Passiamo l'utente esistente
+              _showUserForm(context, u);
             },
             child: const Text("MODIFICA"),
           ),
@@ -158,9 +188,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  // --- FORM DI MODIFICA/INSERIMENTO ---
   void _showUserForm(BuildContext context, [Utente? u]) {
-    // Inizializziamo i controller con i dati dell'utente se presente (u != null)
     final nomeController = TextEditingController(text: u?.nome ?? "");
     final cognomeController = TextEditingController(text: u?.cognome ?? "");
     final emailController = TextEditingController(text: u?.email ?? "");
@@ -173,7 +201,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => StatefulBuilder(
-        // Necessario per aggiornare il dropdown nel BottomSheet
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom + 20,
@@ -216,15 +243,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     minimumSize: const Size(double.infinity, 50),
                     backgroundColor: Colors.blue[900]),
                 onPressed: () async {
-                  // Qui andrebbe la logica di salvataggio del provider
-                  // provider.aggiornaUtente(...) o provider.creaUtente(...)
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(
-                          u == null ? "Utente creato" : "Utente aggiornato")));
+                  // Esegui qui la logica di salvataggio del provider (provider.salvaUtente...)
+                  // Una volta completato il salvataggio asincrono:
+                  if (mounted) {
+                    Navigator.pop(context);
+                    _caricaDati(); // Rinfresca la lista dopo l'operazione
+                  }
                 },
-                child:
-                    Text("SALVA", style: const TextStyle(color: Colors.white)),
+                child: const Text("SALVA", style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -246,7 +272,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           TextButton(
             onPressed: () async {
               await context.read<FleetProvider>().eliminaUtente(u.idUtente);
-              if (mounted) Navigator.pop(context);
+              if (mounted) {
+                Navigator.pop(context);
+                _caricaDati(); 
+              }
             },
             child: const Text("ELIMINA", style: TextStyle(color: Colors.red)),
           ),
@@ -263,7 +292,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           Icon(icon, size: 18, color: Colors.blue[900]),
           const SizedBox(width: 10),
           Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );

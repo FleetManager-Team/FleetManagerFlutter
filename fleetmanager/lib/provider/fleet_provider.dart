@@ -452,7 +452,7 @@ Future<void> chiudiManutenzione(int idManutenzione, String targa) async {
   // Utenti
   Future<List<Utente>> getTuttiDriver() async {
     List<Utente> tutti = await _authService.getTuttiUtenti();
-    return tutti.where((u) => u.ruoloUtente == RuoloUtente.driver).toList();
+    return tutti;
   }
 
   Future<void> creaUtente(Utente u) async {
