@@ -57,21 +57,22 @@ class FleetProvider with ChangeNotifier {
   }
 
   // Carica dati iniziali (mock/back-end)
-  Future<void> inizializzaDati() async {
-    _isLoading = true;
-    notifyListeners();
+Future<void> inizializzaDati() async {
+  // Se la lista ha già dei dati, non ricaricare dai mock (evita il reset)
+  if (_veicoli.isNotEmpty) return;
 
-    try {
-      // Caricamento mock / placeholder
-      _veicoli = MockData.veicoli;
-      _prenotazioni = MockData.prenotazioni;
-      _scadenze = []; // Implementa se hai mock per le scadenze
-      _notifiche = [];
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  _isLoading = true;
+  notifyListeners();
+  try {
+    _veicoli = List.from(MockData.veicoli);
+    _prenotazioni = List.from(MockData.prenotazioni);
+    _scadenze = [];
+    _notifiche = [];
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
 
   Future<List<Prenotazione>> getPrenotazioniVisibiliOrdinare(
     Utente utenteLoggato,
@@ -203,13 +204,14 @@ class FleetProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Helper per aggiornare lo stato di un veicolo nella lista locale
+// Helper per aggiornare lo stato di un veicolo nella lista locale
   void _aggiornaStatoLocaleVeicolo(String targa, StatoVeicolo nuovoStato) {
     int index = _veicoli.indexWhere((v) => v.targa == targa);
+    
     if (index != -1) {
-      // In Flutter/Dart gli oggetti sono spesso final, ne creiamo uno nuovo (Immutabilità)
+      // 1. Creiamo il nuovo oggetto veicolo con lo stato aggiornato
       var v = _veicoli[index];
-      _veicoli[index] = Veicolo(
+      var veicoloAggiornato = Veicolo(
         targa: v.targa,
         marca: v.marca,
         modello: v.modello,
@@ -218,6 +220,24 @@ class FleetProvider with ChangeNotifier {
         km: v.km,
         statoVeicolo: nuovoStato,
       );
+
+      // 2. MODIFICA CRUCIALE: Creiamo una COPIA della lista intera
+      // Questo "trucco" forza Flutter a capire che la lista è cambiata davvero
+      List<Veicolo> nuovaLista = List.from(_veicoli);
+      nuovaLista[index] = veicoloAggiornato;
+      
+      // 3. Sovrascriviamo la variabile privata con la nuova lista
+      _veicoli = nuovaLista;
+
+      // 4. Sincronizziamo anche il Mock (per evitare reset navigando tra le pagine)
+      int mockIndex = MockData.veicoli.indexWhere((mv) => mv.targa == targa);
+      if (mockIndex != -1) {
+        MockData.veicoli[mockIndex] = veicoloAggiornato;
+      }
+
+      // 5. Notifichiamo la UI
+      notifyListeners();
+      debugPrint("PROVIDER: Veicolo $targa aggiornato a $nuovoStato");
     }
   }
 
@@ -346,24 +366,51 @@ class FleetProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> segnalareInterventoStraordinario(
+ Future<void> segnalareInterventoStraordinario(
     Veicolo veicolo,
     String descrizione,
   ) async {
-    await _manutenzioneService.segnalareInterventoStraordinario(
-      veicolo.targa,
-      descrizione,
-    );
-    _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.inManutenzione);
-    await _notificaService.notificaInterventoStraordinario(1, veicolo.targa);
-    notifyListeners();
+    _isLoading = true;
+    notifyListeners(); // Comunica alla UI di mostrare eventuali caricamenti
+
+    try {
+      // 1. Invia i dati al tuo backend Java
+      await _manutenzioneService.segnalareInterventoStraordinario(
+        veicolo.targa,
+        descrizione,
+      );
+
+      // 2. Aggiorna la lista locale dei veicoli
+      _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.inManutenzione);
+
+      // 3. Invia la notifica (tua logica originale)
+      await _notificaService.notificaInterventoStraordinario(1, veicolo.targa);
+      
+    } catch (e) {
+      debugPrint("Errore durante la segnalazione: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners(); // Fondamentale: fa sparire il veicolo dai "Disponibili" e lo fa apparire in "Manutenzione"
+    }
   }
 
-  Future<void> chiudiManutenzione(int idManutenzione) async {
-    await _manutenzioneService.chiudiManutenzione(idManutenzione);
-    // Trova manutenzione e aggiorna veicolo
-    // Per semplicità, assumiamo che il backend gestisca
+Future<void> chiudiManutenzione(int idManutenzione, String targa) async {
+    _isLoading = true;
     notifyListeners();
+    try {
+      // Nota: assicurati che chiudiManutenzione nel service esista o usa chiudiIntervento
+      await _manutenzioneService.chiudiManutenzione(idManutenzione);
+      
+      // Aggiornamento locale
+      _aggiornaStatoLocaleVeicolo(targa, StatoVeicolo.disponibile);
+      
+      debugPrint("DEBUG: Veicolo $targa liberato correttamente.");
+    } catch (e) {
+      debugPrint("Errore: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Scadenze
@@ -439,4 +486,38 @@ class FleetProvider with ChangeNotifier {
     _notifiche = [];
     notifyListeners();
   }
+
+//DASHBOARD MANUTENZIONI - da ListaManutenzioneScreen
+Future<void> avviaManutenzioneStraordinaria(Veicolo veicolo, String descrizione) async {
+  _isLoading = true;
+  notifyListeners();
+  try {
+    // Chiama il service (che già hai)
+    await _manutenzioneService.segnalareInterventoStraordinario(veicolo.targa, descrizione);
+    
+    // Aggiorna lo stato locale per vedere subito il cambio nella UI
+    _aggiornaStatoLocaleVeicolo(veicolo.targa, StatoVeicolo.inManutenzione);
+    
+    // Invia la notifica (come da tua logica Java)
+    await _notificaService.notificaInterventoStraordinario(1, veicolo.targa);
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+
+Future<void> chiudiManutenzioneCompleta(int idManutenzione, String targa) async {
+  _isLoading = true;
+  notifyListeners();
+  try {
+    // 1. Chiama il service per chiudere l'intervento (usa 0 o l'id reale se lo hai)
+    await _manutenzioneService.chiudiManutenzione(idManutenzione);
+    
+    // 2. Riporta il veicolo a disponibile
+    _aggiornaStatoLocaleVeicolo(targa, StatoVeicolo.disponibile);
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
 }

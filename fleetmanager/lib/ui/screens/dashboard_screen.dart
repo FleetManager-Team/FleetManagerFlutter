@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
+import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_veicoli_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -161,7 +162,14 @@ class _HomeScreenState extends State<HomeScreen> {
           veicoliInManutenzione.toString(),
           Icons.build,
           Colors.orange,
-          () {},
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MaintenanceDashboardScreen(),
+              ),
+            );
+          },
         ),
       ],
     );
