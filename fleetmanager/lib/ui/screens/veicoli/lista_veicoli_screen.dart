@@ -3,10 +3,12 @@ import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
+import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
 
 class VehicleListScreen extends StatefulWidget {
   const VehicleListScreen({super.key});
@@ -16,48 +18,38 @@ class VehicleListScreen extends StatefulWidget {
 }
 
 class _VehicleListScreenState extends State<VehicleListScreen> {
-  // null significa "Tutti i veicoli"
   StatoVeicolo? filtroSelezionato;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
 
-    // Logica di filtraggio
     final veicoliFiltrati = filtroSelezionato == null
         ? provider.veicoli
         : provider.veicoli
-              .where((v) => v.statoVeicolo == filtroSelezionato)
-              .toList();
+            .where((v) => v.statoVeicolo == filtroSelezionato)
+            .toList();
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text(
-          "Parco Veicoli",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Parco Veicoli",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Sezione Filtri
           _buildFilterBar(),
-
-          // Lista Risultati
           Expanded(
             child: veicoliFiltrati.isEmpty
-                ? const Center(
-                    child: Text("Nessun veicolo trovato con questo filtro"),
-                  )
+                ? const Center(child: Text("Nessun veicolo trovato"))
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: veicoliFiltrati.length,
-                    itemBuilder: (context, index) {
-                      return _buildVehicleCard(veicoliFiltrati[index]);
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildVehicleCard(veicoliFiltrati[index]),
                   ),
           ),
         ],
@@ -65,7 +57,6 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     );
   }
 
-  /// Barra dei filtri orizzontale
   Widget _buildFilterBar() {
     return Container(
       height: 60,
@@ -84,28 +75,21 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     );
   }
 
-  /// Singolo pulsante di filtro
   Widget _filterChip(StatoVeicolo? stato, String label) {
     final isSelected = filtroSelezionato == stato;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : Colors.blue[800],
-          ),
-        ),
+        label: Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.blue[800])),
         selected: isSelected,
         selectedColor: Colors.blue[800],
         backgroundColor: Colors.blue[50],
-        onSelected: (selected) {
-          setState(() {
-            filtroSelezionato = selected ? stato : null;
-          });
-        },
+        onSelected: (val) =>
+            setState(() => filtroSelezionato = val ? stato : null),
       ),
     );
   }
@@ -115,9 +99,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        // --- AGGIUNGIAMO IL TOCCO QUI ---
         onTap: () => _showVehicleDetails(v),
-        // --------------------------------
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -131,182 +113,95 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             color: _getStatusColor(v.statoVeicolo),
           ),
         ),
-        title: Text(
-          "${v.marca} ${v.modello}",
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text("${v.marca} ${v.modello}",
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("Targa: ${v.targa} • ${v.km} km"),
         trailing: _buildStatusChip(v.statoVeicolo),
       ),
     );
   }
 
+  // --- LOGICA DEL POPUP DETTAGLI (Utilizza DetailsPopUp) ---
+
   void _showVehicleDetails(Veicolo v) {
     final provider = context.read<FleetProvider>();
 
-    // 1. Cerchiamo tutte le prenotazioni per questa targa che non siano annullate
-    // e che finiscano dopo "adesso"
-    List<Prenotazione> prenotazioniFuture = provider.prenotazioni
-        .where(
-          (p) =>
-              p.targa == v.targa &&
-              p.statoPrenotazione != StatoPrenotazione.annullata &&
-              p.dataFine.isAfter(DateTime.now()),
-        )
+    // Ricerca prossima prenotazione
+    List<Prenotazione> future = provider.prenotazioni
+        .where((p) =>
+            p.targa == v.targa &&
+            p.statoPrenotazione != StatoPrenotazione.annullata &&
+            p.dataFine.isAfter(DateTime.now()))
         .toList();
-
-    // 2. Le ordiniamo per data d'inizio (la più vicina per prima)
-    prenotazioniFuture.sort((a, b) => a.dataInizio.compareTo(b.dataInizio));
-
-    // 3. Prendiamo la prima (se esiste)
-    Prenotazione? prossima = prenotazioniFuture.isNotEmpty
-        ? prenotazioniFuture.first
-        : null;
+    future.sort((a, b) => a.dataInizio.compareTo(b.dataInizio));
+    Prenotazione? prossima = future.isNotEmpty ? future.first : null;
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                v.tipoVeicolo == TipoVeicolo.furgone
-                    ? Icons.local_shipping
-                    : Icons.directions_car,
-                color: Colors.blue[800],
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Text("${v.marca} ${v.modello}")),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _detailRow(Icons.tag, "Targa", v.targa),
-                _detailRow(
-                  Icons.calendar_today,
-                  "Anno",
-                  v.annoImmatricolazione.toString(),
-                ),
-                _detailRow(Icons.speed, "Km attuali", "${v.km} km"),
-                _detailRow(
-                  Icons.info,
-                  "Stato",
-                  v.statoVeicolo.name.toUpperCase(),
-                ),
-
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(),
-                ),
-
-                // --- SEZIONE PROSSIMA PRENOTAZIONE ---
-                Text(
-                  "PROSSIMA PRENOTAZIONE",
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue[900],
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                if (prossima != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.blue[100]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _detailRow(
-                          Icons.person,
-                          "ID Utente",
-                          "#${prossima.idUtente}",
-                        ),
-                        _detailRow(
-                          Icons.event,
-                          "Inizio",
-                          "${prossima.dataInizio.day}/${prossima.dataInizio.month} ore ${prossima.dataInizio.hour}:${prossima.dataInizio.minute.toString().padLeft(2, '0')}",
-                        ),
-                        _detailRow(
-                          Icons.event_available,
-                          "Fine",
-                          "${prossima.dataFine.day}/${prossima.dataFine.month} ore ${prossima.dataFine.hour}:${prossima.dataFine.minute.toString().padLeft(2, '0')}",
-                        ),
-                      ],
-                    ),
-                  ),
-                ] else ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      "Nessun impegno futuro. Il veicolo è libero.",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.green,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
+      builder: (context) => DetailsPopUp(
+        title: "${v.marca} ${v.modello}",
+        titleIcon: v.tipoVeicolo == TipoVeicolo.furgone
+            ? Icons.local_shipping
+            : Icons.directions_car,
+        details: [
+          _detailRow(Icons.tag, "Targa", v.targa),
+          _detailRow(Icons.calendar_today, "Immatricolazione",
+              v.annoImmatricolazione.toString()),
+          _detailRow(Icons.speed, "Chilometraggio", "${v.km} km"),
+          _detailRow(Icons.info_outline, "Stato Attuale",
+              v.statoVeicolo.name.toUpperCase()),
+        ],
+        extraSectionTitle: "PROSSIMO IMPEGNO",
+        extraContent: prossima != null
+            ? Column(
+                children: [
+                  _detailRow(
+                      Icons.person, "Driver ID", "#${prossima.idUtente}"),
+                  _detailRow(Icons.event, "Inizio",
+                      DateFormat('dd/MM HH:mm').format(prossima.dataInizio)),
+                  _detailRow(Icons.event_available, "Fine",
+                      DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
                 ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("CHIUDI"),
-            ),
-            // --- MODIFICA QUI: Mostra il tasto solo se NON è manager ---
-            if (provider.utenteLoggato?.ruoloUtente != RuoloUtente.manager &&
-                v.statoVeicolo == StatoVeicolo.disponibile)
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[800],
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Navigazione alla schermata di prenotazione per i Driver
-                },
-                child: const Text(
-                  "PRENOTA ORA",
-                  style: TextStyle(color: Colors.white),
-                ),
+              )
+            : const Text(
+                "Nessuna prenotazione futura. Il veicolo è libero.",
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green,
+                    fontStyle: FontStyle.italic),
               ),
-          ],
-        );
-      },
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("CHIUDI")),
+          if (provider.utenteLoggato?.ruoloUtente != RuoloUtente.manager &&
+              v.statoVeicolo == StatoVeicolo.disponibile)
+            ElevatedButton(
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
+              onPressed: () {
+                Navigator.pop(context);
+                // Navigazione alla prenotazione
+              },
+              child: const Text("PRENOTA ORA",
+                  style: TextStyle(color: Colors.white)),
+            ),
+        ],
+      ),
     );
   }
 
-  // Widget di supporto per le righe (mettilo sotto il metodo build)
+  // Helper per le righe di dettaglio
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          Text(
-            "$label: ",
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-          ),
+          Icon(icon, size: 16, color: Colors.blueGrey[400]),
+          const SizedBox(width: 10),
+          Text("$label: ",
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
@@ -314,18 +209,17 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   }
 
   Widget _buildStatusChip(StatoVeicolo stato) {
-    return Chip(
-      label: Text(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getStatusColor(stato),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
         stato.name.toUpperCase(),
         style: const TextStyle(
-          fontSize: 9,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
       ),
-      backgroundColor: _getStatusColor(stato),
-      side: BorderSide.none,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
