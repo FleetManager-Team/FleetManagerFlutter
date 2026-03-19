@@ -29,6 +29,7 @@ class FleetProvider with ChangeNotifier {
   List<Prenotazione> _prenotazioni = [];
   List<Scadenza> _scadenze = [];
   List<Notifica> _notifiche = [];
+  List<Utente> _utenti = [];
   Utente? _utenteLoggato;
   bool _isLoading = false;
 
@@ -37,6 +38,7 @@ class FleetProvider with ChangeNotifier {
   List<Prenotazione> get prenotazioni => _prenotazioni;
   List<Notifica> get notifiche => _notifiche;
   Utente? get utenteLoggato => _utenteLoggato;
+  List<Utente> get utenti => _utenti;
   bool get isLoading => _isLoading;
 
   // Login method
@@ -58,16 +60,19 @@ class FleetProvider with ChangeNotifier {
 
   // Carica dati iniziali (mock/back-end)
 Future<void> inizializzaDati() async {
-  // Se la lista ha già dei dati, non ricaricare dai mock (evita il reset)
-  if (_veicoli.isNotEmpty) return;
+  // SE LA LISTA È GIÀ PIENA, NON FARE NULLA (Evita il reset grafico)
+  if (_veicoli.isNotEmpty) return; 
 
   _isLoading = true;
   notifyListeners();
+
   try {
+    // Usiamo List.from per slegarci dai dati statici del Mock
     _veicoli = List.from(MockData.veicoli);
     _prenotazioni = List.from(MockData.prenotazioni);
-    _scadenze = [];
+    _utenti = List.from(MockData.utenti);
     _notifiche = [];
+    debugPrint("PROVIDER: Dati inizializzati con ${_veicoli.length} veicoli.");
   } finally {
     _isLoading = false;
     notifyListeners();
@@ -462,11 +467,27 @@ Future<void> chiudiManutenzione(int idManutenzione, String targa) async {
     notifyListeners();
   }
 
-  Future<void> eliminaUtente(int idUtente) async {
-    bool success = await _authService.eliminaUtente(idUtente);
-    if (!success) throw Exception('Errore eliminazione utente');
+ Future<void> eliminaUtente(int id) async {
+  _isLoading = true;
+  notifyListeners();
+
+  try {
+    // 1. Chiediamo al service di cancellare (DB o Mock)
+    bool success = await _authService.eliminaUtente(id);
+
+    if (success) {
+      // 2. Se il service dice OK, cancelliamo dalla lista locale "viva"
+      _utenti.removeWhere((u) => u.idUtente == id);
+      
+      // 3. Notifichiamo la UI: la card sparirà all'istante!
+      notifyListeners();
+      debugPrint("Eliminazione completata.");
+    }
+  } finally {
+    _isLoading = false;
     notifyListeners();
   }
+}
 
   // Notifiche
   Future<List<Notifica>> getNotifichePerUtente() async {

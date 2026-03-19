@@ -35,18 +35,23 @@ class AuthService {
     }
   }
 
-  // Da GestoreLoginImpl: createUtente
-  Future<bool> createUtente(Utente nuovoUtente) async {
-    if (nuovoUtente.email.isEmpty || nuovoUtente.email.isEmpty) {
-      return false;
-    }
-    try {
-      final response = await _dio.post('/utenti', data: nuovoUtente.toJson());
-      return response.statusCode == 201;
-    } catch (e) {
-      return false;
-    }
+Future<bool> createUtente(Utente nuovoUtente) async {
+  // Corretto: controlliamo email e nome (non due volte email)
+  if (nuovoUtente.email.isEmpty || nuovoUtente.nome.isEmpty) {
+    return false;
   }
+  try {
+    // Se hai un backend attivo:
+    // final response = await _dio.post('/utenti', data: nuovoUtente.toJson());
+    // return response.statusCode == 201;
+
+    // Se sei in fase Mock (Provvisorio):
+    MockData.utenti.add(nuovoUtente); 
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
   // Da GestoreLoginImpl: eliminaUtente
   Future<bool> eliminaUtente(int idUtente) async {

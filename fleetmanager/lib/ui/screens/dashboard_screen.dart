@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
+import 'package:fleetmanager/ui/screens/utenti/lista_utenti_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_veicoli_screen.dart';
 import 'package:flutter/material.dart';
@@ -347,6 +348,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDrawer(BuildContext context, Utente? utente) {
+    final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
+
     return Drawer(
       child: ListView(
         children: [
@@ -361,17 +364,28 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text("Dashboard"),
-            onTap: () {},
+            onTap: () => Navigator.pop(context), // Chiude il drawer
           ),
-          ListTile(
-            leading: const Icon(Icons.directions_car),
-            title: const Text("Flotta"),
-            onTap: () {},
-          ),
+          
+          // MOSTRA "GESTIONE UTENTI" SOLO SE L'UTENTE È UN MANAGER
+          if (isManager)
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text("Gestione Utenti"),
+              onTap: () {
+                Navigator.pop(context); // Chiude il drawer
+                // Qui dovrai navigare alla tua schermata di gestione utenti
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen()));
+              },
+            ),
+
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text("Storico"),
-            onTap: () {},
+            onTap: () {
+               Navigator.pop(context);
+               // Navigazione allo storico...
+            },
           ),
           const Divider(),
           ListTile(
