@@ -17,11 +17,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
-
+    final listaDaMostrare = provider.utenti
+        .where((u) => u.ruoloUtente != RuoloUtente.admin)
+        .toList();
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Gestione Utenti", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Gestione Utenti",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
         elevation: 0,
@@ -31,22 +34,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           _buildFilterBar(),
           Expanded(
             child: FutureBuilder<List<Utente>>(
-              future: provider.getTuttiDriver(), // Assicurati che nel provider restituisca tutti
+              future: provider
+                  .getTuttiDriver(), // Assicurati che nel provider restituisca tutti
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
+
                 final utenti = snapshot.data ?? [];
                 // Applichiamo il filtro driver/manager
-                final mostrati = filtroRuolo == null 
-                    ? utenti 
-                    : utenti.where((u) => u.ruoloUtente == filtroRuolo).toList();
+                final mostrati = filtroRuolo == null
+                    ? utenti
+                    : utenti
+                        .where((u) => u.ruoloUtente == filtroRuolo)
+                        .toList();
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
-                  itemCount: mostrati.length,
-                  itemBuilder: (context, index) => _buildUserCard(mostrati[index]),
+                  itemCount: listaDaMostrare.length,
+                  itemBuilder: (context, index) =>
+                      _buildUserCard(listaDaMostrare[index]),
                 );
               },
             ),
@@ -82,7 +89,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.blue[900])),
+        label: Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.blue[900])),
         selected: isSelected,
         selectedColor: Colors.blue[900],
         onSelected: (val) => setState(() => filtroRuolo = val ? ruolo : null),
@@ -97,8 +108,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       child: ListTile(
         onTap: () => _showUserDetails(u),
         leading: CircleAvatar(
-          backgroundColor: u.ruoloUtente == RuoloUtente.manager ? Colors.orange[100] : Colors.blue[100],
-          child: Icon(Icons.person, color: u.ruoloUtente == RuoloUtente.manager ? Colors.orange[800] : Colors.blue[800]),
+          backgroundColor: u.ruoloUtente == RuoloUtente.manager
+              ? Colors.orange[100]
+              : Colors.blue[100],
+          child: Icon(Icons.person,
+              color: u.ruoloUtente == RuoloUtente.manager
+                  ? Colors.orange[800]
+                  : Colors.blue[800]),
         ),
         title: Text("${u.nome} ${u.cognome}"),
         subtitle: Text(u.email),
@@ -117,7 +133,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             _infoRow(Icons.email, "Email", u.email),
             _infoRow(Icons.work, "Ruolo", u.ruoloUtente.name.toUpperCase()),
-            if (u.patente != null) _infoRow(Icons.credit_card, "Patente", u.patente!),
+            if (u.patente != null)
+              _infoRow(Icons.credit_card, "Patente", u.patente!),
           ],
         ),
         actions: [
@@ -131,7 +148,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _showUserForm(context, u); // MODIFICA: Passiamo l'utente esistente
+              _showUserForm(
+                  context, u); // MODIFICA: Passiamo l'utente esistente
             },
             child: const Text("MODIFICA"),
           ),
@@ -152,42 +170,61 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => StatefulBuilder( // Necessario per aggiornare il dropdown nel BottomSheet
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => StatefulBuilder(
+        // Necessario per aggiornare il dropdown nel BottomSheet
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            left: 20, right: 20, top: 20
-          ),
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              left: 20,
+              right: 20,
+              top: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(u == null ? "Nuovo Utente" : "Modifica Utente", 
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(u == null ? "Nuovo Utente" : "Modifica Utente",
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 15),
-              TextField(controller: nomeController, decoration: const InputDecoration(labelText: "Nome")),
-              TextField(controller: cognomeController, decoration: const InputDecoration(labelText: "Cognome")),
-              TextField(controller: emailController, decoration: const InputDecoration(labelText: "Email")),
-              TextField(controller: patenteController, decoration: const InputDecoration(labelText: "Patente (opzionale)")),
+              TextField(
+                  controller: nomeController,
+                  decoration: const InputDecoration(labelText: "Nome")),
+              TextField(
+                  controller: cognomeController,
+                  decoration: const InputDecoration(labelText: "Cognome")),
+              TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: "Email")),
+              TextField(
+                  controller: patenteController,
+                  decoration:
+                      const InputDecoration(labelText: "Patente (opzionale)")),
               DropdownButtonFormField<RuoloUtente>(
                 value: ruoloSelezionato,
-                items: [RuoloUtente.driver, RuoloUtente.manager].map((r) => 
-                  DropdownMenuItem(value: r, child: Text(r.name.toUpperCase()))).toList(),
-                onChanged: (val) => setModalState(() => ruoloSelezionato = val!),
+                items: [RuoloUtente.driver, RuoloUtente.manager]
+                    .map((r) => DropdownMenuItem(
+                        value: r, child: Text(r.name.toUpperCase())))
+                    .toList(),
+                onChanged: (val) =>
+                    setModalState(() => ruoloSelezionato = val!),
                 decoration: const InputDecoration(labelText: "Ruolo"),
               ),
               const SizedBox(height: 25),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: Colors.blue[900]),
+                style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    backgroundColor: Colors.blue[900]),
                 onPressed: () async {
                   // Qui andrebbe la logica di salvataggio del provider
                   // provider.aggiornaUtente(...) o provider.creaUtente(...)
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(u == null ? "Utente creato" : "Utente aggiornato"))
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(
+                          u == null ? "Utente creato" : "Utente aggiornato")));
                 },
-                child: Text("SALVA", style: const TextStyle(color: Colors.white)),
+                child:
+                    Text("SALVA", style: const TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -203,7 +240,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         title: const Text("Sei sicuro?"),
         content: Text("L'utente ${u.nome} verrà eliminato definitivamente."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("ANNULLA")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("ANNULLA")),
           TextButton(
             onPressed: () async {
               await context.read<FleetProvider>().eliminaUtente(u.idUtente);
