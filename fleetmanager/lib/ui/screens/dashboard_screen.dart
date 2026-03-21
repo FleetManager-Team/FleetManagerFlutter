@@ -23,29 +23,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Future<List<Prenotazione>>? _prenotazioniFuture;
+  // RIMOSSO: _prenotazioniFuture (non serve più con il caricamento centralizzato)
 
   @override
   void initState() {
     super.initState();
-    // Carichiamo i dati all'avvio (usa i Mock caricati ieri)
+    // Non carichiamo qui perché lo abbiamo fatto nel login, 
+    // ma lasciamo il check di sicurezza se per caso i dati fossero vuoti
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FleetProvider>().inizializzaDati();
+      final provider = context.read<FleetProvider>();
+      if (provider.veicoli.isEmpty) {
+        provider.inizializzaDati();
+      }
     });
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final provider = context.read<FleetProvider>();
-    final utente = provider.utenteLoggato;
-    if (utente != null && _prenotazioniFuture == null) {
-      _prenotazioniFuture = provider.getPrenotazioniVisibiliOrdinare(utente);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // watch permette alla UI di reagire istantaneamente quando i dati su Supabase cambiano
     final provider = context.watch<FleetProvider>();
     final utente = provider.utenteLoggato;
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
@@ -69,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (isManager) ...[
                       _buildAdminStats(provider),
                       const SizedBox(height: 25),
-                      _buildSectionTitle("Prenotazioni Attive"),
+                      _buildSectionTitle("Prenotazioni in Sede / Attive"),
                       _buildManagerPrenotazioni(provider, utente),
                     ] else ...[
                       _buildDriverActionCard(context),
@@ -98,9 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_none),
-          onPressed: () {
-            /* Naviga a Notifiche */
-          },
+          onPressed: () { /* Future: Notifiche */ },
         ),
       ],
     );
@@ -110,10 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Bentornato,",
-          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-        ),
+        Text("Bentornato,", style: TextStyle(fontSize: 16, color: Colors.grey[600])),
         Text(
           "${utente?.nome ?? ''} ${utente?.cognome ?? ''}",
           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -122,95 +112,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Dashboard per MANAGER: Statistiche rapide
   Widget _buildAdminStats(FleetProvider provider) {
-    final veicoliInManutenzione = provider.veicoli
-        .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
-        .length;
+    final inManutenzione = provider.veicoli.where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione).length;
 
     return Row(
       children: [
-        _statCard(
-          "Totale Veicoli",
-          provider.veicoli.length.toString(),
-          Icons.directions_car,
-          Colors.blue,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const VehicleListScreen(),
-              ),
-            );
-          },
-        ),
-        _statCard(
-          "Prenotazioni",
-          provider.prenotazioni.length.toString(),
-          Icons.assignment,
-          Colors.purple,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BookingListScreen(),
-              ),
-            );
-          },
-        ),
-        _statCard(
-          "In Manutenzione",
-          veicoliInManutenzione.toString(),
-          Icons.build,
-          Colors.orange,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const MaintenanceDashboardScreen(),
-              ),
-            );
-          },
-        ),
+        _statCard("Auto", provider.veicoli.length.toString(), Icons.directions_car, Colors.blue, 
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VehicleListScreen()))),
+        _statCard("Prenotazioni", provider.prenotazioni.length.toString(), Icons.assignment, Colors.purple, 
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingListScreen()))),
+        _statCard("Officina", inManutenzione.toString(), Icons.build, Colors.orange, 
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MaintenanceDashboardScreen()))),
       ],
     );
   }
 
-  // Dashboard per DRIVER: Azione rapida
   Widget _buildDriverActionCard(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue[700]!, Colors.blue[500]!],
-        ),
+        gradient: LinearGradient(colors: [Colors.blue[700]!, Colors.blue[500]!]),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Hai bisogno di un'auto?",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const Text("Hai bisogno di un'auto?", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.blue[700],
-            ),
-            child: const Text("PRENOTA ORA"),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen())),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue[700]),
+            child: const Text("NUOVA PRENOTAZIONE"),
           ),
         ],
       ),
@@ -219,62 +152,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildManagerPrenotazioni(FleetProvider provider, Utente? utente) {
     if (utente == null) return const SizedBox.shrink();
+    // Il manager vede le prenotazioni che richiedono attenzione (Richieste o Attive)
+    final attive = provider.prenotazioni.where((p) => 
+      p.statoPrenotazione == StatoPrenotazione.richiesta || 
+      p.statoPrenotazione == StatoPrenotazione.attiva).toList();
 
-    // Filtriamo: mostriamo solo chi è "In corso"
-    final attive = provider.prenotazioni
-        .where((p) => p.statoPrenotazione == StatoPrenotazione.attiva)
-        .toList();
-
-    if (attive.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        child: Text(
-          "Nessun veicolo attualmente fuori sede.",
-          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-        ),
-      );
-    }
-
-    // Restituisce la lista (senza altri titoli interni)
-    return _buildPrenotazioniList(attive, true, provider, utente);
+    return _buildPrenotazioniList(attive, true);
   }
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
     final utente = provider.utenteLoggato;
-    final miePrenotazioni = provider.prenotazioni
-        .where((p) => p.idUtente == utente?.idUtente)
-        .toList();
+    // Il driver vede solo le sue prenotazioni non ancora concluse
+    final mie = provider.prenotazioni.where((p) => 
+      p.idUtente == utente?.idUtente && 
+      p.statoPrenotazione != StatoPrenotazione.completata && 
+      p.statoPrenotazione != StatoPrenotazione.annullata).toList();
 
-    if (miePrenotazioni.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text(
-            "Non hai ancora effettuato prenotazioni.",
-            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-          ),
-        ),
+    return _buildPrenotazioniList(mie, false);
+  }
+
+  Widget _buildPrenotazioniList(List<Prenotazione> prenotazioni, bool isManager) {
+    if (prenotazioni.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Text("Nessuna attività recente.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
       );
     }
 
-    return _buildPrenotazioniList(
-      miePrenotazioni, // Passiamo solo la lista filtrata
-      false,
-      provider,
-      utente,
-    );
-  }
-
-  Widget _buildPrenotazioniList(
-    List<Prenotazione> prenotazioni,
-    bool isManager,
-    FleetProvider provider,
-    Utente? utente,
-  ) {
-    if (prenotazioni.isEmpty)
-      return const Center(child: Text("Nessuna prenotazione trovata"));
-
-    String formatDate(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
+    final df = DateFormat('dd/MM HH:mm');
 
     return ListView.builder(
       shrinkWrap: true,
@@ -283,66 +188,56 @@ class _HomeScreenState extends State<HomeScreen> {
       itemBuilder: (context, index) {
         final p = prenotazioni[index];
         return Card(
-          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
-            title: Text("Prenotazione #${p.idPrenotazione}"),
-            subtitle: Column(
-              // Usiamo una Column per aggiungere più info
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isManager) // Solo il manager vede di chi è la prenotazione
-                  Text(
-                    "Driver ID: ${p.idUtente}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueGrey,
-                    ),
-                  ),
-                Text("Veicolo: ${p.targa}"),
-                Text("Dal: ${formatDate(p.dataInizio)}"),
-                Text("Al: ${formatDate(p.dataFine)}"),
-              ],
+            leading: CircleAvatar(
+              backgroundColor: _getStatusColor(p.statoPrenotazione).withOpacity(0.1),
+              child: Icon(Icons.calendar_today, color: _getStatusColor(p.statoPrenotazione), size: 20),
             ),
-            isThreeLine: true,
-            // ... resto del codice (Chip e azioni)
+            title: Text("${p.targa} - ${p.statoPrenotazione.name.toUpperCase()}", 
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: Text("Dal: ${df.format(p.dataInizio)}\nAl: ${df.format(p.dataFine)}", 
+              style: const TextStyle(fontSize: 12)),
+            trailing: isManager && p.statoPrenotazione == StatoPrenotazione.richiesta
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingListScreen())),
+                  )
+                : null,
           ),
         );
       },
     );
   }
 
-  // Helper UI
-  Widget _statCard(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  // Helper per colori stati
+  Color _getStatusColor(StatoPrenotazione stato) {
+    switch (stato) {
+      case StatoPrenotazione.richiesta: return Colors.orange;
+      case StatoPrenotazione.confermata: return Colors.blue;
+      case StatoPrenotazione.attiva: return Colors.green;
+      default: return Colors.grey;
+    }
+  }
+
+  Widget _statCard(String label, String value, IconData icon, Color color, VoidCallback onTap) {
     return Expanded(
       child: Card(
-        clipBehavior:
-            Clip.antiAlias, // Serve per far vedere l'effetto onda del tocco
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
-          onTap: onTap, // Qui passiamo la funzione di navigazione
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               children: [
-                Icon(icon, color: color),
+                Icon(icon, color: color, size: 24),
                 const SizedBox(height: 8),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
+                Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center),
               ],
             ),
           ),
@@ -353,73 +248,55 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _buildDrawer(BuildContext context, Utente? utente) {
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
-
     return Drawer(
-      child: ListView(
+      child: Column(
         children: [
           UserAccountsDrawerHeader(
+            decoration: BoxDecoration(color: Colors.blue[800]),
             accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
             accountEmail: Text(utente?.email ?? ''),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 40),
-            ),
+            currentAccountPicture: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person, size: 40)),
           ),
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text("Dashboard"),
-            onTap: () => Navigator.pop(context), // Chiude il drawer
+            onTap: () => Navigator.pop(context),
           ),
-
-          // MOSTRA "GESTIONE UTENTI" SOLO SE L'UTENTE È UN MANAGER
           if (isManager)
             ListTile(
               leading: const Icon(Icons.people),
               title: const Text("Gestione Utenti"),
               onTap: () {
-                Navigator.pop(context); // Chiude il drawer
-                // Qui dovrai navigare alla tua schermata di gestione utenti
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const UserManagementScreen()));
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen()));
               },
             ),
-
           ListTile(
             leading: const Icon(Icons.history),
-            title: const Text("Storico"),
+            title: const Text("Storico Prenotazioni"),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const BookingHistoryScreen()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingHistoryScreen()));
             },
           ),
+          const Spacer(),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
             title: const Text("Logout"),
             onTap: () {
               context.read<FleetProvider>().logout();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
             },
           ),
+          const SizedBox(height: 20),
         ],
       ),
     );

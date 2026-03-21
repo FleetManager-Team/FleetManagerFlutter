@@ -1,60 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../../provider/fleet_provider.dart';
-import '../../../models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+
 
 class NuovaPrenotazioneScreen extends StatefulWidget {
+  const NuovaPrenotazioneScreen({super.key});
+
   @override
-  _NuovaPrenotazioneScreenState createState() =>
-      _NuovaPrenotazioneScreenState();
+  State<NuovaPrenotazioneScreen> createState() => _NuovaPrenotazioneScreenState();
 }
 
 class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
   String? _targaSelezionata;
-  DateTime _inizio = DateTime.now()
-      .add(Duration(days: 1))
-      .copyWith(hour: 9, minute: 0);
-  DateTime _fine = DateTime.now()
-      .add(Duration(days: 1))
-      .copyWith(hour: 18, minute: 0);
+  
+  // Impostiamo di default domani alle 09:00
+  DateTime _inizio = DateTime.now().add(const Duration(days: 1)).copyWith(hour: 9, minute: 0, second: 0, millisecond: 0);
+  DateTime _fine = DateTime.now().add(const Duration(days: 1)).copyWith(hour: 18, minute: 0, second: 0, millisecond: 0);
 
+  // Helper per selezionare data e ora
   Future<void> _selectDateTime(BuildContext context, bool isStart) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: isStart ? _inizio : _fine,
-      firstDate: isStart ? DateTime.now() : _inizio,
+      firstDate: DateTime.now(),
       lastDate: DateTime(2030),
       locale: const Locale('it', 'IT'),
     );
-    if (pickedDate != null) {
+
+    if (pickedDate != null && mounted) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(isStart ? _inizio : _fine),
-        builder: (BuildContext context, Widget? child) {
-          return Localizations.override(
-            context: context,
-            locale: const Locale('it', 'IT'),
-            child: child,
-          );
-        },
       );
+
       if (pickedTime != null) {
-        final DateTime selectedDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
         setState(() {
+          final selected = DateTime(
+            pickedDate.year, pickedDate.month, pickedDate.day,
+            pickedTime.hour, pickedTime.minute,
+          );
           if (isStart) {
-            _inizio = selectedDateTime;
+            _inizio = selected;
             if (_fine.isBefore(_inizio)) {
-              _fine = _inizio.add(Duration(hours: 1));
+              _fine = _inizio.add(const Duration(hours: 1));
             }
           } else {
-            _fine = selectedDateTime;
+            _fine = selected;
           }
         });
       }
@@ -63,91 +56,113 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<FleetProvider>(context);
+    // Usiamo watch per reagire ai cambiamenti del provider (es. caricamento completato)
+    final provider = context.watch<FleetProvider>();
+    
+    // Filtriamo solo i veicoli realmente disponibili nel DB
     final veicoliDisponibili = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.disponibile)
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text("Prenota Veicolo")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Menu a tendina Veicoli disponibili
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: "Seleziona Veicolo Disponibile",
-              ),
-              value: _targaSelezionata,
-              onChanged: (val) => setState(() => _targaSelezionata = val),
-              items: veicoliDisponibili
-                  .map(
-                    (v) => DropdownMenuItem(
+      appBar: AppBar(
+        title: const Text("Prenota Veicolo"),
+        backgroundColor: Colors.blue[900],
+        foregroundColor: Colors.white,
+      ),
+      body: provider.isLoading 
+          ? const Center(child: CircularProgressIndicator()) // Mostra caricamento se il provider sta lavorando
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text("Scegli un veicolo dalla flotta:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  
+                  // Dropdown Veicoli
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.directions_car),
+                    ),
+                    hint: const Text("Seleziona Veicolo"),
+                    value: _targaSelezionata,
+                    onChanged: (val) => setState(() => _targaSelezionata = val),
+                    items: veicoliDisponibili.map((v) => DropdownMenuItem(
                       value: v.targa,
                       child: Text("${v.marca} ${v.modello} (${v.targa})"),
+                    )).toList(),
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Text("Seleziona periodo:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+
+                  // Data Inizio
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.login, color: Colors.green),
+                      title: const Text("Inizio"),
+                      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(_inizio)),
+                      onTap: () => _selectDateTime(context, true),
                     ),
-                  )
-                  .toList(),
-              validator: (value) =>
-                  value == null ? 'Seleziona un veicolo' : null,
-            ),
+                  ),
 
-            SizedBox(height: 20),
+                  // Data Fine
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text("Fine"),
+                      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(_fine)),
+                      onTap: () => _selectDateTime(context, false),
+                    ),
+                  ),
 
-            // Selettore Data e Ora Inizio
-            ListTile(
-              title: Text(
-                "Inizio: ${DateFormat('dd/MM/yyyy HH:mm').format(_inizio)}",
-              ),
-              trailing: Icon(Icons.calendar_today),
-              onTap: () => _selectDateTime(context, true),
-            ),
+                  const Spacer(),
 
-            // Selettore Data e Ora Fine
-            ListTile(
-              title: Text(
-                "Fine: ${DateFormat('dd/MM/yyyy HH:mm').format(_fine)}",
-              ),
-              trailing: Icon(Icons.calendar_today),
-              onTap: () => _selectDateTime(context, false),
-            ),
+                  // Pulsante Conferma
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[900],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: (_targaSelezionata == null || _fine.isBefore(_inizio))
+                        ? null
+                        : () async {
+                            try {
+                              if (provider.utenteLoggato == null) throw "Utente non loggato";
 
-            Spacer(),
+                              final veicolo = veicoliDisponibili.firstWhere((v) => v.targa == _targaSelezionata);
+                              
+                              await provider.creaPrenotazione(
+                                provider.utenteLoggato!,
+                                veicolo,
+                                _inizio,
+                                _fine,
+                              );
 
-            ElevatedButton(
-              onPressed: _targaSelezionata == null || _fine.isBefore(_inizio)
-                  ? null
-                  : () async {
-                      try {
-                        await provider.creaPrenotazione(
-                          provider.utenteLoggato!,
-                          veicoliDisponibili.firstWhere(
-                            (v) => v.targa == _targaSelezionata!,
-                          ),
-                          _inizio,
-                          _fine,
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Prenotazione creata con successo!"),
-                          ),
-                        );
-                        Navigator.pop(context);
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Errore: ${e.toString()}")),
-                        );
-                      }
-                    },
-              child: const Text("CONFERMA PRENOTAZIONE"),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Richiesta inviata! In attesa di approvazione.")),
+                                );
+                                Navigator.pop(context);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Errore: ${e.toString()}"), backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          },
+                    child: const Text("INVIA RICHIESTA PRENOTAZIONE", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

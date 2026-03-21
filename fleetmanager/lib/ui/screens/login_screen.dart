@@ -46,40 +46,63 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState!.validate()) {
+      final provider = context.read<FleetProvider>();
 
-    final fleetProvider = Provider.of<FleetProvider>(context, listen: false);
-    final success = await fleetProvider.login(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+      try {
+        // 1. Esegui il login su Supabase
+        final success = await provider.login(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
 
-    if (success && mounted) {
-      // Navigazione alla dashboard con animazione
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(), // Placeholder per dashboard
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOut;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
+        if (success) {
+          // 2. Carica i dati dal database prima di entrare
+          await provider.inizializzaDati();
+
+          if (mounted) {
+            // 3. Navigazione alla dashboard con la tua animazione originale
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(1.0, 0.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOut;
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
+              ),
             );
-          },
-        ),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Email o password errati'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+          }
+        } else {
+          // 4. Gestione errore credenziali
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Email o password errati'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // 5. Gestione errori di rete/connessione
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Errore di connessione: $e'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -161,13 +184,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 if (value == null || value.isEmpty) {
                                   return 'Inserisci l\'email';
                                 }
-
-                                // Permettiamo anche credenziali rapide per test:
-                                // - email/password = a/a oppure b/b
                                 if (value == 'a' || value == 'b') {
                                   return null;
                                 }
-
                                 if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                                   return 'Email non valida';
                                 }
@@ -194,19 +213,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 if (value == null || value.isEmpty) {
                                   return 'Inserisci la password';
                                 }
-
-                                // Permettiamo anche credenziali rapide per test: a/a o b/b
                                 if ((value == 'a' || value == 'b') &&
                                     (_emailController.text == 'a' || _emailController.text == 'b')) {
                                   return null;
                                 }
-
                                 if (value.length < 6) {
                                   return 'Password troppo corta';
                                 }
                                 return null;
                               },
-
                             ),
                             const SizedBox(height: 24),
 
@@ -241,7 +256,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             const SizedBox(height: 16),
                             TextButton(
                               onPressed: () {
-                                // Placeholder per recupero password
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Funzionalità in sviluppo')),
                                 );

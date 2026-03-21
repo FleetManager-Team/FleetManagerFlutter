@@ -5,7 +5,7 @@ import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
-import 'package:fleetmanager/ui/widgets/details_pop_up.dart'; // Importa il widget condiviso
+import 'package:collection/collection.dart';
 
 class BookingListScreen extends StatefulWidget {
   const BookingListScreen({super.key});
@@ -22,17 +22,16 @@ class _BookingListScreenState extends State<BookingListScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
-    final isManager =
-        provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager;
+    final isManager = provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager;
 
+    // Filtriamo la lista basandoci su targa e stato
     List<Prenotazione> lista = provider.prenotazioni.where((p) {
-      final matchStato =
-          filtroStato == null || p.statoPrenotazione == filtroStato;
-      final matchRicerca =
-          p.targa.toLowerCase().contains(queryRicerca.toLowerCase());
+      final matchStato = filtroStato == null || p.statoPrenotazione == filtroStato;
+      final matchRicerca = p.targa.toLowerCase().contains(queryRicerca.toLowerCase());
       return matchStato && matchRicerca;
     }).toList();
 
+    // Ordinamento
     lista.sort((a, b) {
       int cmp = a.dataInizio.compareTo(b.dataInizio);
       return ordineCrescente ? cmp : -cmp;
@@ -41,15 +40,17 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Registro Prenotazioni",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Registro Prenotazioni", style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blue[800],
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(
-                ordineCrescente ? Icons.arrow_upward : Icons.arrow_downward),
+            icon: Icon(ordineCrescente ? Icons.arrow_upward : Icons.arrow_downward),
             onPressed: () => setState(() => ordineCrescente = !ordineCrescente),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => provider.inizializzaDati(), // Refresh manuale dal DB
           ),
         ],
       ),
@@ -57,86 +58,72 @@ class _BookingListScreenState extends State<BookingListScreen> {
         children: [
           _buildTopActions(),
           Expanded(
-            child: lista.isEmpty
-                ? const Center(child: Text("Nessuna prenotazione trovata"))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: lista.length,
-                    itemBuilder: (context, index) =>
-                        _buildBookingCard(lista[index], provider, isManager),
-                  ),
+            child: provider.isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : lista.isEmpty
+                    ? const Center(child: Text("Nessuna prenotazione trovata"))
+                    : RefreshIndicator(
+                        onRefresh: () => provider.inizializzaDati(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: lista.length,
+                          itemBuilder: (context, index) => _buildBookingCard(lista[index], provider, isManager),
+                        ),
+                      ),
           ),
         ],
       ),
     );
   }
 
-  // --- LOGICA DEL POPUP AGGIORNATA ---
-  void _showBookingDetails(
-      Prenotazione p, FleetProvider provider, bool isManager) {
+  void _showBookingDetails(Prenotazione p, FleetProvider provider, bool isManager) {
     final statusColor = _getBookingStatusColor(p.statoPrenotazione);
+    
+    // Cerchiamo il nome del driver per renderlo leggibile
+    final driver = provider.utenti.firstWhereOrNull((u) => u.idUtente == p.idUtente);
+    final nomeDriver = driver != null ? "${driver.nome} ${driver.cognome}" : "ID: #${p.idUtente}";
 
     showDialog(
       context: context,
-      builder: (context) => DetailsPopUp(
-        title: "Dettaglio Prenotazione",
-        titleIcon: Icons.assignment,
-        details: [
-          _detailRow(Icons.directions_car, "Veicolo", p.targa),
-          _detailRow(Icons.person, "Driver ID", "#${p.idUtente}"),
-          _detailRow(Icons.calendar_today, "Inizio",
-              DateFormat('dd/MM/yyyy HH:mm').format(p.dataInizio)),
-          _detailRow(Icons.event_available, "Fine",
-              DateFormat('dd/MM/yyyy HH:mm').format(p.dataFine)),
-          _detailRow(Icons.info_outline, "Tipo",
-              p.tipoPrenotazione.name.toUpperCase()),
-        ],
-        // Qui sfruttiamo il nuovo "Riquadro Automatico" del DetailsPopUp
-        extraSectionTitle: "Stato Attuale",
-        extraContent: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+      builder: (context) => AlertDialog(
+        title: const Text("Dettaglio Prenotazione"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lens, size: 12, color: statusColor),
-            const SizedBox(width: 8),
-            Text(
-              p.statoPrenotazione.name.toUpperCase(),
-              style: TextStyle(
-                  color: statusColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14),
-            ),
+            _detailRow(Icons.directions_car, "Veicolo", p.targa),
+            _detailRow(Icons.person, "Driver", nomeDriver),
+            _detailRow(Icons.calendar_today, "Inizio", DateFormat('dd/MM HH:mm').format(p.dataInizio)),
+            _detailRow(Icons.event_available, "Fine", DateFormat('dd/MM HH:mm').format(p.dataFine)),
+            const Divider(),
+            Text(p.statoPrenotazione.name.toUpperCase(), 
+                 style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("CHIUDI")),
-          if (isManager &&
-              p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("CHIUDI")),
+          if (isManager && p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.green[600]),
-              onPressed: () {
-                provider.confermaPrenotazione(p.idPrenotazione);
-                Navigator.pop(context);
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () async {
+                await provider.confermaPrenotazione(p.idPrenotazione);
+                if (mounted) Navigator.pop(context);
               },
-              child:
-                  const Text("APPROVA", style: TextStyle(color: Colors.white)),
+              child: const Text("APPROVA", style: TextStyle(color: Colors.white)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red[600]),
-              onPressed: () {
-                provider.annullaPrenotazione(p.idPrenotazione);
-                Navigator.pop(context);
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                await provider.annullaPrenotazione(p.idPrenotazione);
+                if (mounted) Navigator.pop(context);
               },
-              child:
-                  const Text("RIFIUTA", style: TextStyle(color: Colors.white)),
+              child: const Text("RIFIUTA", style: TextStyle(color: Colors.white)),
             ),
           ],
         ],
       ),
     );
   }
+
 
   // Supporto UI
   Widget _buildTopActions() {

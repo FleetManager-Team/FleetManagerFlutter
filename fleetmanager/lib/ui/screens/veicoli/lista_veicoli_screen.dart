@@ -1,6 +1,7 @@
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +23,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // watch permette alla lista di aggiornarsi in tempo reale se cambiano i dati sul DB
     final provider = context.watch<FleetProvider>();
 
     final veicoliFiltrati = filtroSelezionato == null
@@ -43,14 +45,16 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         children: [
           _buildFilterBar(),
           Expanded(
-            child: veicoliFiltrati.isEmpty
-                ? const Center(child: Text("Nessun veicolo trovato"))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: veicoliFiltrati.length,
-                    itemBuilder: (context, index) =>
-                        _buildVehicleCard(veicoliFiltrati[index]),
-                  ),
+            child: provider.isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : veicoliFiltrati.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: veicoliFiltrati.length,
+                        itemBuilder: (context, index) =>
+                            _buildVehicleCard(veicoliFiltrati[index]),
+                      ),
           ),
         ],
       ),
@@ -60,6 +64,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   Widget _buildFilterBar() {
     return Container(
       height: 60,
+      width: double.infinity,
       color: Colors.white,
       child: ListView(
         scrollDirection: Axis.horizontal,
@@ -80,11 +85,11 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label,
-            style: TextStyle(
+        label: Text(label),
+        labelStyle: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.blue[800])),
+                color: isSelected ? Colors.white : Colors.blue[800]),
         selected: isSelected,
         selectedColor: Colors.blue[800],
         backgroundColor: Colors.blue[50],
@@ -96,6 +101,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
 
   Widget _buildVehicleCard(Veicolo v) {
     return Card(
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
@@ -121,18 +127,17 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     );
   }
 
-  // --- LOGICA DEL POPUP DETTAGLI (Utilizza DetailsPopUp) ---
-
   void _showVehicleDetails(Veicolo v) {
     final provider = context.read<FleetProvider>();
 
-    // Ricerca prossima prenotazione
+    // Calcolo prossima prenotazione per questo veicolo
     List<Prenotazione> future = provider.prenotazioni
         .where((p) =>
             p.targa == v.targa &&
             p.statoPrenotazione != StatoPrenotazione.annullata &&
             p.dataFine.isAfter(DateTime.now()))
         .toList();
+    
     future.sort((a, b) => a.dataInizio.compareTo(b.dataInizio));
     Prenotazione? prossima = future.isNotEmpty ? future.first : null;
 
@@ -145,53 +150,60 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             : Icons.directions_car,
         details: [
           _detailRow(Icons.tag, "Targa", v.targa),
-          _detailRow(Icons.calendar_today, "Immatricolazione",
-              v.annoImmatricolazione.toString()),
-          _detailRow(Icons.speed, "Chilometraggio", "${v.km} km"),
-          _detailRow(Icons.info_outline, "Stato Attuale",
-              v.statoVeicolo.name.toUpperCase()),
+          _detailRow(Icons.calendar_today, "Anno", v.annoImmatricolazione.toString()),
+          _detailRow(Icons.speed, "Km attuali", "${v.km} km"),
+          _detailRow(Icons.info_outline, "Stato", v.statoVeicolo.name.toUpperCase()),
         ],
         extraSectionTitle: "PROSSIMO IMPEGNO",
         extraContent: prossima != null
             ? Column(
                 children: [
-                  _detailRow(
-                      Icons.person, "Driver ID", "#${prossima.idUtente}"),
-                  _detailRow(Icons.event, "Inizio",
-                      DateFormat('dd/MM HH:mm').format(prossima.dataInizio)),
-                  _detailRow(Icons.event_available, "Fine",
-                      DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
+                  _detailRow(Icons.person, "Driver ID", "#${prossima.idUtente}"),
+                  _detailRow(Icons.event, "Inizio", DateFormat('dd/MM HH:mm').format(prossima.dataInizio)),
+                  _detailRow(Icons.event_available, "Fine", DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
                 ],
               )
             : const Text(
-                "Nessuna prenotazione futura. Il veicolo è libero.",
-                style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.green,
-                    fontStyle: FontStyle.italic),
+                "Nessuna prenotazione futura.",
+                style: TextStyle(fontSize: 13, color: Colors.green, fontStyle: FontStyle.italic),
               ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("CHIUDI")),
+          // Se il veicolo è disponibile e l'utente non è manager, può prenotare
           if (provider.utenteLoggato?.ruoloUtente != RuoloUtente.manager &&
               v.statoVeicolo == StatoVeicolo.disponibile)
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
               onPressed: () {
-                Navigator.pop(context);
-                // Navigazione alla prenotazione
+                Navigator.pop(context); // Chiude il popup
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen()),
+                );
               },
-              child: const Text("PRENOTA ORA",
-                  style: TextStyle(color: Colors.white)),
+              child: const Text("PRENOTA ORA", style: TextStyle(color: Colors.white)),
             ),
         ],
       ),
     );
   }
 
-  // Helper per le righe di dettaglio
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text("Nessun veicolo corrisponde al filtro", 
+            style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -199,9 +211,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         children: [
           Icon(icon, size: 16, color: Colors.blueGrey[400]),
           const SizedBox(width: 10),
-          Text("$label: ",
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
@@ -217,22 +227,17 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       ),
       child: Text(
         stato.name.toUpperCase(),
-        style: const TextStyle(
-            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
 
   Color _getStatusColor(StatoVeicolo stato) {
     switch (stato) {
-      case StatoVeicolo.disponibile:
-        return Colors.green[600]!;
-      case StatoVeicolo.prenotato:
-        return Colors.blue[600]!;
-      case StatoVeicolo.inManutenzione:
-        return Colors.orange[700]!;
-      case StatoVeicolo.fuoriServizio:
-        return Colors.red[700]!;
+      case StatoVeicolo.disponibile: return Colors.green[600]!;
+      case StatoVeicolo.prenotato: return Colors.blue[600]!;
+      case StatoVeicolo.inManutenzione: return Colors.orange[700]!;
+      case StatoVeicolo.fuoriServizio: return Colors.red[700]!;
     }
   }
 }

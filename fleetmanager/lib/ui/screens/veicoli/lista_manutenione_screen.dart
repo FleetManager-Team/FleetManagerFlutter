@@ -1,8 +1,9 @@
+import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // Aggiunto per eventuali date
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
+import 'package:fleetmanager/models/manutenzione.dart'; // Assicurati di importare il modello
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
@@ -21,6 +22,7 @@ class _MaintenanceDashboardScreenState
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
 
+    // Filtriamo i veicoli che sono attualmente in manutenzione
     final veicoliInManutenzione = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
         .toList();
@@ -88,7 +90,7 @@ class _MaintenanceDashboardScreenState
 
   Widget _buildMaintenanceCard(Veicolo v, FleetProvider provider) {
     return Card(
-      margin: const EdgeInsets.all(8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         onTap: () => _showMaintenanceDetails(v, provider),
@@ -109,8 +111,21 @@ class _MaintenanceDashboardScreenState
     );
   }
 
-  // --- NUOVO POPUP DETTAGLI MANUTENZIONE ---
   void _showMaintenanceDetails(Veicolo v, FleetProvider provider) {
+    // Recuperiamo l'ID dell'intervento aperto per questo veicolo dalla lista manutenzioni
+    // Se non lo trovi, usiamo un fallback o gestiamo l'errore
+    final intervento = provider.manutenzioni.firstWhere(
+      (m) => m.targa == v.targa && m.oraFine == null,
+      orElse: () => Manutenzione(
+          idManutenzione: -1, 
+          data: DateTime.now(), 
+          tipoManutenzione: TipoManutenzione.straordinaria, 
+          descrizione: "N.D.", 
+          targa: v.targa),
+    );
+
+    final kmController = TextEditingController(text: v.km.toString());
+
     showDialog(
       context: context,
       builder: (context) => DetailsPopUp(
@@ -118,54 +133,37 @@ class _MaintenanceDashboardScreenState
         titleIcon: Icons.build_circle,
         details: [
           _detailRow(Icons.pin, "Targa", v.targa),
-          _detailRow(Icons.speed, "Chilometraggio", "${v.km} km"),
-          _detailRow(Icons.category, "Tipo", v.tipoVeicolo.name.toUpperCase()),
+          _detailRow(Icons.speed, "Km ingresso", "${v.km} km"),
+          _detailRow(Icons.description, "Motivo", intervento.descrizione),
         ],
-        extraSectionTitle: "Stato Intervento",
-        // Dato che il riquadro del tuo popup è azzurro fisso,
-        // usiamo icone e testi arancioni per far capire lo stato.
-        extraContent: Row(
+        extraSectionTitle: "Chiusura Intervento",
+        extraContent: Column(
           children: [
-            const Icon(Icons.settings_suggest, color: Colors.orange, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "IN ASSISTENZA",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange[900],
-                        fontSize: 13),
-                  ),
-                  const Text(
-                    "Veicolo non disponibile per prenotazioni.",
-                    style: TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                ],
-              ),
+            const Text("Inserisci i chilometri attuali al rientro:", 
+              style: TextStyle(fontSize: 12, color: Colors.black54)),
+            TextField(
+              controller: kmController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: "Km finali"),
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("INDIETRO"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("INDIETRO")),
           ElevatedButton(
             onPressed: () async {
-              await provider.chiudiManutenzione(0, v.targa);
+              int nuoviKm = int.tryParse(kmController.text) ?? v.km;
+              // Passiamo l'ID reale dell'intervento e i nuovi KM
+              await provider.chiudiManutenzione(intervento.idManutenzione, v.targa, nuoviKm: nuoviKm);
+              
               if (mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text("Veicolo ${v.targa} rientrato in flotta")),
+                  SnackBar(content: Text("Veicolo ${v.targa} rientrato con $nuoviKm km")),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
             child: const Text("CHIUDI INTERVENTO"),
           ),
         ],
@@ -173,7 +171,6 @@ class _MaintenanceDashboardScreenState
     );
   }
 
-  // Helper per le righe di dettaglio
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -182,7 +179,7 @@ class _MaintenanceDashboardScreenState
           Icon(icon, size: 18, color: Colors.grey[600]),
           const SizedBox(width: 10),
           Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -200,71 +197,40 @@ class _MaintenanceDashboardScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            left: 20,
-            right: 20,
-            top: 20),
+            left: 20, right: 20, top: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "Segnala Nuovo Intervento",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
+            const Text("Segnala Nuovo Intervento", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
             const SizedBox(height: 15),
             DropdownButtonFormField<Veicolo>(
-              items: veicoliDisponibili
-                  .map((v) => DropdownMenuItem(
-                      value: v, child: Text("${v.targa} - ${v.modello}")))
-                  .toList(),
+              items: veicoliDisponibili.map((v) => DropdownMenuItem(value: v, child: Text("${v.targa} - ${v.modello}"))).toList(),
               onChanged: (val) => veicoloSelezionato = val,
-              decoration: const InputDecoration(
-                labelText: "Seleziona Veicolo",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.directions_car),
-              ),
+              decoration: const InputDecoration(labelText: "Seleziona Veicolo", border: OutlineInputBorder(), prefixIcon: Icon(Icons.directions_car)),
             ),
             const SizedBox(height: 15),
             TextField(
               controller: descController,
-              decoration: const InputDecoration(
-                labelText: "Descrizione guasto / motivo",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.edit_note),
-              ),
+              decoration: const InputDecoration(labelText: "Descrizione guasto", border: OutlineInputBorder(), prefixIcon: Icon(Icons.edit_note)),
               maxLines: 2,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                if (veicoloSelezionato != null) {
-                  await provider.segnalareInterventoStraordinario(
-                    veicoloSelezionato!,
-                    descController.text,
-                  );
+                if (veicoloSelezionato != null && descController.text.isNotEmpty) {
+                  await provider.segnalareInterventoStraordinario(veicoloSelezionato!, descController.text);
                   if (mounted) {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              "Manutenzione avviata per ${veicoloSelezionato!.targa}")),
-                    );
                   }
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[800],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-              child: const Text("AVVIA MANUTENZIONE",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),
+              child: const Text("AVVIA MANUTENZIONE", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -279,11 +245,7 @@ class _MaintenanceDashboardScreenState
         children: [
           Icon(Icons.build_circle_outlined, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text("Nessun veicolo in manutenzione",
-              style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500)),
+          Text("Nessun veicolo in manutenzione", style: TextStyle(color: Colors.grey[600], fontSize: 16, fontWeight: FontWeight.w500)),
         ],
       ),
     );

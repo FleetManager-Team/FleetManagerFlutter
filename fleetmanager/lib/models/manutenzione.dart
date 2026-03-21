@@ -17,25 +17,25 @@ class Manutenzione {
     required this.targa,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'idManutenzione': idManutenzione,
-      'data': data.toIso8601String(),
-      'oraFine': oraFine?.toIso8601String(),
-      'tipoManutenzione': tipoManutenzione.name,
-      'descrizione': descrizione,
-      'targa': targa,
-    };
-  }
-
   factory Manutenzione.fromJson(Map<String, dynamic> json) {
     return Manutenzione(
-      idManutenzione: json['idManutenzione'],
+      idManutenzione: json['id_manutenzione'],
       data: DateTime.parse(json['data']),
-      oraFine: json['oraFine'] != null ? DateTime.parse(json['oraFine']) : null,
-      tipoManutenzione: TipoManutenzione.values.firstWhere((e) => e.name == json['tipoManutenzione']),
+      oraFine: json['ora_fine'] != null ? DateTime.parse(json['ora_fine']) : null,
+      tipoManutenzione: TipoManutenzione.values.firstWhere((e) => e.name == json['tipo']),
       descrizione: json['descrizione'],
       targa: json['targa'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id_manutenzione': idManutenzione,
+      'data': data.toIso8601String(),
+      'ora_fine': oraFine?.toIso8601String(),
+      'tipo': tipoManutenzione.name,
+      'descrizione': descrizione,
+      'targa': targa,
+    };
   }
 }

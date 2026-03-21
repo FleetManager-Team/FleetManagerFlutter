@@ -5,9 +5,9 @@ class Utente {
   final String nome;
   final String cognome;
   final String email;
-  final String? password; // Opzionale se riceviamo i dati dal server
+  final String? password; 
   final RuoloUtente ruoloUtente;
-  final String? patente; // Può essere nullo
+  final String? patente; 
 
   Utente({
     required this.idUtente,
@@ -21,23 +21,22 @@ class Utente {
 
   factory Utente.fromJson(Map<String, dynamic> json) {
     return Utente(
-      idUtente: json['idUtente'],
+      idUtente: json['id_utente'],
       nome: json['nome'],
       cognome: json['cognome'],
       email: json['email'],
-      ruoloUtente: RuoloUtente.values.firstWhere((e) => e.name == json['ruoloUtente']),
+      ruoloUtente: RuoloUtente.values.firstWhere((e) => e.name == json['ruolo']),
       patente: json['patente'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'idUtente': idUtente,
+      'id_utente': idUtente,
       'nome': nome,
       'cognome': cognome,
       'email': email,
-      'password': password,
-      'ruoloUtente': ruoloUtente.name,
+      'ruolo': ruoloUtente.name,
       'patente': patente,
     };
   }

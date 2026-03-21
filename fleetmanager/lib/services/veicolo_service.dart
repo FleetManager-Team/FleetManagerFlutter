@@ -1,50 +1,23 @@
-import 'package:dio/dio.dart';
-import 'package:fleetmanager/mock/mock_data.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/veicolo.dart';
 import '../models/enums/stato_veicolo.dart';
 
 class VeicoloService {
-  // In un progetto serio, l'indirizzo base verrebbe da una configurazione globale
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api'));
+  final _supabase = Supabase.instance.client;
 
-  /// Recupera tutti i veicoli dal database (Backend)
-  /// Restituisce un Future: la promessa di una lista di oggetti Veicolo
   Future<List<Veicolo>> fetchAllVeicoli() async {
-    try {
-      final response = await _dio.get('/veicoli');
-
-      if (response.statusCode == 200) {
-        // La risposta arriva come una lista di mappe JSON
-        List<dynamic> data = response.data;
-        // Convertiamo ogni mappa JSON in un oggetto Veicolo usando il factory .fromJson
-        return data.map((json) => Veicolo.fromJson(json)).toList();
-      } else {
-        throw Exception('Errore del server: ${response.statusCode}');
-      }
-    } catch (_) {
-      // Fallback mock per sviluppo/offline
-      return MockData.veicoli;
-    }
+    final response = await _supabase.from('veicoli').select();
+    return (response as List).map((json) => Veicolo.fromJson(json)).toList();
   }
 
-  /// Aggiorna lo stato di un veicolo (es. da Disponibile a In Manutenzione)
-  /// Corrisponde al tuo setStatoVeicolo in Java
   Future<void> updateStatoVeicolo(String targa, StatoVeicolo nuovoStato) async {
-    try {
-      await _dio.patch('/veicoli/$targa', data: {
-        'statoVeicolo': nuovoStato.name, // Usiamo .name per inviare la stringa dell'enum
-      });
-    } catch (e) {
-      throw Exception('Impossibile aggiornare lo stato: $e');
-    }
+    await _supabase
+        .from('veicoli')
+        .update({'stato': nuovoStato.name})
+        .eq('targa', targa);
   }
 
-  /// Crea un nuovo veicolo inviando l'oggetto completo come JSON
   Future<void> createVeicolo(Veicolo veicolo) async {
-    try {
-      await _dio.post('/veicoli', data: veicolo.toJson());
-    } catch (e) {
-      throw Exception('Errore durante la creazione del veicolo: $e');
-    }
+    await _supabase.from('veicoli').insert(veicolo.toJson());
   }
 }

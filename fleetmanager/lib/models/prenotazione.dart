@@ -10,8 +10,6 @@ class Prenotazione {
   final int idUtente;
   final String targa;
 
-  var inizio;
-
   Prenotazione({
     required this.idPrenotazione,
     required this.dataInizio,
@@ -24,26 +22,24 @@ class Prenotazione {
 
   factory Prenotazione.fromJson(Map<String, dynamic> json) {
     return Prenotazione(
-      idPrenotazione: json['idPrenotazione'],
-      dataInizio: DateTime.parse(json['dataInizio']),
-      dataFine: DateTime.parse(json['dataFine']),
-      statoPrenotazione: StatoPrenotazione.values.firstWhere((e) => e.name == json['statoPrenotazione']),
-      tipoPrenotazione: TipoPrenotazione.values.firstWhere((e) => e.name == json['tipoPrenotazione']),
-      idUtente: json['idUtente'],
+      idPrenotazione: json['id_prenotazione'],
+      dataInizio: DateTime.parse(json['data_inizio']),
+      dataFine: DateTime.parse(json['data_fine']),
+      statoPrenotazione: StatoPrenotazione.values.firstWhere((e) => e.name == json['stato']),
+      tipoPrenotazione: TipoPrenotazione.values.firstWhere((e) => e.name == json['tipo']),
+      idUtente: json['id_utente'],
       targa: json['targa'],
     );
   }
 
-  get veicoloId => null;
-
   Map<String, dynamic> toJson() {
     return {
-      'idPrenotazione': idPrenotazione,
-      'dataInizio': dataInizio.toIso8601String(),
-      'dataFine': dataFine.toIso8601String(),
-      'statoPrenotazione': statoPrenotazione.name,
-      'tipoPrenotazione': tipoPrenotazione.name,
-      'idUtente': idUtente,
+      'id_prenotazione': idPrenotazione,
+      'data_inizio': dataInizio.toIso8601String(),
+      'data_fine': dataFine.toIso8601String(),
+      'stato': statoPrenotazione.name,
+      'tipo': tipoPrenotazione.name,
+      'id_utente': idUtente,
       'targa': targa,
     };
   }

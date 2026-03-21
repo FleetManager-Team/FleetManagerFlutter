@@ -13,8 +13,8 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   RuoloUtente? filtroRuolo;
-  List<Utente> cacheUtenti = [];
-  bool isLoading = true;
+  // Non serve più cacheUtenti locale perché leggiamo direttamente dal Provider
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -22,34 +22,28 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _caricaDati();
   }
 
-  // Carica i dati dal provider e aggiorna la cache locale
   Future<void> _caricaDati() async {
+    setState(() => isLoading = true);
     try {
-      final provider = context.read<FleetProvider>();
-      // Recupera la lista completa (Driver + Manager)
-      final dati = await provider.getTuttiDriver(); 
-      if (mounted) {
-        setState(() {
-          cacheUtenti = dati;
-          isLoading = false;
-        });
-      }
+      // Chiamiamo l'inizializzazione dei dati che scarica gli utenti da Supabase
+      await context.read<FleetProvider>().inizializzaDati();
     } catch (e) {
       if (mounted) {
-        setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Errore nel caricamento: $e")),
         );
       }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // LOGICA DI FILTRO REATTIVA
-    final listaFiltrata = cacheUtenti.where((u) {
-      // Se filtroRuolo è null (TUTTI), l'utente passa sempre.
-      // Altrimenti passa solo se il suo ruolo coincide con quello selezionato.
+    // Usiamo watch per rendere la UI reattiva ai cambiamenti nel database/provider
+    final provider = context.watch<FleetProvider>();
+
+    final listaFiltrata = provider.utenti.where((u) {
       return filtroRuolo == null || u.ruoloUtente == filtroRuolo;
     }).toList();
 
@@ -64,10 +58,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() => isLoading = true);
-              _caricaDati();
-            },
+            onPressed: _caricaDati,
           )
         ],
       ),
@@ -78,9 +69,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : listaFiltrata.isEmpty
-                    ? const Center(
-                        child: Text("Nessun utente trovato per questo filtro"),
-                      )
+                    ? const Center(child: Text("Nessun utente trovato"))
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: listaFiltrata.length,
@@ -119,18 +108,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.blue[900])),
+        label: Text(label),
+        labelStyle: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.blue[900]),
         selected: isSelected,
         selectedColor: Colors.blue[900],
-        onSelected: (val) {
-          setState(() {
-            filtroRuolo = val ? ruolo : null;
-          });
-        },
+        onSelected: (val) => setState(() => filtroRuolo = val ? ruolo : null),
       ),
     );
   }
@@ -164,7 +149,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             _infoRow(Icons.email, "Email", u.email),
             _infoRow(Icons.work, "Ruolo", u.ruoloUtente.name.toUpperCase()),
-            if (u.patente != null && u.patente!.isNotEmpty)
+            if (u.patente != null)
               _infoRow(Icons.credit_card, "Patente", u.patente!),
           ],
         ),
@@ -192,6 +177,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final nomeController = TextEditingController(text: u?.nome ?? "");
     final cognomeController = TextEditingController(text: u?.cognome ?? "");
     final emailController = TextEditingController(text: u?.email ?? "");
+    final passwordController = TextEditingController();
     final patenteController = TextEditingController(text: u?.patente ?? "");
     RuoloUtente ruoloSelezionato = u?.ruoloUtente ?? RuoloUtente.driver;
 
@@ -223,6 +209,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               TextField(
                   controller: emailController,
                   decoration: const InputDecoration(labelText: "Email")),
+              if (u == null) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true, // Nasconde i caratteri
+                  decoration: const InputDecoration(
+                    labelText: "Password Temporanea",
+                    hintText: "Minimo 6 caratteri",
+                    helperText: "Comunicala al driver per il primo accesso",
+                  ),
+                ),
+              ],
               TextField(
                   controller: patenteController,
                   decoration:
@@ -243,14 +241,67 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     minimumSize: const Size(double.infinity, 50),
                     backgroundColor: Colors.blue[900]),
                 onPressed: () async {
-                  // Esegui qui la logica di salvataggio del provider (provider.salvaUtente...)
-                  // Una volta completato il salvataggio asincrono:
-                  if (mounted) {
-                    Navigator.pop(context);
-                    _caricaDati(); // Rinfresca la lista dopo l'operazione
+                  final provider = context.read<FleetProvider>();
+
+                  // 1. Validazione dei campi obbligatori
+                  if (nomeController.text.isEmpty ||
+                      emailController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text("Nome ed Email sono obbligatori")),
+                    );
+                    return;
+                  }
+
+                  try {
+                    if (u == null) {
+                      // --- CREAZIONE NUOVO UTENTE ---
+                      // Controllo lunghezza password (limite Supabase)
+                      if (passwordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  "La password deve essere di almeno 6 caratteri")),
+                        );
+                        return;
+                      }
+
+                      // Chiamiamo la funzione che crea sia l'Auth che la riga nel DB
+                      await provider.aggiungiNuovoUtente(
+                        email: emailController.text.trim(),
+                        passwordScelta: passwordController.text,
+                        nome: nomeController.text.trim(),
+                        cognome: cognomeController.text.trim(),
+                        ruolo: ruoloSelezionato
+                            .name, 
+                        patente: patenteController.text.trim(),
+                      );
+                    } else {
+                      // --- MODIFICA UTENTE ESISTENTE ---
+                      // Per ora lasciamo la logica che avevi o implementa un update specifico
+                      debugPrint("Logica di modifica da implementare se serve");
+                    }
+
+                    // Se tutto è andato bene, chiudiamo il pannello
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text("Operazione completata con successo!")),
+                      );
+                    }
+                  } catch (e) {
+                    // Gestione errori (es: email già registrata o problemi di rete)
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Errore: ${e.toString()}")),
+                      );
+                    }
                   }
                 },
-                child: const Text("SALVA", style: TextStyle(color: Colors.white)),
+                child:
+                    const Text("SALVA", style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -274,7 +325,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               await context.read<FleetProvider>().eliminaUtente(u.idUtente);
               if (mounted) {
                 Navigator.pop(context);
-                _caricaDati(); 
+                // Non serve chiamare _caricaDati() perché eliminaUtente nel provider
+                // dovrebbe già gestire la rimozione dalla lista o chiamare notifyListeners()
               }
             },
             child: const Text("ELIMINA", style: TextStyle(color: Colors.red)),

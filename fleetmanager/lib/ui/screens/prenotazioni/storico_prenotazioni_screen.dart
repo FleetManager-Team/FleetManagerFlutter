@@ -5,6 +5,7 @@ import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
+import 'package:collection/collection.dart'; // Necessario per firstWhereOrNull
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -14,7 +15,12 @@ class BookingHistoryScreen extends StatefulWidget {
 }
 
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
-  StatoPrenotazione? filtroStato; // null = Tutte (Completate + Annullate)
+  StatoPrenotazione? filtroStato; // null = TUTTE
+
+  // Metodo per ricaricare i dati dal database reale
+  Future<void> _onRefresh() async {
+    await context.read<FleetProvider>().inizializzaDati();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +28,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     final utente = provider.utenteLoggato;
     final isManager = utente?.ruoloUtente == RuoloUtente.manager;
 
-    // 1. Prendiamo tutte le prenotazioni dal provider
+    // 1. Filtriamo le prenotazioni chiuse (completate o annullate)
     List<Prenotazione> storico = provider.prenotazioni.where((p) {
-      // Filtriamo solo quelle chiuse (completate o annullate)
       bool isChiusa = p.statoPrenotazione == StatoPrenotazione.completata || 
                      p.statoPrenotazione == StatoPrenotazione.annullata;
       
@@ -34,12 +39,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       return isChiusa && isMia;
     }).toList();
 
-    // 2. Applichiamo il filtro della UI (se selezionato)
+    // 2. Applichiamo il filtro della UI
     if (filtroStato != null) {
       storico = storico.where((p) => p.statoPrenotazione == filtroStato).toList();
     }
 
-    // 3. Ordiniamo per data (la più recente in alto)
+    // 3. Ordiniamo per data (più recente in alto)
     storico.sort((a, b) => b.dataFine.compareTo(a.dataFine));
 
     return Scaffold(
@@ -48,23 +53,36 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         title: const Text("Storico Prenotazioni", style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blueGrey[800],
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _onRefresh,
+          )
+        ],
       ),
       body: Column(
         children: [
-          _buildFilterBar(),
+          _buildFilterBar(), // Questo è il metodo che ti dava errore
           Expanded(
-            child: storico.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: storico.length,
-                    itemBuilder: (context, index) => _buildHistoryCard(storico[index], isManager),
+            child: provider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    child: storico.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: storico.length,
+                            itemBuilder: (context, index) => _buildHistoryCard(storico[index], isManager, provider),
+                          ),
                   ),
           ),
         ],
       ),
     );
   }
+
+  // --- WIDGET HELPER ---
 
   Widget _buildFilterBar() {
     return Container(
@@ -87,7 +105,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.blueGrey)),
+        label: Text(label, 
+          style: TextStyle(
+            fontSize: 11, 
+            fontWeight: FontWeight.bold, 
+            color: isSelected ? Colors.white : Colors.blueGrey
+          )
+        ),
         selected: isSelected,
         selectedColor: Colors.blueGrey,
         onSelected: (val) => setState(() => filtroStato = val ? stato : null),
@@ -95,9 +119,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     );
   }
 
-  Widget _buildHistoryCard(Prenotazione p, bool isManager) {
+  Widget _buildHistoryCard(Prenotazione p, bool isManager, FleetProvider provider) {
     final DateFormat formatter = DateFormat('dd/MM/yyyy');
     final bool isAnnullata = p.statoPrenotazione == StatoPrenotazione.annullata;
+
+    // Recupero nome driver (solo se manager)
+    String infoSottotitolo = "Periodo: ${formatter.format(p.dataInizio)} - ${formatter.format(p.dataFine)}";
+    String? nomeDriver;
+    if (isManager) {
+      final d = provider.utenti.firstWhereOrNull((u) => u.idUtente == p.idUtente);
+      if (d != null) nomeDriver = "Driver: ${d.nome} ${d.cognome}";
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -112,8 +144,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Periodo: ${formatter.format(p.dataInizio)} - ${formatter.format(p.dataFine)}"),
-            if (isManager) Text("Driver ID: #${p.idUtente}", style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+            Text(infoSottotitolo),
+            if (nomeDriver != null) 
+              Text(nomeDriver, style: const TextStyle(color: Colors.blueGrey, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
         trailing: Container(
@@ -124,7 +157,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
           ),
           child: Text(
             p.statoPrenotazione.name.toUpperCase(),
-            style: TextStyle(color: isAnnullata ? Colors.red[700] : Colors.green[700], fontSize: 10, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: isAnnullata ? Colors.red[700] : Colors.green[700], 
+              fontSize: 10, 
+              fontWeight: FontWeight.bold
+            ),
           ),
         ),
       ),
@@ -138,7 +175,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         children: [
           Icon(Icons.history_toggle_off, size: 80, color: Colors.grey),
           SizedBox(height: 16),
-          Text("Nessuna prenotazione passata trovata.", style: TextStyle(color: Colors.grey)),
+          Text("Nessun record trovato nello storico.", style: TextStyle(color: Colors.grey)),
         ],
       ),
     );

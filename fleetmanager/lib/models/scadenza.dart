@@ -17,11 +17,21 @@ class Scadenza {
 
   factory Scadenza.fromJson(Map<String, dynamic> json) {
     return Scadenza(
-      idScadenza: json['idScadenza'],
-      tipoScadenza: TipoScadenza.values.firstWhere((e) => e.name == json['tipoScadenza']),
+      idScadenza: json['id_scadenza'],
+      tipoScadenza: TipoScadenza.values.firstWhere((e) => e.name == json['tipo']),
       data: DateTime.parse(json['data']),
       notificata: json['notificata'] ?? false,
       targa: json['targa'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id_scadenza': idScadenza,
+      'tipo': tipoScadenza.name,
+      'data': data.toIso8601String(),
+      'notificata': notificata,
+      'targa': targa,
+    };
   }
 }
