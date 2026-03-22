@@ -16,7 +16,7 @@ import '../services/prenotazione_service.dart';
 import '../services/manutenzione_service.dart';
 import '../services/scadenza_service.dart';
 import '../services/notifica_service.dart';
-import '../services/veicolo_service.dart'; // Aggiunto VeicoloService
+import '../services/veicolo_service.dart';
 
 class FleetProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -106,54 +106,94 @@ class FleetProvider with ChangeNotifier {
     );
 
     await _prenotazioneService.creaPrenotazione(p);
+    /*
     await _notificaService.notificaRichiestaPrenotazione(
         driver.idUtente, veicolo.targa, inizio, fine);
-
+  */
     _prenotazioni = await _prenotazioneService.fetchPrenotazioni(); // Refresh
     notifyListeners();
   }
 
-  Future<void> confermaPrenotazione(int idPrenotazione) async {
-    await _prenotazioneService.confermaPrenotazione(idPrenotazione);
-    _prenotazioni = await _prenotazioneService.fetchPrenotazioni(); // Refresh
-    notifyListeners();
+  Future<void> confermaPrenotazione(int id) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Update sul DB
+      await Supabase.instance.client
+          .from('prenotazioni')
+          .update({'stato': 'confermata'}).eq('id_prenotazione', id);
+
+      // REFRESH TOTALE: Forza lo scaricamento dei dati freschi dal DB
+      await inizializzaDati();
+
+      debugPrint("✅ Prenotazione $id confermata e UI aggiornata");
+    } catch (e) {
+      debugPrint("❌ Errore conferma prenotazione: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<void> annullaPrenotazione(int idPrenotazione) async {
-    await _prenotazioneService.annullaPrenotazione(idPrenotazione);
-    _prenotazioni = await _prenotazioneService.fetchPrenotazioni(); // Refresh
-    notifyListeners();
+// Metodo per Rifiutare/Annullare
+  Future<void> annullaPrenotazione(int id) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await Supabase.instance.client
+          .from('prenotazioni')
+          .update({'stato': 'annullata'}).eq('id_prenotazione', id);
+
+      await inizializzaDati();
+
+      debugPrint("✅ Prenotazione $id annullata");
+    } catch (e) {
+      debugPrint("❌ Errore annullamento prenotazione: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // --- LOGICA MANUTENZIONI ---
 
   Future<void> programmareManutenzione(Veicolo veicolo, DateTime inizio,
       TipoManutenzione tipo, String descrizione) async {
-    // Registra nel DB
-    await _manutenzioneService.registraIntervento(Manutenzione(
-      idManutenzione: 0,
-      data: inizio,
-      tipoManutenzione: tipo,
-      descrizione: descrizione,
-      targa: veicolo.targa,
-    ));
+    try {
+      _isLoading = true;
+      notifyListeners();
 
-    Future<void> segnalareInterventoStraordinario(
-        Veicolo v, String descrizione) async {
-      await _manutenzioneService.segnalareInterventoStraordinario(
-          v.targa, descrizione);
-      await inizializzaDati(); // Rinfresca tutto per aggiornare stato veicolo e lista
+      // 1. Registra l'intervento
+      await _manutenzioneService.registraIntervento(Manutenzione(
+        idManutenzione: 0,
+        data: inizio,
+        tipoManutenzione: tipo,
+        descrizione: descrizione,
+        targa: veicolo.targa,
+      ));
+
+      // 2. Aggiorna stato veicolo nel DB
+      await _veicoloService.updateStatoVeicolo(
+          veicolo.targa, StatoVeicolo.inManutenzione);
+
+      /* 3. Notifica
+      await _notificaService.notificaManutenzioneProgrammata(
+          1, veicolo.targa, inizio);
+        */
+
+      // 4. Refresh atomico
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("❌ Errore programmazione manutenzione: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    // Aggiorna stato veicolo nel DB
-    await _veicoloService.updateStatoVeicolo(
-        veicolo.targa, StatoVeicolo.inManutenzione);
-
-    await _notificaService.notificaManutenzioneProgrammata(
-        1, veicolo.targa, inizio);
-
-    _veicoli = await _veicoloService.fetchAllVeicoli(); // Refresh
-    notifyListeners();
   }
 
   Future<void> chiudiManutenzione(int idManutenzione, String targa,
@@ -161,12 +201,20 @@ class FleetProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // Usiamo i nuovi chilometri passati dalla UI, o quelli attuali se null
+      // Recuperiamo i KM: se la UI non li passa, prendiamo quelli vecchi dal database
       int kmFinali = nuoviKm ?? _veicoli.firstWhere((v) => v.targa == targa).km;
 
+      // Chiamata al service per aggiornare Supabase
       await _manutenzioneService.chiudiIntervento(
           idManutenzione, kmFinali, targa);
-      await inizializzaDati(); // Rinfresca tutto
+
+      // REFRESH: Scarica i dati aggiornati così il veicolo torna nel "Parco Auto"
+      await inizializzaDati();
+
+      debugPrint("✅ Manutenzione chiusa: $targa è di nuovo disponibile.");
+    } catch (e) {
+      debugPrint("❌ Errore chiusura manutenzione: $e");
+      rethrow; // Serve per far vedere l'errore nel popup dell'app
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -227,7 +275,6 @@ class FleetProvider with ChangeNotifier {
       final authRes = await Supabase.instance.client.auth.signUp(
         email: email.trim(),
         password: passwordScelta,
-      
       );
 
       if (authRes.user != null) {
@@ -248,6 +295,45 @@ class FleetProvider with ChangeNotifier {
       rethrow;
     } catch (e) {
       debugPrint("❌ Errore Database: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+// --- LOGICA VEICOLI ---
+  Future<void> aggiungiNuovoVeicolo({
+    required String targa,
+    required String marca,
+    required String modello,
+    required String tipo,
+    required String anno,
+    String? kmAttuali,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // 1. INSERIMENTO NELLA TABELLA 'veicoli'
+      await Supabase.instance.client.from('veicoli').insert({
+        'targa': targa.trim().toUpperCase(), // Targa sempre in maiuscolo
+        'marca': marca.trim(),
+        'modello': modello.trim(),
+        'tipo': tipo,
+        'stato': 'disponibile',
+        'km': kmAttuali ?? '0',
+        'anno_immatricolazione': int.tryParse(anno) ?? DateTime.now().year,
+      });
+
+      // 2. REFRESH DEI DATI
+      // Ricarica la lista veicoli così appare subito nel Parco Auto
+      await inizializzaDati();
+
+      debugPrint("✅ Veicolo aggiunto correttamente: $targa");
+    } catch (e) {
+      // Gestione errore database (es: targa duplicata o errore RLS)
+      debugPrint("❌ Errore durante l'inserimento veicolo: $e");
       rethrow;
     } finally {
       _isLoading = false;

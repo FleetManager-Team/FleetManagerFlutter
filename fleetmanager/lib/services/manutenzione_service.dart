@@ -11,19 +11,20 @@ class ManutenzioneService {
     await _supabase.from('manutenzioni').insert(data);
   }
 
-  Future<void> chiudiIntervento(int id, int nuoviKm, String targa) async {
-    // 1. Chiude la manutenzione
-    await _supabase
-        .from('manutenzioni')
-        .update({'ora_fine': DateTime.now().toIso8601String()})
-        .eq('id_manutenzione', id);
-    
-    // 2. Aggiorna i km del veicolo
-    await _supabase
-        .from('veicoli')
-        .update({'km': nuoviKm, 'stato': 'disponibile'})
-        .eq('targa', targa);
+  Future<void> chiudiIntervento(int id, int kmFinali, String targa) async {
+    // 1. Aggiorna la riga della manutenzione mettendo la data di fine
+    await _supabase.from('manutenzioni').update({
+      'ora_fine': DateTime.now().toIso8601String(),
+      'km_uscita': kmFinali,
+    }).eq('id_manutenzione', id);
+
+    // 2. Aggiorna il veicolo: torna disponibile e ha i nuovi KM
+    await _supabase.from('veicoli').update({
+      'stato': 'disponibile',
+      'km': kmFinali,
+    }).eq('targa', targa);
   }
+
   Future<List<Manutenzione>> fetchTutte() async {
     try {
       final response = await _supabase
@@ -39,7 +40,8 @@ class ManutenzioneService {
     }
   }
 
-  Future<void> segnalareInterventoStraordinario(String targa, String descrizione) async {
+  Future<void> segnalareInterventoStraordinario(
+      String targa, String descrizione) async {
     try {
       // A. Crea il record dell'intervento
       await _supabase.from('manutenzioni').insert({
@@ -52,13 +54,12 @@ class ManutenzioneService {
       });
 
       // B. Cambia lo stato del veicolo in 'in_manutenzione'
-      await _supabase
-          .from('veicoli')
-          .update({'stato_veicolo': 'inManutenzione'}) // Assicurati che il nome colonna sia corretto
+      await _supabase.from('veicoli').update({
+        'stato_veicolo': 'inManutenzione'
+      }) // Assicurati che il nome colonna sia corretto
           .eq('targa', targa);
-
     } catch (e) {
       throw Exception('Errore nel database durante la segnalazione: $e');
     }
-}
+  }
 }

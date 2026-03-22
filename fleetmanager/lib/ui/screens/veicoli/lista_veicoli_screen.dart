@@ -45,7 +45,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         children: [
           _buildFilterBar(),
           Expanded(
-            child: provider.isLoading 
+            child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : veicoliFiltrati.isEmpty
                     ? _buildEmptyState()
@@ -58,6 +58,14 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           ),
         ],
       ),
+      floatingActionButton:
+          provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager
+              ? FloatingActionButton(
+                  onPressed: () => _showAddVehicleForm(context),
+                  backgroundColor: Colors.blue[900],
+                  child: const Icon(Icons.add, color: Colors.white),
+                )
+              : null,
     );
   }
 
@@ -74,7 +82,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           _filterChip(StatoVeicolo.disponibile, "DISPONIBILI"),
           _filterChip(StatoVeicolo.prenotato, "PRENOTATI"),
           _filterChip(StatoVeicolo.inManutenzione, "IN SERVICE"),
-          _filterChip(StatoVeicolo.fuoriServizio, "OFF-LINE"),
+          _filterChip(StatoVeicolo.fuoriServizio, "NON DISPONIBILI"),
         ],
       ),
     );
@@ -87,9 +95,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       child: ChoiceChip(
         label: Text(label),
         labelStyle: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.blue[800]),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.blue[800]),
         selected: isSelected,
         selectedColor: Colors.blue[800],
         backgroundColor: Colors.blue[50],
@@ -137,7 +145,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             p.statoPrenotazione != StatoPrenotazione.annullata &&
             p.dataFine.isAfter(DateTime.now()))
         .toList();
-    
+
     future.sort((a, b) => a.dataInizio.compareTo(b.dataInizio));
     Prenotazione? prossima = future.isNotEmpty ? future.first : null;
 
@@ -150,22 +158,30 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             : Icons.directions_car,
         details: [
           _detailRow(Icons.tag, "Targa", v.targa),
-          _detailRow(Icons.calendar_today, "Anno", v.annoImmatricolazione.toString()),
+          _detailRow(
+              Icons.calendar_today, "Anno", v.annoImmatricolazione.toString()),
           _detailRow(Icons.speed, "Km attuali", "${v.km} km"),
-          _detailRow(Icons.info_outline, "Stato", v.statoVeicolo.name.toUpperCase()),
+          _detailRow(
+              Icons.info_outline, "Stato", v.statoVeicolo.name.toUpperCase()),
         ],
         extraSectionTitle: "PROSSIMO IMPEGNO",
         extraContent: prossima != null
             ? Column(
                 children: [
-                  _detailRow(Icons.person, "Driver ID", "#${prossima.idUtente}"),
-                  _detailRow(Icons.event, "Inizio", DateFormat('dd/MM HH:mm').format(prossima.dataInizio)),
-                  _detailRow(Icons.event_available, "Fine", DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
+                  _detailRow(
+                      Icons.person, "Driver ID", "#${prossima.idUtente}"),
+                  _detailRow(Icons.event, "Inizio",
+                      DateFormat('dd/MM HH:mm').format(prossima.dataInizio)),
+                  _detailRow(Icons.event_available, "Fine",
+                      DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
                 ],
               )
             : const Text(
                 "Nessuna prenotazione futura.",
-                style: TextStyle(fontSize: 13, color: Colors.green, fontStyle: FontStyle.italic),
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green,
+                    fontStyle: FontStyle.italic),
               ),
         actions: [
           TextButton(
@@ -175,7 +191,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           if (provider.utenteLoggato?.ruoloUtente != RuoloUtente.manager &&
               v.statoVeicolo == StatoVeicolo.disponibile)
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
               onPressed: () {
                 Navigator.pop(context); // Chiude il popup
                 Navigator.push(
@@ -183,7 +200,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen()),
                 );
               },
-              child: const Text("PRENOTA ORA", style: TextStyle(color: Colors.white)),
+              child: const Text("PRENOTA ORA",
+                  style: TextStyle(color: Colors.white)),
             ),
         ],
       ),
@@ -197,8 +215,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         children: [
           Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text("Nessun veicolo corrisponde al filtro", 
-            style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+          Text("Nessun veicolo corrisponde al filtro",
+              style: TextStyle(color: Colors.grey[600], fontSize: 16)),
         ],
       ),
     );
@@ -211,7 +229,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         children: [
           Icon(icon, size: 16, color: Colors.blueGrey[400]),
           const SizedBox(width: 10),
-          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Text("$label: ",
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
@@ -227,17 +247,125 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       ),
       child: Text(
         stato.name.toUpperCase(),
-        style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
 
   Color _getStatusColor(StatoVeicolo stato) {
     switch (stato) {
-      case StatoVeicolo.disponibile: return Colors.green[600]!;
-      case StatoVeicolo.prenotato: return Colors.blue[600]!;
-      case StatoVeicolo.inManutenzione: return Colors.orange[700]!;
-      case StatoVeicolo.fuoriServizio: return Colors.red[700]!;
+      case StatoVeicolo.disponibile:
+        return Colors.green[600]!;
+      case StatoVeicolo.prenotato:
+        return Colors.blue[600]!;
+      case StatoVeicolo.inManutenzione:
+        return Colors.orange[700]!;
+      case StatoVeicolo.fuoriServizio:
+        return Colors.red[700]!;
     }
+  }
+
+  void _showAddVehicleForm(BuildContext context) {
+    final targaController = TextEditingController();
+    final marcaController = TextEditingController();
+    final modelloController = TextEditingController();
+    final kmController = TextEditingController();
+    final annoController = TextEditingController(text: DateTime.now().year.toString());
+    TipoVeicolo tipoSelezionato = TipoVeicolo.auto;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("AGGIUNGI NUOVO VEICOLO",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 20),
+              TextField(
+                  controller: targaController,
+                  decoration: const InputDecoration(labelText: "Targa")),
+              TextField(
+                  controller: marcaController,
+                  decoration: const InputDecoration(labelText: "Marca")),
+              TextField(
+                  controller: modelloController,
+                  decoration: const InputDecoration(labelText: "Modello")),
+              TextField(
+                controller: annoController,
+                decoration:
+                    const InputDecoration(labelText: "Anno Immatricolazione"),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                  controller: kmController,
+                  decoration:
+                      const InputDecoration(labelText: "Kilometri attuali"),
+                  keyboardType: TextInputType.number),
+              const SizedBox(height: 15),
+              DropdownButtonFormField<TipoVeicolo>(
+                value: tipoSelezionato,
+                decoration: const InputDecoration(labelText: "Tipo Veicolo"),
+                items: TipoVeicolo.values
+                    .map((t) => DropdownMenuItem(
+                        value: t, child: Text(t.name.toUpperCase())))
+                    .toList(),
+                onChanged: (val) => tipoSelezionato = val!,
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: Colors.blue[900],
+                ),
+                onPressed: () async {
+                  final provider = context.read<FleetProvider>();
+
+                  try {
+                    await provider.aggiungiNuovoVeicolo(
+                      targa: targaController.text,
+                      marca: marcaController.text,
+                      modello: modelloController.text,
+                      tipo:
+                          tipoSelezionato.name, 
+                      anno: annoController.text,
+                      kmAttuali: kmController.text,
+                    );
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Veicolo aggiunto con successo!")),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Errore: ${e.toString()}")),
+                      );
+                    }
+                  }
+                },
+                child: const Text("SALVA VEICOLO",
+                    style: TextStyle(color: Colors.white)),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

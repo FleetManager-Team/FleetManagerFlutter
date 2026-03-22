@@ -25,8 +25,14 @@ class Prenotazione {
       idPrenotazione: json['id_prenotazione'],
       dataInizio: DateTime.parse(json['data_inizio']),
       dataFine: DateTime.parse(json['data_fine']),
-      statoPrenotazione: StatoPrenotazione.values.firstWhere((e) => e.name == json['stato']),
-      tipoPrenotazione: TipoPrenotazione.values.firstWhere((e) => e.name == json['tipo']),
+      statoPrenotazione: StatoPrenotazione.values.firstWhere(
+        (e) => e.name.toLowerCase() == json['stato'].toString().toLowerCase(),
+        orElse: () => StatoPrenotazione.richiesta, // Fallback di sicurezza
+      ),
+      tipoPrenotazione: TipoPrenotazione.values.firstWhere(
+        (e) => e.name.toLowerCase() == json['tipo'].toString().toLowerCase(),
+        orElse: () => TipoPrenotazione.utente, // Fallback di sicurezza
+      ),
       idUtente: json['id_utente'],
       targa: json['targa'],
     );

@@ -1,5 +1,7 @@
+import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
@@ -34,13 +36,6 @@ class _MaintenanceDashboardScreenState
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.orange[800],
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_business),
-            onPressed: () => _showNewMaintenanceDialog(context),
-            tooltip: "Nuovo Intervento",
-          )
-        ],
       ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -61,6 +56,17 @@ class _MaintenanceDashboardScreenState
                 ),
               ],
             ),
+      floatingActionButton:
+          provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager
+              ? FloatingActionButton.extended(
+                  onPressed: () => _showNewMaintenanceDialog(context),
+                  backgroundColor: Colors.orange[800],
+                  icon: const Icon(Icons.build, color: Colors.white),
+                  label: const Text("NUOVO INTERVENTO",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                )
+              : null,
     );
   }
 
@@ -117,10 +123,10 @@ class _MaintenanceDashboardScreenState
     final intervento = provider.manutenzioni.firstWhere(
       (m) => m.targa == v.targa && m.oraFine == null,
       orElse: () => Manutenzione(
-          idManutenzione: -1, 
-          data: DateTime.now(), 
-          tipoManutenzione: TipoManutenzione.straordinaria, 
-          descrizione: "N.D.", 
+          idManutenzione: -1,
+          data: DateTime.now(),
+          tipoManutenzione: TipoManutenzione.straordinaria,
+          descrizione: "N.D.",
           targa: v.targa),
     );
 
@@ -139,8 +145,8 @@ class _MaintenanceDashboardScreenState
         extraSectionTitle: "Chiusura Intervento",
         extraContent: Column(
           children: [
-            const Text("Inserisci i chilometri attuali al rientro:", 
-              style: TextStyle(fontSize: 12, color: Colors.black54)),
+            const Text("Inserisci i chilometri attuali al rientro:",
+                style: TextStyle(fontSize: 12, color: Colors.black54)),
             TextField(
               controller: kmController,
               keyboardType: TextInputType.number,
@@ -149,21 +155,28 @@ class _MaintenanceDashboardScreenState
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("INDIETRO")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("INDIETRO")),
           ElevatedButton(
             onPressed: () async {
               int nuoviKm = int.tryParse(kmController.text) ?? v.km;
               // Passiamo l'ID reale dell'intervento e i nuovi KM
-              await provider.chiudiManutenzione(intervento.idManutenzione, v.targa, nuoviKm: nuoviKm);
-              
+              await provider.chiudiManutenzione(
+                  intervento.idManutenzione, v.targa,
+                  nuoviKm: nuoviKm);
+
               if (mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Veicolo ${v.targa} rientrato con $nuoviKm km")),
+                  SnackBar(
+                      content:
+                          Text("Veicolo ${v.targa} rientrato con $nuoviKm km")),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green, foregroundColor: Colors.white),
             child: const Text("CHIUDI INTERVENTO"),
           ),
         ],
@@ -192,47 +205,152 @@ class _MaintenanceDashboardScreenState
         .toList();
 
     Veicolo? veicoloSelezionato;
+    TipoManutenzione tipoSelezionato = TipoManutenzione.ordinaria;
     final descController = TextEditingController();
+
+    // Variabili per gestire Data e Ora selezionate
+    DateTime dataSelezionata = DateTime.now();
+    TimeOfDay oraSelezionata = TimeOfDay.now();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            left: 20, right: 20, top: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text("Segnala Nuovo Intervento", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-            const SizedBox(height: 15),
-            DropdownButtonFormField<Veicolo>(
-              items: veicoliDisponibili.map((v) => DropdownMenuItem(value: v, child: Text("${v.targa} - ${v.modello}"))).toList(),
-              onChanged: (val) => veicoloSelezionato = val,
-              decoration: const InputDecoration(labelText: "Seleziona Veicolo", border: OutlineInputBorder(), prefixIcon: Icon(Icons.directions_car)),
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: "Descrizione guasto", border: OutlineInputBorder(), prefixIcon: Icon(Icons.edit_note)),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                if (veicoloSelezionato != null && descController.text.isNotEmpty) {
-                  await provider.segnalareInterventoStraordinario(veicoloSelezionato!, descController.text);
-                  if (mounted) {
-                    Navigator.pop(context);
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              left: 20,
+              right: 20,
+              top: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text("Nuovo Intervento Officina",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+
+              // Selezione Veicolo
+              DropdownButtonFormField<Veicolo>(
+                items: veicoliDisponibili
+                    .map((v) => DropdownMenuItem(
+                        value: v,
+                        child: Text("${v.targa} - ${v.marca} ${v.modello}")))
+                    .toList(),
+                onChanged: (val) => veicoloSelezionato = val,
+                decoration: const InputDecoration(
+                    labelText: "Veicolo",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.directions_car)),
+              ),
+              const SizedBox(height: 15),
+
+              // SELEZIONE DATA E ORA (NOVITÀ)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                          DateFormat('dd/MM/yyyy').format(dataSelezionata)),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: dataSelezionata,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null)
+                          setModalState(() => dataSelezionata = picked);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.access_time),
+                      label: Text(oraSelezionata.format(context)),
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: oraSelezionata,
+                        );
+                        if (picked != null)
+                          setModalState(() => oraSelezionata = picked);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+
+              // Tipo Intervento
+              DropdownButtonFormField<TipoManutenzione>(
+                value: tipoSelezionato,
+                items: TipoManutenzione.values
+                    .map((t) => DropdownMenuItem(
+                        value: t, child: Text(t.name.toUpperCase())))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setModalState(() => tipoSelezionato = val);
+                },
+                decoration: const InputDecoration(
+                    labelText: "Tipo Intervento",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.settings_suggest)),
+              ),
+              const SizedBox(height: 15),
+
+              // Descrizione
+              TextField(
+                controller: descController,
+                decoration: const InputDecoration(
+                    labelText: "Dettagli guasto",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.edit_note)),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: () async {
+                  if (veicoloSelezionato != null &&
+                      descController.text.isNotEmpty) {
+                    // Uniamo Data e Ora in un unico DateTime
+                    final dataCompleta = DateTime(
+                        dataSelezionata.year,
+                        dataSelezionata.month,
+                        dataSelezionata.day,
+                        oraSelezionata.hour,
+                        oraSelezionata.minute);
+
+                    try {
+                      await provider.programmareManutenzione(
+                        veicoloSelezionato!,
+                        dataCompleta, // Passiamo la data scelta dall'utente
+                        tipoSelezionato,
+                        descController.text,
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text("Errore: $e"),
+                          backgroundColor: Colors.red));
+                    }
                   }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 15)),
-              child: const Text("AVVIA MANUTENZIONE", style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[800],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15)),
+                child: const Text("AVVIA INTERVENTO",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -245,7 +363,11 @@ class _MaintenanceDashboardScreenState
         children: [
           Icon(Icons.build_circle_outlined, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text("Nessun veicolo in manutenzione", style: TextStyle(color: Colors.grey[600], fontSize: 16, fontWeight: FontWeight.w500)),
+          Text("Nessun veicolo in manutenzione",
+              style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500)),
         ],
       ),
     );
