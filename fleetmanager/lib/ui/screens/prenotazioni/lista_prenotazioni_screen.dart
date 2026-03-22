@@ -20,18 +20,32 @@ class _BookingListScreenState extends State<BookingListScreen> {
   bool ordineCrescente = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Al caricamento, assicuriamoci che gli stati siano aggiornati (es. da confermata ad attiva)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<FleetProvider>().inizializzaDati();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
     final isManager =
         provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager;
 
-    // Filtriamo la lista basandoci su targa e stato
+    // Filtro e ricerca
     List<Prenotazione> lista = provider.prenotazioni.where((p) {
       final matchStato =
           filtroStato == null || p.statoPrenotazione == filtroStato;
       final matchRicerca =
           p.targa.toLowerCase().contains(queryRicerca.toLowerCase());
-      return matchStato && matchRicerca;
+
+      // Se non è manager, vede solo le sue (Logica opzionale, dipende dal tuo business)
+      bool matchUtente =
+          isManager || p.idUtente == provider.utenteLoggato?.idUtente;
+
+      return matchStato && matchRicerca && matchUtente;
     }).toList();
 
     // Ordinamento
@@ -45,7 +59,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
       appBar: AppBar(
         title: const Text("Registro Prenotazioni",
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue[800],
+        backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -55,8 +69,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                provider.inizializzaDati(), // Refresh manuale dal DB
+            onPressed: () => provider.inizializzaDati(),
           ),
         ],
       ),
@@ -67,7 +80,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
             child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : lista.isEmpty
-                    ? const Center(child: Text("Nessuna prenotazione trovata"))
+                    ? _buildEmptyState()
                     : RefreshIndicator(
                         onRefresh: () => provider.inizializzaDati(),
                         child: ListView.builder(
@@ -83,98 +96,6 @@ class _BookingListScreenState extends State<BookingListScreen> {
     );
   }
 
-  void _showBookingDetails(
-      Prenotazione p, FleetProvider provider, bool isManager) {
-    final statusColor = _getBookingStatusColor(p.statoPrenotazione);
-
-    // Cerchiamo il nome del driver per renderlo leggibile
-    final driver =
-        provider.utenti.firstWhereOrNull((u) => u.idUtente == p.idUtente);
-    final nomeDriver = driver != null
-        ? "${driver.nome} ${driver.cognome}"
-        : "ID: #${p.idUtente}";
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Dettaglio Prenotazione"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _detailRow(Icons.directions_car, "Veicolo", p.targa),
-            _detailRow(Icons.person, "Driver", nomeDriver),
-            _detailRow(Icons.calendar_today, "Inizio",
-                DateFormat('dd/MM HH:mm').format(p.dataInizio)),
-            _detailRow(Icons.event_available, "Fine",
-                DateFormat('dd/MM HH:mm').format(p.dataFine)),
-            const Divider(),
-            Text(p.statoPrenotazione.name.toUpperCase(),
-                style:
-                    TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed:
-                  provider.isLoading ? null : () => Navigator.pop(context),
-              child: const Text("CHIUDI")),
-          if (isManager &&
-              p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
-            // Tasto APPROVA
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              onPressed: provider.isLoading
-                  ? null
-                  : () async {
-                      try {
-                        await provider.confermaPrenotazione(p.idPrenotazione);
-                        if (context.mounted) Navigator.pop(context);
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Errore durante la conferma: $e"),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-              child: provider.isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text("APPROVA",
-                      style: TextStyle(color: Colors.white)),
-            ),
-            // Tasto RIFIUTA
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: provider.isLoading
-                  ? null
-                  : () async {
-                      try {
-                        await provider.annullaPrenotazione(p.idPrenotazione);
-                        if (context.mounted) Navigator.pop(context);
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Errore durante l'annullamento: $e"),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-              child:
-                  const Text("RIFIUTA", style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // Supporto UI
   Widget _buildTopActions() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -189,6 +110,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none),
@@ -198,13 +120,16 @@ class _BookingListScreenState extends State<BookingListScreen> {
           const SizedBox(width: 10),
           DropdownButton<StatoPrenotazione>(
             value: filtroStato,
+            hint: const Text("Stato"),
             underline: const SizedBox(),
-            icon: const Icon(Icons.filter_alt),
+            icon: const Icon(Icons.filter_list_alt),
             onChanged: (val) => setState(() => filtroStato = val),
             items: [
-              const DropdownMenuItem(value: null, child: Text("TUTTI")),
+              const DropdownMenuItem(value: null, child: Text("Tutti")),
               ...StatoPrenotazione.values.map((s) => DropdownMenuItem(
-                  value: s, child: Text(s.name.toUpperCase()))),
+                  value: s,
+                  child: Text(s.name.toUpperCase(),
+                      style: const TextStyle(fontSize: 12)))),
             ],
           ),
         ],
@@ -215,27 +140,114 @@ class _BookingListScreenState extends State<BookingListScreen> {
   Widget _buildBookingCard(
       Prenotazione p, FleetProvider provider, bool isManager) {
     final statusColor = _getBookingStatusColor(p.statoPrenotazione);
+    final driver =
+        provider.utenti.firstWhereOrNull((u) => u.idUtente == p.idUtente);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        onTap: () => _showBookingDetails(p, provider, isManager),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8)),
-          child: Icon(Icons.event_note, color: statusColor),
+        onTap: () => _showBookingDetails(p, provider, isManager, driver),
+        leading: CircleAvatar(
+          backgroundColor: statusColor.withOpacity(0.1),
+          child: Icon(Icons.calendar_month, color: statusColor),
         ),
-        title: Text("Veicolo: ${p.targa}",
+        title: Text("Targa: ${p.targa}",
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle:
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text("Inizio: ${DateFormat('dd/MM HH:mm').format(p.dataInizio)}"),
+            if (isManager && driver != null)
+              Text("Driver: ${driver.nome} ${driver.cognome}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
         trailing: _buildStatusTag(p.statoPrenotazione, statusColor),
       ),
     );
   }
 
+  void _showBookingDetails(
+      Prenotazione p, FleetProvider provider, bool isManager, dynamic driver) {
+    final statusColor = _getBookingStatusColor(p.statoPrenotazione);
+    final nomeDriver = driver != null
+        ? "${driver.nome} ${driver.cognome}"
+        : "ID: #${p.idUtente}";
+
+    showDialog(
+      context: context,
+      barrierDismissible: !provider.isLoading,
+      builder: (context) => StatefulBuilder(
+        // Per gestire il caricamento dentro il dialog
+        builder: (context, setDialogState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: const Text("Dettaglio Prenotazione"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _detailRow(Icons.directions_car, "Veicolo", p.targa),
+              _detailRow(Icons.person, "Driver", nomeDriver),
+              _detailRow(Icons.access_time, "Dalle",
+                  DateFormat('dd/MM/yy HH:mm').format(p.dataInizio)),
+              _detailRow(Icons.access_time_filled, "Alle",
+                  DateFormat('dd/MM/yy HH:mm').format(p.dataFine)),
+              const Divider(height: 30),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10)),
+                child: Text(p.statoPrenotazione.name.toUpperCase(),
+                    style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed:
+                    provider.isLoading ? null : () => Navigator.pop(context),
+                child: const Text("CHIUDI")),
+            if (isManager &&
+                p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
+              ElevatedButton(
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.red[400]),
+                onPressed: provider.isLoading
+                    ? null
+                    : () async {
+                        await provider.annullaPrenotazione(p.idPrenotazione);
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                child: const Text("RIFIUTA",
+                    style: TextStyle(color: Colors.white)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600]),
+                onPressed: provider.isLoading
+                    ? null
+                    : () async {
+                        await provider.confermaPrenotazione(p.idPrenotazione);
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                child: const Text("APPROVA",
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Supporto UI
   Widget _buildStatusTag(StatoPrenotazione stato, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -249,17 +261,37 @@ class _BookingListScreenState extends State<BookingListScreen> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_busy, size: 60, color: Colors.grey[400]),
+          const SizedBox(height: 10),
+          Text("Nessuna prenotazione trovata",
+              style: TextStyle(color: Colors.grey[600])),
+        ],
+      ),
+    );
+  }
+
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.blueGrey[400]),
-          const SizedBox(width: 8),
-          Text("$label: ",
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
+          Icon(icon, size: 20, color: Colors.blue[900]),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(value,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 14)),
+            ],
+          ),
         ],
       ),
     );
@@ -268,15 +300,15 @@ class _BookingListScreenState extends State<BookingListScreen> {
   Color _getBookingStatusColor(StatoPrenotazione stato) {
     switch (stato) {
       case StatoPrenotazione.richiesta:
-        return Colors.orange[700]!;
+        return Colors.orange[800]!;
       case StatoPrenotazione.attiva:
-        return Colors.green[600]!;
+        return Colors.green[700]!;
       case StatoPrenotazione.completata:
-        return Colors.grey[600]!;
+        return Colors.blueGrey[600]!;
       case StatoPrenotazione.annullata:
         return Colors.red[700]!;
       case StatoPrenotazione.confermata:
-        return Colors.blue[600]!;
+        return Colors.blue[700]!;
     }
   }
 }

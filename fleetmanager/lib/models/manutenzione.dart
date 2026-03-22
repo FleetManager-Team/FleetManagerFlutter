@@ -3,10 +3,11 @@ import 'enums/tipo_manutenzione.dart';
 class Manutenzione {
   final int idManutenzione;
   final DateTime data;
-  final DateTime? oraFine; 
+  final DateTime? oraFine;
   final TipoManutenzione tipoManutenzione;
   final String descrizione;
   final String targa;
+  final String luogo;
 
   Manutenzione({
     required this.idManutenzione,
@@ -15,16 +16,20 @@ class Manutenzione {
     required this.tipoManutenzione,
     required this.descrizione,
     required this.targa,
+    required this.luogo,
   });
 
   factory Manutenzione.fromJson(Map<String, dynamic> json) {
     return Manutenzione(
       idManutenzione: json['id_manutenzione'],
       data: DateTime.parse(json['data']),
-      oraFine: json['ora_fine'] != null ? DateTime.parse(json['ora_fine']) : null,
-      tipoManutenzione: TipoManutenzione.values.firstWhere((e) => e.name == json['tipo']),
+      oraFine:
+          json['ora_fine'] != null ? DateTime.parse(json['ora_fine']) : null,
+      tipoManutenzione:
+          TipoManutenzione.values.firstWhere((e) => e.name == json['tipo']),
       descrizione: json['descrizione'],
       targa: json['targa'],
+      luogo: json['luogo'],
     );
   }
 
@@ -36,6 +41,7 @@ class Manutenzione {
       'tipo': tipoManutenzione.name,
       'descrizione': descrizione,
       'targa': targa,
+      'luogo': luogo,
     };
   }
 }

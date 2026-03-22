@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
-import 'package:fleetmanager/models/manutenzione.dart'; // Assicurati di importare il modello
+import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
@@ -20,11 +20,33 @@ class MaintenanceDashboardScreen extends StatefulWidget {
 
 class _MaintenanceDashboardScreenState
     extends State<MaintenanceDashboardScreen> {
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _caricaDati();
+  }
+
+  Future<void> _caricaDati() async {
+    setState(() => _isLoading = true);
+    try {
+      await context.read<FleetProvider>().inizializzaDati();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Errore nel caricamento: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
 
-    // Filtriamo i veicoli che sono attualmente in manutenzione
     final veicoliInManutenzione = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
         .toList();
@@ -36,8 +58,14 @@ class _MaintenanceDashboardScreenState
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.orange[800],
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _caricaDati,
+          )
+        ],
       ),
-      body: provider.isLoading
+      body: (_isLoading || provider.isLoading)
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
@@ -118,8 +146,6 @@ class _MaintenanceDashboardScreenState
   }
 
   void _showMaintenanceDetails(Veicolo v, FleetProvider provider) {
-    // Recuperiamo l'ID dell'intervento aperto per questo veicolo dalla lista manutenzioni
-    // Se non lo trovi, usiamo un fallback o gestiamo l'errore
     final intervento = provider.manutenzioni.firstWhere(
       (m) => m.targa == v.targa && m.oraFine == null,
       orElse: () => Manutenzione(
@@ -127,7 +153,8 @@ class _MaintenanceDashboardScreenState
           data: DateTime.now(),
           tipoManutenzione: TipoManutenzione.straordinaria,
           descrizione: "N.D.",
-          targa: v.targa),
+          targa: v.targa,
+          luogo: "N.D."), // Aggiunto luogo di fallback
     );
 
     final kmController = TextEditingController(text: v.km.toString());
@@ -140,6 +167,8 @@ class _MaintenanceDashboardScreenState
         details: [
           _detailRow(Icons.pin, "Targa", v.targa),
           _detailRow(Icons.speed, "Km ingresso", "${v.km} km"),
+          _detailRow(Icons.location_on, "Luogo",
+              intervento.luogo), // Visualizzazione luogo
           _detailRow(Icons.description, "Motivo", intervento.descrizione),
         ],
         extraSectionTitle: "Chiusura Intervento",
@@ -161,7 +190,6 @@ class _MaintenanceDashboardScreenState
           ElevatedButton(
             onPressed: () async {
               int nuoviKm = int.tryParse(kmController.text) ?? v.km;
-              // Passiamo l'ID reale dell'intervento e i nuovi KM
               await provider.chiudiManutenzione(
                   intervento.idManutenzione, v.targa,
                   nuoviKm: nuoviKm);
@@ -207,8 +235,7 @@ class _MaintenanceDashboardScreenState
     Veicolo? veicoloSelezionato;
     TipoManutenzione tipoSelezionato = TipoManutenzione.ordinaria;
     final descController = TextEditingController();
-
-    // Variabili per gestire Data e Ora selezionate
+    final luogoController = TextEditingController(); // Controller per il luogo
     DateTime dataSelezionata = DateTime.now();
     TimeOfDay oraSelezionata = TimeOfDay.now();
 
@@ -232,8 +259,6 @@ class _MaintenanceDashboardScreenState
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
-
-              // Selezione Veicolo
               DropdownButtonFormField<Veicolo>(
                 items: veicoliDisponibili
                     .map((v) => DropdownMenuItem(
@@ -247,8 +272,6 @@ class _MaintenanceDashboardScreenState
                     prefixIcon: Icon(Icons.directions_car)),
               ),
               const SizedBox(height: 15),
-
-              // SELEZIONE DATA E ORA (NOVITÀ)
               Row(
                 children: [
                   Expanded(
@@ -286,8 +309,6 @@ class _MaintenanceDashboardScreenState
                 ],
               ),
               const SizedBox(height: 15),
-
-              // Tipo Intervento
               DropdownButtonFormField<TipoManutenzione>(
                 value: tipoSelezionato,
                 items: TipoManutenzione.values
@@ -303,23 +324,30 @@ class _MaintenanceDashboardScreenState
                     prefixIcon: Icon(Icons.settings_suggest)),
               ),
               const SizedBox(height: 15),
-
-              // Descrizione
+              // CAMPO LUOGO AGGIUNTO
+              TextField(
+                controller: luogoController,
+                decoration: const InputDecoration(
+                    labelText: "Luogo / Officina",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.location_on)),
+              ),
+              const SizedBox(height: 15),
               TextField(
                 controller: descController,
                 decoration: const InputDecoration(
-                    labelText: "Dettagli guasto",
+                    labelText: "Dettagli intervento",
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.edit_note)),
                 maxLines: 2,
               ),
               const SizedBox(height: 20),
-
               ElevatedButton(
                 onPressed: () async {
                   if (veicoloSelezionato != null &&
-                      descController.text.isNotEmpty) {
-                    // Uniamo Data e Ora in un unico DateTime
+                      descController.text.isNotEmpty &&
+                      luogoController.text.isNotEmpty) {
+                    // Controllo anche sul luogo
                     final dataCompleta = DateTime(
                         dataSelezionata.year,
                         dataSelezionata.month,
@@ -330,9 +358,11 @@ class _MaintenanceDashboardScreenState
                     try {
                       await provider.programmareManutenzione(
                         veicoloSelezionato!,
-                        dataCompleta, // Passiamo la data scelta dall'utente
+                        dataCompleta,
                         tipoSelezionato,
                         descController.text,
+                        luogo:
+                            luogoController.text, // Passaggio del nuovo campo
                       );
                       if (context.mounted) Navigator.pop(context);
                     } catch (e) {
@@ -340,6 +370,10 @@ class _MaintenanceDashboardScreenState
                           content: Text("Errore: $e"),
                           backgroundColor: Colors.red));
                     }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content:
+                            Text("Compila tutti i campi, incluso il luogo")));
                   }
                 },
                 style: ElevatedButton.styleFrom(
