@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
+import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
 import 'package:flutter/material.dart';
@@ -107,33 +108,68 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     );
   }
 
-  Widget _buildVehicleCard(Veicolo v) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        onTap: () => _showVehicleDetails(v),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: _getStatusColor(v.statoVeicolo).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            v.tipoVeicolo == TipoVeicolo.furgone
-                ? Icons.local_shipping
-                : Icons.directions_car,
-            color: _getStatusColor(v.statoVeicolo),
-          ),
+ Widget _buildVehicleCard(Veicolo v) {
+  final provider = context.watch<FleetProvider>();
+  
+  // Cerchiamo se c'è una manutenzione programmata (non ancora chiusa e futura)
+  final manutenzioneProgrammata = provider.manutenzioni.cast<Manutenzione?>().firstWhere(
+    (m) => m?.targa == v.targa && m?.oraFine == null && m!.data.isAfter(DateTime.now()),
+    orElse: () => null,
+  );
+
+  return Card(
+    elevation: 2,
+    margin: const EdgeInsets.only(bottom: 12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: ListTile(
+      onTap: () => _showVehicleDetails(v),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _getStatusColor(v.statoVeicolo).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-        title: Text("${v.marca} ${v.modello}",
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("Targa: ${v.targa} • ${v.km} km"),
-        trailing: _buildStatusChip(v.statoVeicolo),
+        child: Icon(
+          v.tipoVeicolo == TipoVeicolo.furgone
+              ? Icons.local_shipping
+              : Icons.directions_car,
+          color: _getStatusColor(v.statoVeicolo),
+        ),
       ),
-    );
-  }
+      title: Text("${v.marca} ${v.modello}",
+          style: const TextStyle(fontWeight: FontWeight.bold)),
+      
+      // MODIFICA QUI: Subtitle multi-riga per mostrare i KM e l'eventuale avviso
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Targa: ${v.targa} • ${v.km} km"),
+          
+          // Se c'è una manutenzione in arrivo, mostriamo l'avviso arancione
+          if (manutenzioneProgrammata != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.event_busy, color: Colors.orange, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Manutenzione: ${manutenzioneProgrammata.data.day}/${manutenzioneProgrammata.data.month} ore ${manutenzioneProgrammata.data.hour}:${manutenzioneProgrammata.data.minute.toString().padLeft(2, '0')}",
+                    style: const TextStyle(
+                      color: Colors.orange, 
+                      fontSize: 11, 
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      trailing: _buildStatusChip(v.statoVeicolo),
+    ),
+  );
+}
 
   void _showVehicleDetails(Veicolo v) {
     final provider = context.read<FleetProvider>();

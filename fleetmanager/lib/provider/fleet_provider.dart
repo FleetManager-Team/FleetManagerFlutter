@@ -235,6 +235,7 @@ class FleetProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      // 1. Registriamo l'intervento (questo va sempre fatto)
       await _manutenzioneService.registraIntervento(Manutenzione(
         idManutenzione: 0,
         data: inizio,
@@ -244,17 +245,33 @@ class FleetProvider with ChangeNotifier {
         luogo: luogo,
       ));
 
-      await _veicoloService.updateStatoVeicolo(
-          veicolo.targa, StatoVeicolo.inManutenzione);
+      // 2. LOGICA DI STATO (IL PUNTO CRITICO)
+      // Cambiamo lo stato in 'inManutenzione' SOLO SE:
+      // - È un'emergenza (Straordinaria)
+      // - OPPURE l'appuntamento è ADESSO (o nel passato)
+      bool deveBloccareSubito = 
+          tipo == TipoManutenzione.straordinaria || 
+          inizio.isBefore(DateTime.now().add(const Duration(minutes: 10)));
+
+      if (deveBloccareSubito) {
+        await _veicoloService.updateStatoVeicolo(
+            veicolo.targa, StatoVeicolo.inManutenzione);
+      } else {
+        // Se è ordinaria e futura, lasciamo lo stato 'disponibile'!
+        // Così il driver la vede nella lista, ma il nostro 'isVeicoloDisponibile'
+        // la bloccherà solo per le ore del tagliando.
+        debugPrint("Auto lasciata DISPONIBILE per prenotazioni pre-tagliando");
+      }
+
       await inizializzaDati();
     } catch (e) {
-      debugPrint("❌ Errore manutenzione: $e");
+      debugPrint("❌ Errore: $e");
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
-  }
+}
 
   Future<void> chiudiManutenzione(int idManutenzione, String targa,
       {int? nuoviKm}) async {
@@ -323,4 +340,37 @@ class FleetProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+bool isVeicoloDisponibile(String targa, DateTime inizioRichiesto, DateTime fineRichiesto) {
+  // 1. Il veicolo è fisicamente in officina ADESSO? 
+  // Se sì, è bloccato a prescindere dalle date future.
+  final v = _veicoli.firstWhere((v) => v.targa == targa);
+  if (v.statoVeicolo == StatoVeicolo.inManutenzione) return false;
+
+  // 2. Controllo incrocio con MANUTENZIONI PROGRAMMATE
+  final haConflittoManutenzione = _manutenzioni.any((m) {
+    // Consideriamo solo manutenzioni della stessa auto e ancora "aperte" (senza oraFine)
+    if (m.targa != targa || m.oraFine != null) return false;
+
+    // Ipotizziamo che la manutenzione occupi l'auto dalla sua 'data' 
+    // fino a poche ore dopo (es. 10 ore o fino a fine giornata)
+    DateTime inizioM = m.data;
+    DateTime fineM = m.data.add(const Duration(hours: 8)); 
+
+    // Formula Magica della Sovrapposizione:
+    // Un conflitto esiste SOLO SE (Inizio1 < Fine2) E (Fine1 > Inizio2)
+    return inizioRichiesto.isBefore(fineM) && fineRichiesto.isAfter(inizioM);
+  });
+
+  if (haConflittoManutenzione) return false;
+
+  // 3. Controllo incrocio con altre PRENOTAZIONI già confermate
+  final haConflittoPrenotazione = _prenotazioni.any((p) {
+    if (p.targa != targa || p.statoPrenotazione != StatoPrenotazione.confermata) return false;
+    
+    return inizioRichiesto.isBefore(p.dataFine) && fineRichiesto.isAfter(p.dataInizio);
+  });
+
+  return !haConflittoPrenotazione;
+}
 }

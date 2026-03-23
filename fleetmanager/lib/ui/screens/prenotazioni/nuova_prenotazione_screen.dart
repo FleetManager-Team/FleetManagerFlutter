@@ -4,20 +4,24 @@ import 'package:intl/intl.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 
-
 class NuovaPrenotazioneScreen extends StatefulWidget {
   const NuovaPrenotazioneScreen({super.key});
 
   @override
-  State<NuovaPrenotazioneScreen> createState() => _NuovaPrenotazioneScreenState();
+  State<NuovaPrenotazioneScreen> createState() =>
+      _NuovaPrenotazioneScreenState();
 }
 
 class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
   String? _targaSelezionata;
-  
+
   // Impostiamo di default domani alle 09:00
-  DateTime _inizio = DateTime.now().add(const Duration(days: 1)).copyWith(hour: 9, minute: 0, second: 0, millisecond: 0);
-  DateTime _fine = DateTime.now().add(const Duration(days: 1)).copyWith(hour: 18, minute: 0, second: 0, millisecond: 0);
+  DateTime _inizio = DateTime.now()
+      .add(const Duration(days: 1))
+      .copyWith(hour: 9, minute: 0, second: 0, millisecond: 0);
+  DateTime _fine = DateTime.now()
+      .add(const Duration(days: 1))
+      .copyWith(hour: 18, minute: 0, second: 0, millisecond: 0);
 
   // Helper per selezionare data e ora
   Future<void> _selectDateTime(BuildContext context, bool isStart) async {
@@ -38,8 +42,11 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
       if (pickedTime != null) {
         setState(() {
           final selected = DateTime(
-            pickedDate.year, pickedDate.month, pickedDate.day,
-            pickedTime.hour, pickedTime.minute,
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
           );
           if (isStart) {
             _inizio = selected;
@@ -58,7 +65,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
   Widget build(BuildContext context) {
     // Usiamo watch per reagire ai cambiamenti del provider (es. caricamento completato)
     final provider = context.watch<FleetProvider>();
-    
+
     // Filtriamo solo i veicoli realmente disponibili nel DB
     final veicoliDisponibili = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.disponibile)
@@ -70,16 +77,19 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
         backgroundColor: Colors.blue[900],
         foregroundColor: Colors.white,
       ),
-      body: provider.isLoading 
-          ? const Center(child: CircularProgressIndicator()) // Mostra caricamento se il provider sta lavorando
+      body: provider.isLoading
+          ? const Center(
+              child:
+                  CircularProgressIndicator()) // Mostra caricamento se il provider sta lavorando
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text("Scegli un veicolo dalla flotta:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("Scegli un veicolo dalla flotta:",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  
+
                   // Dropdown Veicoli
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
@@ -89,14 +99,18 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                     hint: const Text("Seleziona Veicolo"),
                     value: _targaSelezionata,
                     onChanged: (val) => setState(() => _targaSelezionata = val),
-                    items: veicoliDisponibili.map((v) => DropdownMenuItem(
-                      value: v.targa,
-                      child: Text("${v.marca} ${v.modello} (${v.targa})"),
-                    )).toList(),
+                    items: veicoliDisponibili
+                        .map((v) => DropdownMenuItem(
+                              value: v.targa,
+                              child:
+                                  Text("${v.marca} ${v.modello} (${v.targa})"),
+                            ))
+                        .toList(),
                   ),
 
                   const SizedBox(height: 24),
-                  const Text("Seleziona periodo:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("Seleziona periodo:",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
 
                   // Data Inizio
@@ -104,7 +118,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.login, color: Colors.green),
                       title: const Text("Inizio"),
-                      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(_inizio)),
+                      subtitle:
+                          Text(DateFormat('dd/MM/yyyy HH:mm').format(_inizio)),
                       onTap: () => _selectDateTime(context, true),
                     ),
                   ),
@@ -114,7 +129,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.logout, color: Colors.red),
                       title: const Text("Fine"),
-                      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(_fine)),
+                      subtitle:
+                          Text(DateFormat('dd/MM/yyyy HH:mm').format(_fine)),
                       onTap: () => _selectDateTime(context, false),
                     ),
                   ),
@@ -127,16 +143,49 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                       backgroundColor: Colors.blue[900],
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: (_targaSelezionata == null || _fine.isBefore(_inizio))
+                    onPressed: (_targaSelezionata == null ||
+                            _fine.isBefore(_inizio))
                         ? null
                         : () async {
                             try {
-                              if (provider.utenteLoggato == null) throw "Utente non loggato";
+                              if (provider.utenteLoggato == null)
+                                throw "Utente non loggato";
 
-                              final veicolo = veicoliDisponibili.firstWhere((v) => v.targa == _targaSelezionata);
-                              
+                              // 1. Troviamo il veicolo che l'utente sta cercando di prenotare
+                              final veicolo = veicoliDisponibili.firstWhere(
+                                  (v) => v.targa == _targaSelezionata);
+
+                              // 2. CONTROLLO INTELLIGENTE: Il veicolo è davvero libero in quelle date?
+                              // (Considerando sia altre prenotazioni che manutenzioni programmate)
+                              bool disponibile = provider.isVeicoloDisponibile(
+                                  veicolo.targa, _inizio, _fine);
+
+                              if (!disponibile) {
+                                // Se c'è un conflitto, fermiamo tutto qui e avvisiamo l'utente
+                                if (mounted) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title:
+                                          const Text("Veicolo non disponibile"),
+                                      content: const Text(
+                                          "In questo orario il veicolo è impegnato per un'altra prenotazione o per una manutenzione programmata.\n\nProva a cambiare orario o seleziona un altro mezzo."),
+                                      actions: [
+                                        TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text("HO CAPITO"))
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return; // Esci dalla funzione, non creare la prenotazione
+                              }
+
+                              // 3. Se il controllo passa, procediamo con la creazione
                               await provider.creaPrenotazione(
                                 provider.utenteLoggato!,
                                 veicolo,
@@ -146,19 +195,24 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
 
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Richiesta inviata! In attesa di approvazione.")),
+                                  const SnackBar(
+                                      content: Text(
+                                          "Richiesta inviata! In attesa di approvazione.")),
                                 );
                                 Navigator.pop(context);
                               }
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Errore: ${e.toString()}"), backgroundColor: Colors.red),
+                                  SnackBar(
+                                      content: Text("Errore: ${e.toString()}"),
+                                      backgroundColor: Colors.red),
                                 );
                               }
                             }
                           },
-                    child: const Text("INVIA RICHIESTA PRENOTAZIONE", style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text("INVIA RICHIESTA PRENOTAZIONE",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
