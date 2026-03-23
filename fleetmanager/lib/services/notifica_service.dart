@@ -11,18 +11,16 @@ class NotificaService {
         .select()
         .eq('id_utente', idUtente)
         .order('data_invio', ascending: false);
-    
+
     return (response as List).map((json) => Notifica.fromJson(json)).toList();
   }
 
   Future<void> segnaLetta(int id) async {
     await _supabase
         .from('notifiche')
-        .update({'letta': true})
-        .eq('id_notifica', id);
+        .update({'letta': true}).eq('id_notifica', id);
   }
 
-  // Metodo generico interno per creare notifiche (sostituisce i vari post del backend)
   Future<void> _creaNotifica({
     required int idUtente,
     required String messaggio,
@@ -39,24 +37,30 @@ class NotificaService {
     });
   }
 
-  Future<void> inviaNotificaScadenza(int idScadenza, String targa, String tipoScadenza, DateTime data) async {
+  // --- ORA TUTTI I METODI ACCETTANO L'ID DEL DESTINATARIO ---
+
+  Future<void> inviaNotificaScadenza(int idManager, int idScadenza,
+      String targa, String tipoScadenza, DateTime data) async {
     await _creaNotifica(
-      idUtente: 1, // Nota: Qui andrebbe l'ID del Manager o del destinatario
-      messaggio: 'Scadenza $tipoScadenza per il veicolo $targa il ${data.day}/${data.month}',
+      idUtente: idManager,
+      messaggio:
+          'Scadenza $tipoScadenza per il veicolo $targa il ${data.day}/${data.month}',
       tipo: TipoNotifica.scadenza,
       idScadenza: idScadenza,
     );
   }
 
-  Future<void> notificaRichiestaPrenotazione(int idDriver, String targa, DateTime dataInizio, DateTime dataFine) async {
+  Future<void> notificaRichiestaPrenotazione(int idManager, String nomeDriver,
+      String targa, DateTime dataInizio, DateTime dataFine) async {
     await _creaNotifica(
-      idUtente: 1, // Destinato al Manager
-      messaggio: 'Nuova richiesta prenotazione: Driver $idDriver per $targa dal ${dataInizio.day}/${dataInizio.month}',
+      idUtente: idManager,
+      messaggio: 'Nuova richiesta prenotazione: Driver $nomeDriver per $targa...',
       tipo: TipoNotifica.info,
     );
   }
 
-  Future<void> notificaConfermaPrenotazione(int idDriver, String targa, DateTime dataInizio, DateTime dataFine) async {
+  Future<void> notificaConfermaPrenotazione(int idDriver, String targa,
+      DateTime dataInizio, DateTime dataFine) async {
     await _creaNotifica(
       idUtente: idDriver,
       messaggio: 'La tua prenotazione per $targa è stata confermata.',
@@ -64,7 +68,8 @@ class NotificaService {
     );
   }
 
-  Future<void> notificaRifiutoPrenotazione(int idDriver, String targa, DateTime dataInizio, DateTime dataFine) async {
+  Future<void> notificaRifiutoPrenotazione(int idDriver, String targa,
+      DateTime dataInizio, DateTime dataFine) async {
     await _creaNotifica(
       idUtente: idDriver,
       messaggio: 'La tua prenotazione per $targa è stata rifiutata.',
@@ -72,27 +77,39 @@ class NotificaService {
     );
   }
 
-  Future<void> notificaManutenzioneProgrammata(int idUtente, String targa, DateTime data) async {
+  Future<void> notificaManutenzioneProgrammata(
+      int idUtente, String targa, DateTime data) async {
     await _creaNotifica(
       idUtente: idUtente,
-      messaggio: 'Manutenzione programmata per $targa il ${data.day}/${data.month}.',
+      messaggio:
+          'Manutenzione programmata per $targa il ${data.day}/${data.month}.',
       tipo: TipoNotifica.manutenzione,
     );
   }
 
-  Future<void> notificaAnnullamentoPrenotazioneDaDriver(int idDriver, String targa) async {
+  Future<void> notificaAnnullamentoPrenotazioneDaDriver(
+      int idManager, int idDriver, String targa) async {
     await _creaNotifica(
-      idUtente: 1, // Destinato al Manager
+      idUtente: idManager,
       messaggio: 'Il driver $idDriver ha annullato la prenotazione per $targa.',
       tipo: TipoNotifica.alert,
     );
   }
 
-  Future<void> notificaInterventoStraordinario(int idUtente, String targa) async {
+  Future<void> notificaInterventoStraordinario(
+      int idManager, String targa) async {
     await _creaNotifica(
-      idUtente: 1, // Destinato al Manager
+      idUtente: idManager,
       messaggio: 'Segnalato intervento straordinario per il veicolo $targa.',
       tipo: TipoNotifica.manutenzione,
     );
+  }
+
+  Future<void> eliminaNotifica(int id) async {
+    await _supabase.from('notifiche').delete().eq('id_notifica', id);
+  }
+
+  Future<void> svuotaNotifiche(int idUtente) async {
+    await _supabase.from('notifiche').delete().eq('id_utente', idUtente);
   }
 }

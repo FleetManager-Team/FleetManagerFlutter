@@ -1,16 +1,19 @@
+import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
+import 'package:fleetmanager/models/manutenzione.dart';
+import 'package:fleetmanager/models/enums/ruolo_utente.dart'; // Assicurati che sia importato
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/veicolo.dart';
 import '../models/prenotazione.dart';
 import '../models/utente.dart';
-import '../models/manutenzione.dart';
+import '../models/notifica.dart';
 import '../models/enums/stato_veicolo.dart';
 import '../models/enums/stato_prenotazione.dart';
 import '../models/enums/tipo_manutenzione.dart';
-import '../models/enums/tipo_prenotazione.dart';
 import '../services/auth_service.dart';
 import '../services/prenotazione_service.dart';
 import '../services/manutenzione_service.dart';
+import '../services/notifica_service.dart';
 import '../services/veicolo_service.dart';
 
 class FleetProvider with ChangeNotifier {
@@ -18,11 +21,13 @@ class FleetProvider with ChangeNotifier {
   final VeicoloService _veicoloService = VeicoloService();
   final PrenotazioneService _prenotazioneService = PrenotazioneService();
   final ManutenzioneService _manutenzioneService = ManutenzioneService();
+  final NotificaService _notificaService = NotificaService();
 
   List<Veicolo> _veicoli = [];
   List<Prenotazione> _prenotazioni = [];
   List<Manutenzione> _manutenzioni = [];
   List<Utente> _utenti = [];
+  List<Notifica> _notifiche = [];
   Utente? _utenteLoggato;
   bool _isLoading = false;
 
@@ -30,43 +35,58 @@ class FleetProvider with ChangeNotifier {
   List<Veicolo> get veicoli => _veicoli;
   List<Prenotazione> get prenotazioni => _prenotazioni;
   List<Manutenzione> get manutenzioni => _manutenzioni;
+  List<Notifica> get notifiche => _notifiche;
   Utente? get utenteLoggato => _utenteLoggato;
   List<Utente> get utenti => _utenti;
   bool get isLoading => _isLoading;
 
-  /// CARICAMENTO DATI E SINCRONIZZAZIONE
+  /// HELPER: Recupera l'ID del Manager dinamicamente
+  int get _managerId {
+    try {
+      return _utenti
+          .firstWhere((u) => u.ruoloUtente == RuoloUtente.manager)
+          .idUtente;
+    } catch (e) {
+      // Fallback: Se non trova un manager, usa l'ID dell'utente loggato o un default sicuro
+      return _utenteLoggato?.idUtente ?? 1;
+    }
+  }
+
+  /// --- INIZIALIZZAZIONE ---
   Future<void> inizializzaDati() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 1. Sincronizza gli stati temporali (es. Passaggio da Confermata ad Attiva)
       await _prenotazioneService.aggiornaStatiPrenotazioni();
 
-      // 2. Carica i dati aggiornati in parallelo per velocità
       final risultati = await Future.wait([
         _veicoloService.fetchAllVeicoli(),
         _prenotazioneService.fetchPrenotazioni(),
         _authService.getTuttiUtenti(),
         _manutenzioneService.fetchTutte(),
+        if (_utenteLoggato != null)
+          _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
+        else
+          Future.value(<Notifica>[]),
       ]);
 
       _veicoli = risultati[0] as List<Veicolo>;
       _prenotazioni = risultati[1] as List<Prenotazione>;
       _utenti = risultati[2] as List<Utente>;
       _manutenzioni = risultati[3] as List<Manutenzione>;
+      _notifiche = risultati[4] as List<Notifica>;
 
-      debugPrint("✅ PROVIDER: Dati sincronizzati e caricati.");
+      debugPrint("✅ PROVIDER: Dati e Notifiche sincronizzati.");
     } catch (e) {
-      debugPrint("❌ PROVIDER ERROR durante inizializzazione: $e");
+      debugPrint("❌ PROVIDER ERROR: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // --- LOGICA AUTENTICAZIONE ---
-
+  /// --- LOGICA AUTENTICAZIONE ---
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
@@ -92,84 +112,69 @@ class FleetProvider with ChangeNotifier {
     _veicoli = [];
     _prenotazioni = [];
     _manutenzioni = [];
-    _utenti = [];
+    _notifiche = [];
     notifyListeners();
   }
 
-  // --- LOGICA UTENTI (CRUD) ---
-
-  Future<void> aggiungiNuovoUtente({
-    required String email,
-    required String passwordScelta,
-    required String nome,
-    required String cognome,
-    required String ruolo,
-    String? patente,
-  }) async {
-    _isLoading = true;
-    notifyListeners();
+  /// --- LOGICA NOTIFICHE ---
+  Future<void> segnaNotificaLetta(int id) async {
     try {
-      final authRes = await Supabase.instance.client.auth.signUp(
-        email: email.trim(),
-        password: passwordScelta,
-      );
-
-      if (authRes.user != null) {
-        await Supabase.instance.client.from('utenti').insert({
-          'email': email.trim().toLowerCase(),
-          'nome': nome.trim(),
-          'cognome': cognome.trim(),
-          'ruolo': ruolo,
-          'patente': patente ?? 'Da inserire',
-        });
-        await inizializzaDati();
-      }
-    } catch (e) {
-      debugPrint("❌ Errore aggiunta utente: $e");
-      rethrow;
-    } finally {
-      _isLoading = false;
+      await _notificaService.segnaLetta(id);
+      _notifiche.removeWhere((n) => n.idNotifica == id);
       notifyListeners();
+    } catch (e) {
+      debugPrint("❌ Errore segna letta: $e");
     }
   }
 
-  Future<void> eliminaUtente(int id) async {
+  Future<void> segnaTutteNotificheComeLette() async {
+    if (_utenteLoggato == null) return;
+
     _isLoading = true;
     notifyListeners();
+
     try {
-      await _authService.eliminaUtente(id);
+      // 1. Aggiorna Supabase: setta letta = true per tutte le notifiche dell'utente loggato
+      await Supabase.instance.client
+          .from('notifiche')
+          .update({'letta': true})
+          .eq('id_utente', _utenteLoggato!.idUtente)
+          .eq('letta', false); // Solo quelle non ancora lette
+
+      // 2. Aggiorna la lista locale (puoi ricaricare i dati o modificarli in memoria)
       await inizializzaDati();
+
+      debugPrint("✅ Tutte le notifiche segnate come lette.");
     } catch (e) {
-      debugPrint("❌ Errore eliminazione utente: $e");
-      rethrow;
+      debugPrint("❌ Errore segna tutte come lette: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> aggiornaUtente(Utente u) async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> eliminaNotifica(int id) async {
     try {
-      await Supabase.instance.client.from('utenti').update({
-        'nome': u.nome,
-        'cognome': u.cognome,
-        'ruolo': u.ruoloUtente.name,
-        'patente': u.patente,
-      }).eq('id_utente', u.idUtente);
-      await inizializzaDati();
-    } catch (e) {
-      debugPrint("❌ Errore aggiornamento utente: $e");
-      rethrow;
-    } finally {
-      _isLoading = false;
+      await _notificaService.eliminaNotifica(id);
+      _notifiche.removeWhere((n) => n.idNotifica == id);
       notifyListeners();
+    } catch (e) {
+      debugPrint("❌ Errore eliminazione notifica: $e");
     }
   }
 
-  // --- LOGICA PRENOTAZIONI ---
+  Future<void> eliminaTutteLeNotifiche() async {
+    if (_utenteLoggato == null) return;
+    try {
+      await _notificaService.svuotaNotifiche(_utenteLoggato!.idUtente);
+      _notifiche.clear();
+      notifyListeners();
+    } catch (e) {
+      debugPrint("❌ Errore svuota notifiche: $e");
+    }
+  }
 
+  /// --- LOGICA PRENOTAZIONI ---
   Future<void> creaPrenotazione(
       Utente driver, Veicolo veicolo, DateTime inizio, DateTime fine) async {
     if (driver.patente == null || driver.patente == 'Da inserire') {
@@ -179,10 +184,9 @@ class FleetProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      bool disponibile = await _prenotazioneService.validaDisponibilita(
-          veicolo.targa, inizio, fine);
-      if (!disponibile) {
-        throw Exception('Il veicolo è già prenotato in questo periodo.');
+      if (!isVeicoloDisponibile(veicolo.targa, inizio, fine)) {
+        throw Exception(
+            'Il veicolo è già impegnato (Manutenzione o Prenotazione).');
       }
 
       Prenotazione p = Prenotazione(
@@ -196,6 +200,10 @@ class FleetProvider with ChangeNotifier {
       );
 
       await _prenotazioneService.creaPrenotazione(p);
+
+      // NOTIFICA AL MANAGER (ID Recuperato dinamicamente)
+      await _notificaService.notificaRichiestaPrenotazione(_managerId,
+          "${driver.nome} ${driver.cognome}", veicolo.targa, inizio, fine);
       await inizializzaDati();
     } finally {
       _isLoading = false;
@@ -208,6 +216,12 @@ class FleetProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _prenotazioneService.confermaPrenotazione(id);
+
+      final p =
+          _prenotazioni.firstWhere((element) => element.idPrenotazione == id);
+      await _notificaService.notificaConfermaPrenotazione(
+          p.idUtente, p.targa, p.dataInizio, p.dataFine);
+
       await inizializzaDati();
     } finally {
       _isLoading = false;
@@ -219,7 +233,20 @@ class FleetProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      final p =
+          _prenotazioni.firstWhere((element) => element.idPrenotazione == id);
       await _prenotazioneService.annullaPrenotazione(id);
+
+      if (_utenteLoggato?.ruoloUtente == RuoloUtente.manager) {
+        // Il manager rifiuta -> notifica al driver
+        await _notificaService.notificaRifiutoPrenotazione(
+            p.idUtente, p.targa, p.dataInizio, p.dataFine);
+      } else {
+        // Il driver annulla -> notifica al manager
+        await _notificaService.notificaAnnullamentoPrenotazioneDaDriver(
+            _managerId, p.idUtente, p.targa);
+      }
+
       await inizializzaDati();
     } finally {
       _isLoading = false;
@@ -227,15 +254,13 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  // --- LOGICA MANUTENZIONI ---
-
+  /// --- LOGICA MANUTENZIONI ---
   Future<void> programmareManutenzione(Veicolo veicolo, DateTime inizio,
       TipoManutenzione tipo, String descrizione,
       {required String luogo}) async {
     _isLoading = true;
     notifyListeners();
     try {
-      // 1. Registriamo l'intervento (questo va sempre fatto)
       await _manutenzioneService.registraIntervento(Manutenzione(
         idManutenzione: 0,
         data: inizio,
@@ -245,33 +270,37 @@ class FleetProvider with ChangeNotifier {
         luogo: luogo,
       ));
 
-      // 2. LOGICA DI STATO (IL PUNTO CRITICO)
-      // Cambiamo lo stato in 'inManutenzione' SOLO SE:
-      // - È un'emergenza (Straordinaria)
-      // - OPPURE l'appuntamento è ADESSO (o nel passato)
-      bool deveBloccareSubito = 
-          tipo == TipoManutenzione.straordinaria || 
+      bool deveBloccareSubito = tipo == TipoManutenzione.straordinaria ||
           inizio.isBefore(DateTime.now().add(const Duration(minutes: 10)));
 
       if (deveBloccareSubito) {
         await _veicoloService.updateStatoVeicolo(
             veicolo.targa, StatoVeicolo.inManutenzione);
-      } else {
-        // Se è ordinaria e futura, lasciamo lo stato 'disponibile'!
-        // Così il driver la vede nella lista, ma il nostro 'isVeicoloDisponibile'
-        // la bloccherà solo per le ore del tagliando.
-        debugPrint("Auto lasciata DISPONIBILE per prenotazioni pre-tagliando");
+
+        // Notifica il manager dell'intervento avviato
+        await _notificaService.notificaInterventoStraordinario(
+            _managerId, veicolo.targa);
+      }
+
+      final colpite = _prenotazioni.where((p) =>
+          p.targa == veicolo.targa &&
+          p.statoPrenotazione == StatoPrenotazione.confermata &&
+          p.dataInizio.isAfter(inizio.subtract(const Duration(minutes: 30))));
+
+      for (var pr in colpite) {
+        await _notificaService.notificaRifiutoPrenotazione(
+            pr.idUtente, veicolo.targa, pr.dataInizio, pr.dataFine);
       }
 
       await inizializzaDati();
     } catch (e) {
-      debugPrint("❌ Errore: $e");
+      debugPrint("❌ Errore manutenzione: $e");
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
-}
+  }
 
   Future<void> chiudiManutenzione(int idManutenzione, String targa,
       {int? nuoviKm}) async {
@@ -283,7 +312,7 @@ class FleetProvider with ChangeNotifier {
           idManutenzione, kmFinali, targa);
       await inizializzaDati();
     } catch (e) {
-      debugPrint("❌ Errore chiusura manutenzione: $e");
+      debugPrint("❌ Errore chiusura: $e");
       rethrow;
     } finally {
       _isLoading = false;
@@ -291,16 +320,62 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  // --- GESTIONE VEICOLI (CRUD) ---
+  /// --- DISPONIBILITÀ INTELLIGENTE ---
+  bool isVeicoloDisponibile(
+      String targa, DateTime inizioReq, DateTime fineReq) {
+    final v = _veicoli.firstWhere((v) => v.targa == targa);
+    if (v.statoVeicolo == StatoVeicolo.inManutenzione) return false;
 
-  Future<void> aggiungiNuovoVeicolo({
-    required String targa,
-    required String marca,
-    required String modello,
-    required String tipo,
-    required String anno,
-    String? kmAttuali,
-  }) async {
+    final haM = _manutenzioni.any((m) {
+      if (m.targa != targa || m.oraFine != null) return false;
+      DateTime fineM = m.data.add(const Duration(hours: 8));
+      return inizioReq.isBefore(fineM) && fineReq.isAfter(m.data);
+    });
+    if (haM) return false;
+
+    return !_prenotazioni.any((p) =>
+        p.targa == targa &&
+        p.statoPrenotazione == StatoPrenotazione.confermata &&
+        inizioReq.isBefore(p.dataFine) &&
+        fineReq.isAfter(p.dataInizio));
+  }
+
+  /// --- LOGICA UTENTI E VEICOLI (CRUD) ---
+  Future<void> aggiungiNuovoUtente(
+      {required String email,
+      required String passwordScelta,
+      required String nome,
+      required String cognome,
+      required String ruolo,
+      String? patente}) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final authRes = await Supabase.instance.client.auth
+          .signUp(email: email.trim(), password: passwordScelta);
+      if (authRes.user != null) {
+        await Supabase.instance.client.from('utenti').insert({
+          'email': email.trim().toLowerCase(),
+          'nome': nome.trim(),
+          'cognome': cognome.trim(),
+          'ruolo': ruolo,
+          'patente': patente ?? 'Da inserire',
+        });
+        await inizializzaDati();
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> aggiungiNuovoVeicolo(
+      {required String targa,
+      required String marca,
+      required String modello,
+      required String tipo,
+      required String anno,
+      String? kmAttuali}) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -314,9 +389,18 @@ class FleetProvider with ChangeNotifier {
         'anno_immatricolazione': int.tryParse(anno) ?? DateTime.now().year,
       });
       await inizializzaDati();
-    } catch (e) {
-      debugPrint("❌ Errore aggiunta veicolo: $e");
-      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> eliminaUtente(int id) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authService.eliminaUtente(id);
+      await inizializzaDati();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -332,45 +416,64 @@ class FleetProvider with ChangeNotifier {
           .delete()
           .eq('targa', targa);
       await inizializzaDati();
-    } catch (e) {
-      debugPrint("❌ Errore eliminazione veicolo: $e");
-      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-bool isVeicoloDisponibile(String targa, DateTime inizioRichiesto, DateTime fineRichiesto) {
-  // 1. Il veicolo è fisicamente in officina ADESSO? 
-  // Se sì, è bloccato a prescindere dalle date future.
-  final v = _veicoli.firstWhere((v) => v.targa == targa);
-  if (v.statoVeicolo == StatoVeicolo.inManutenzione) return false;
+  Future<void> modificaPrenotazione(
+      int idPrenotazione, DateTime nuovoInizio, DateTime nuovaFine) async {
+    _isLoading = true;
+    notifyListeners();
 
-  // 2. Controllo incrocio con MANUTENZIONI PROGRAMMATE
-  final haConflittoManutenzione = _manutenzioni.any((m) {
-    // Consideriamo solo manutenzioni della stessa auto e ancora "aperte" (senza oraFine)
-    if (m.targa != targa || m.oraFine != null) return false;
+    try {
+      // 1. Recuperiamo la prenotazione attuale
+      final p = _prenotazioni
+          .firstWhere((element) => element.idPrenotazione == idPrenotazione);
 
-    // Ipotizziamo che la manutenzione occupi l'auto dalla sua 'data' 
-    // fino a poche ore dopo (es. 10 ore o fino a fine giornata)
-    DateTime inizioM = m.data;
-    DateTime fineM = m.data.add(const Duration(hours: 8)); 
+      // --- AGGIUNTA: Recuperiamo l'oggetto Utente per avere il Nome ---
+      final driver = _utenti.firstWhere((u) => u.idUtente == p.idUtente);
+      final String nomeCompleto = "${driver.nome} ${driver.cognome}";
 
-    // Formula Magica della Sovrapposizione:
-    // Un conflitto esiste SOLO SE (Inizio1 < Fine2) E (Fine1 > Inizio2)
-    return inizioRichiesto.isBefore(fineM) && fineRichiesto.isAfter(inizioM);
-  });
+      // 2. Controllo disponibilità
+      if (!isVeicoloDisponibilePerModifica(
+          p.targa, nuovoInizio, nuovaFine, idPrenotazione)) {
+        throw Exception(
+            'Il veicolo non è disponibile per queste nuove date/orari.');
+      }
 
-  if (haConflittoManutenzione) return false;
+      // 3. Update su Supabase
+      await Supabase.instance.client.from('prenotazioni').update({
+        'data_inizio': nuovoInizio.toIso8601String(),
+        'data_fine': nuovaFine.toIso8601String(),
+        'stato': 'richiesta',
+      }).eq('id_prenotazione', idPrenotazione);
 
-  // 3. Controllo incrocio con altre PRENOTAZIONI già confermate
-  final haConflittoPrenotazione = _prenotazioni.any((p) {
-    if (p.targa != targa || p.statoPrenotazione != StatoPrenotazione.confermata) return false;
-    
-    return inizioRichiesto.isBefore(p.dataFine) && fineRichiesto.isAfter(p.dataInizio);
-  });
+      // 4. Notifica al Manager
+      // USIAMO nomeCompleto (String) invece di p.idUtente (int)
+      await _notificaService.notificaRichiestaPrenotazione(
+          _managerId, nomeCompleto, p.targa, nuovoInizio, nuovaFine);
 
-  return !haConflittoPrenotazione;
-}
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("❌ Errore durante la modifica: $e");
+      rethrow; // Importante per far vedere l'errore nella UI
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+// Helper necessario per non andare in conflitto con la prenotazione che stiamo modificando
+  bool isVeicoloDisponibilePerModifica(
+      String targa, DateTime inizio, DateTime fine, int idDaEscludere) {
+    // Simile a isVeicoloDisponibile ma aggiunge .where((p) => p.idPrenotazione != idDaEscludere)
+    return !_prenotazioni.any((p) =>
+        p.targa == targa &&
+        p.idPrenotazione != idDaEscludere &&
+        p.statoPrenotazione != StatoPrenotazione.annullata &&
+        inizio.isBefore(p.dataFine) &&
+        fine.isAfter(p.dataInizio));
+  }
 }
