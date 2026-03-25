@@ -183,12 +183,16 @@ class FleetProvider with ChangeNotifier {
 
     _isLoading = true;
     notifyListeners();
-    try {
-      if (!isVeicoloDisponibile(veicolo.targa, inizio, fine)) {
-        throw Exception(
-            'Il veicolo è già impegnato (Manutenzione o Prenotazione).');
-      }
 
+    try {
+      if (!_isSlotDisponibile(
+          targa: veicolo.targa,
+          idUtente: driver.idUtente,
+          inizio: inizio,
+          fine: fine)) {
+        throw Exception(
+            'Impossibile procedere: sovrapposizione rilevata. L\'auto o il conducente sono già impegnati in questo orario.');
+      }
       Prenotazione p = Prenotazione(
         idPrenotazione: 0,
         dataInizio: inizio,
@@ -201,10 +205,13 @@ class FleetProvider with ChangeNotifier {
 
       await _prenotazioneService.creaPrenotazione(p);
 
-      // NOTIFICA AL MANAGER (ID Recuperato dinamicamente)
       await _notificaService.notificaRichiestaPrenotazione(_managerId,
           "${driver.nome} ${driver.cognome}", veicolo.targa, inizio, fine);
+
       await inizializzaDati();
+    } catch (e) {
+      debugPrint("❌ Errore creazione prenotazione: $e");
+      rethrow; // Permette alla UI di catturare l'errore e mostrarlo all'utente
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -323,21 +330,10 @@ class FleetProvider with ChangeNotifier {
   /// --- DISPONIBILITÀ INTELLIGENTE ---
   bool isVeicoloDisponibile(
       String targa, DateTime inizioReq, DateTime fineReq) {
-    final v = _veicoli.firstWhere((v) => v.targa == targa);
-    if (v.statoVeicolo == StatoVeicolo.inManutenzione) return false;
-
-    final haM = _manutenzioni.any((m) {
-      if (m.targa != targa || m.oraFine != null) return false;
-      DateTime fineM = m.data.add(const Duration(hours: 8));
-      return inizioReq.isBefore(fineM) && fineReq.isAfter(m.data);
-    });
-    if (haM) return false;
-
-    return !_prenotazioni.any((p) =>
-        p.targa == targa &&
-        p.statoPrenotazione == StatoPrenotazione.confermata &&
-        inizioReq.isBefore(p.dataFine) &&
-        fineReq.isAfter(p.dataInizio));
+    // Riutilizziamo la logica potente che abbiamo scritto sopra!
+    // Passiamo un ID utente fittizio (0) perché qui ci interessa solo l'auto
+    return _isSlotDisponibile(
+        targa: targa, idUtente: 0, inizio: inizioReq, fine: fineReq);
   }
 
   /// --- LOGICA UTENTI E VEICOLI (CRUD) ---
@@ -428,52 +424,78 @@ class FleetProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Recuperiamo la prenotazione attuale
       final p = _prenotazioni
           .firstWhere((element) => element.idPrenotazione == idPrenotazione);
 
-      // --- AGGIUNTA: Recuperiamo l'oggetto Utente per avere il Nome ---
       final driver = _utenti.firstWhere((u) => u.idUtente == p.idUtente);
       final String nomeCompleto = "${driver.nome} ${driver.cognome}";
 
-      // 2. Controllo disponibilità
-      if (!isVeicoloDisponibilePerModifica(
-          p.targa, nuovoInizio, nuovaFine, idPrenotazione)) {
+      if (!_isSlotDisponibile(
+          targa: p.targa,
+          idUtente: p.idUtente,
+          inizio: nuovoInizio,
+          fine: nuovaFine,
+          idDaEscludere: idPrenotazione)) {
         throw Exception(
-            'Il veicolo non è disponibile per queste nuove date/orari.');
+            'Impossibile modificare: l\'auto o il conducente sono già impegnati in quegli orari.');
       }
 
-      // 3. Update su Supabase
       await Supabase.instance.client.from('prenotazioni').update({
         'data_inizio': nuovoInizio.toIso8601String(),
         'data_fine': nuovaFine.toIso8601String(),
-        'stato': 'richiesta',
+        'stato': 'richiesta', // Torna in approvazione per sicurezza
       }).eq('id_prenotazione', idPrenotazione);
-
-      // 4. Notifica al Manager
-      // USIAMO nomeCompleto (String) invece di p.idUtente (int)
       await _notificaService.notificaRichiestaPrenotazione(
           _managerId, nomeCompleto, p.targa, nuovoInizio, nuovaFine);
-
       await inizializzaDati();
     } catch (e) {
       debugPrint("❌ Errore durante la modifica: $e");
-      rethrow; // Importante per far vedere l'errore nella UI
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-// Helper necessario per non andare in conflitto con la prenotazione che stiamo modificando
-  bool isVeicoloDisponibilePerModifica(
-      String targa, DateTime inizio, DateTime fine, int idDaEscludere) {
-    // Simile a isVeicoloDisponibile ma aggiunge .where((p) => p.idPrenotazione != idDaEscludere)
-    return !_prenotazioni.any((p) =>
-        p.targa == targa &&
-        p.idPrenotazione != idDaEscludere &&
-        p.statoPrenotazione != StatoPrenotazione.annullata &&
-        inizio.isBefore(p.dataFine) &&
-        fine.isAfter(p.dataInizio));
+  bool _isSlotDisponibile({
+    required String targa,
+    required int idUtente,
+    required DateTime inizio,
+    required DateTime fine,
+    int? idDaEscludere, // Importante per la modifica
+  }) {
+    // 1. CONTROLLO MANUTENZIONI ATTIVE
+    final veicoloInOfficina = _manutenzioni.any((m) =>
+        m.targa == targa &&
+        m.oraFine == null && // Manutenzione non ancora chiusa
+        inizio.isBefore(
+            m.data.add(const Duration(hours: 8))) && // Stima durata se non nota
+        fine.isAfter(m.data));
+
+    if (veicoloInOfficina) return false;
+
+    // 2. CONTROLLO PRENOTAZIONI ESISTENTI (Sia Confermate che in Richiesta)
+    return !_prenotazioni.any((p) {
+      // Saltiamo la prenotazione stessa se stiamo facendo una modifica
+      if (idDaEscludere != null && p.idPrenotazione == idDaEscludere)
+        return false;
+
+      // Ignoriamo quelle annullate o rifiutate (non occupano spazio)
+      if (p.statoPrenotazione == StatoPrenotazione.annullata) return false;
+
+      // Verifichiamo se gli orari si incrociano
+      final haSovrapposizioneOraria =
+          inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);
+
+      if (haSovrapposizioneOraria) {
+        // Caso A: L'auto è già impegnata da qualcun altro
+        if (p.targa == targa) return true;
+
+        // Caso B: IL DRIVER (TU) ha già un'altra auto prenotata in quel momento
+        if (p.idUtente == idUtente) return true;
+      }
+
+      return false;
+    });
   }
 }

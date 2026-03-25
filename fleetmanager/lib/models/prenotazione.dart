@@ -23,15 +23,15 @@ class Prenotazione {
   factory Prenotazione.fromJson(Map<String, dynamic> json) {
     return Prenotazione(
       idPrenotazione: json['id_prenotazione'],
-      dataInizio: DateTime.parse(json['data_inizio']),
-      dataFine: DateTime.parse(json['data_fine']),
+      dataInizio: DateTime.parse(json['data_inizio']).toLocal(),
+      dataFine: DateTime.parse(json['data_fine']).toLocal(),
       statoPrenotazione: StatoPrenotazione.values.firstWhere(
         (e) => e.name.toLowerCase() == json['stato'].toString().toLowerCase(),
-        orElse: () => StatoPrenotazione.richiesta, // Fallback di sicurezza
+        orElse: () => StatoPrenotazione.richiesta,
       ),
       tipoPrenotazione: TipoPrenotazione.values.firstWhere(
         (e) => e.name.toLowerCase() == json['tipo'].toString().toLowerCase(),
-        orElse: () => TipoPrenotazione.utente, // Fallback di sicurezza
+        orElse: () => TipoPrenotazione.utente,
       ),
       idUtente: json['id_utente'],
       targa: json['targa'],
