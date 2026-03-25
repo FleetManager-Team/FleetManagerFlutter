@@ -1,3 +1,4 @@
+import 'package:fleetmanager/services/veicolo_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FleetProvider()),
+        Provider(create: (_) => VeicoloService()),
       ],
       child: const MyApp(),
     ),

@@ -1,6 +1,7 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/restituzione_veicolo_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/storico_prenotazioni_screen.dart';
 import 'package:fleetmanager/ui/screens/utenti/lista_utenti_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
@@ -24,13 +25,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // RIMOSSO: _prenotazioniFuture (non serve più con il caricamento centralizzato)
-
   @override
   void initState() {
     super.initState();
-    // Non carichiamo qui perché lo abbiamo fatto nel login,
-    // ma lasciamo il check di sicurezza se per caso i dati fossero vuoti
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<FleetProvider>();
       if (provider.veicoli.isEmpty) {
@@ -41,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // watch permette alla UI di reagire istantaneamente quando i dati su Supabase cambiano
     final provider = context.watch<FleetProvider>();
     final utente = provider.utenteLoggato;
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
@@ -69,6 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildManagerPrenotazioni(provider, utente),
                     ] else ...[
                       _buildDriverActionCard(context),
+                      // Card per la restituzione (solo se c'è una prenotazione attiva)
+                      _buildReturnActionCard(context, provider),
                       const SizedBox(height: 25),
                       _buildSectionTitle("Le Mie Prenotazioni"),
                       _buildDriverPrenotazioni(provider),
@@ -95,6 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
         style: TextStyle(fontWeight: FontWeight.bold),
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => provider.inizializzaDati(),
+          tooltip: "Aggiorna dati",
+        ),
         Stack(
           alignment: Alignment.center,
           children: [
@@ -131,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
+        const SizedBox(width: 8),
       ],
     );
   }
@@ -149,11 +153,94 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildReturnActionCard(BuildContext context, FleetProvider provider) {
+    final utente = provider.utenteLoggato;
+    Prenotazione? attiva;
+
+    try {
+      attiva = provider.prenotazioni.firstWhere((p) =>
+          p.idUtente == utente?.idUtente &&
+          p.statoPrenotazione == StatoPrenotazione.attiva);
+    } catch (_) {
+      attiva = null;
+    }
+
+    if (attiva == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 15),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient:
+              LinearGradient(colors: [Colors.green[700]!, Colors.green[500]!]),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "VEICOLO IN USO",
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1),
+                ),
+                Text(
+                  attiva.targa,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Stai terminando il viaggio?",
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 15),
+            // Pulsante reso identico a quello della card blu
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RestituzioneVeicoloScreen(
+                      prenotazione: attiva!,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.green[700]),
+              child: const Text("RESTITUISCI VEICOLO"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildAdminStats(FleetProvider provider) {
     final inManutenzione = provider.veicoli
         .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
         .length;
-
     return Row(
       children: [
         _statCard(
@@ -202,8 +289,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           ElevatedButton(
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen())),
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const NuovaPrenotazioneScreen())),
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.blue[700]),
@@ -216,26 +305,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildManagerPrenotazioni(FleetProvider provider, Utente? utente) {
     if (utente == null) return const SizedBox.shrink();
-    // Il manager vede le prenotazioni che richiedono attenzione (Richieste o Attive)
-    final attive = provider.prenotazioni
+    final list = provider.prenotazioni
         .where((p) =>
             p.statoPrenotazione == StatoPrenotazione.richiesta ||
             p.statoPrenotazione == StatoPrenotazione.attiva)
         .toList();
-
-    return _buildPrenotazioniList(attive, true);
+    return _buildPrenotazioniList(list, true);
   }
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
     final utente = provider.utenteLoggato;
-    // Il driver vede solo le sue prenotazioni non ancora concluse
+    // LOGICA DI FILTRAGGIO: Escludiamo le attive perché sono già nel widget verde in alto
     final mie = provider.prenotazioni
         .where((p) =>
-            p.idUtente == utente?.idUtente &&
-            p.statoPrenotazione != StatoPrenotazione.completata &&
-            p.statoPrenotazione != StatoPrenotazione.annullata)
+                p.idUtente == utente?.idUtente &&
+                p.statoPrenotazione != StatoPrenotazione.completata &&
+                p.statoPrenotazione != StatoPrenotazione.annullata &&
+                p.statoPrenotazione !=
+                    StatoPrenotazione
+                        .attiva // <--- NASCONDE L'ATTIVA DALL'ELENCO
+            )
         .toList();
-
     return _buildPrenotazioniList(mie, false);
   }
 
@@ -248,22 +338,16 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
       );
     }
-
     final df = DateFormat('dd/MM HH:mm');
-    final provider = context.read<FleetProvider>();
-
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: prenotazioni.length,
       itemBuilder: (context, index) {
         final p = prenotazioni[index];
-
-        // Definiamo se il driver può agire (solo su richieste o confermate future)
         final bool canEditOrCancel = !isManager &&
             (p.statoPrenotazione == StatoPrenotazione.richiesta ||
                 p.statoPrenotazione == StatoPrenotazione.confermata);
-
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 10),
@@ -283,24 +367,19 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle: Text(
                 "Dal: ${df.format(p.dataInizio)}\nAl: ${df.format(p.dataFine)}",
                 style: const TextStyle(fontSize: 12)),
-
-            // NUOVO TRAILING DINAMICO
             trailing: canEditOrCancel
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Tasto Modifica
                       IconButton(
-                        icon: const Icon(Icons.edit_calendar,
-                            color: Colors.blue, size: 22),
-                        onPressed: () => _mostraDialogModifica(context, p),
-                      ),
-                      // Tasto Annulla
+                          icon: const Icon(Icons.edit_calendar,
+                              color: Colors.blue, size: 22),
+                          onPressed: () => _mostraDialogModifica(context, p)),
                       IconButton(
-                        icon: const Icon(Icons.cancel_outlined,
-                            color: Colors.redAccent, size: 22),
-                        onPressed: () => _mostraDialogAnnullamento(context, p),
-                      ),
+                          icon: const Icon(Icons.cancel_outlined,
+                              color: Colors.redAccent, size: 22),
+                          onPressed: () =>
+                              _mostraDialogAnnullamento(context, p)),
                     ],
                   )
                 : (isManager &&
@@ -310,8 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const BookingListScreen())),
-                      )
+                                builder: (_) => const BookingListScreen())))
                     : null),
           ),
         );
@@ -319,7 +397,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Helper per colori stati
   Color _getStatusColor(StatoPrenotazione stato) {
     switch (stato) {
       case StatoPrenotazione.richiesta:
@@ -344,18 +421,16 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
-            child: Column(
-              children: [
-                Icon(icon, color: color, size: 24),
-                const SizedBox(height: 8),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-                Text(label,
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    textAlign: TextAlign.center),
-              ],
-            ),
+            child: Column(children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 8),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(label,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  textAlign: TextAlign.center),
+            ]),
           ),
         ),
       ),
@@ -364,32 +439,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    );
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)));
   }
 
   Widget _buildDrawer(BuildContext context, Utente? utente) {
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
     return Drawer(
-      child: Column(
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: Colors.blue[800]),
-            accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
-            accountEmail: Text(utente?.email ?? ''),
-            currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40)),
-          ),
-          ListTile(
+      child: Column(children: [
+        UserAccountsDrawerHeader(
+          decoration: BoxDecoration(color: Colors.blue[800]),
+          accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
+          accountEmail: Text(utente?.email ?? ''),
+          currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, size: 40)),
+        ),
+        ListTile(
             leading: const Icon(Icons.home),
             title: const Text("Dashboard"),
-            onTap: () => Navigator.pop(context),
-          ),
-          if (isManager)
-            ListTile(
+            onTap: () => Navigator.pop(context)),
+        if (isManager)
+          ListTile(
               leading: const Icon(Icons.people),
               title: const Text("Gestione Utenti"),
               onTap: () {
@@ -398,9 +470,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(
                         builder: (_) => const UserManagementScreen()));
-              },
-            ),
-          ListTile(
+              }),
+        ListTile(
             leading: const Icon(Icons.history),
             title: const Text("Storico Prenotazioni"),
             onTap: () {
@@ -409,11 +480,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const BookingHistoryScreen()));
-            },
-          ),
-          const Spacer(),
-          const Divider(),
-          ListTile(
+            }),
+        const Spacer(),
+        const Divider(),
+        ListTile(
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
             title: const Text("Logout"),
             onTap: () {
@@ -422,180 +492,98 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false);
-            },
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
+            }),
+        const SizedBox(height: 20),
+      ]),
     );
   }
 
+  // --- LOGICA DIALOG ---
   void _mostraDialogModifica(BuildContext context, Prenotazione p) async {
-    DateTime nuovaDataInizio = p.dataInizio;
-    DateTime nuovaDataFine = p.dataFine;
-
+    DateTime inizio = p.dataInizio;
+    DateTime fine = p.dataFine;
     await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          // Necessario per aggiornare la UI dentro il BottomSheet
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text("Modifica Orari Prenotazione",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-
-                  // SELETTORE INIZIO
-                  _buildDateTimePickerTile(
-                    label: "Inizio",
-                    dateTime: nuovaDataInizio,
-                    onTap: () async {
-                      final picked =
-                          await _selezionaDataEOra(context, nuovaDataInizio);
-                      if (picked != null)
-                        setModalState(() => nuovaDataInizio = picked);
-                    },
-                  ),
-
-                  const Divider(),
-
-                  // SELETTORE FINE
-                  _buildDateTimePickerTile(
-                    label: "Fine",
-                    dateTime: nuovaDataFine,
-                    onTap: () async {
-                      final picked =
-                          await _selezionaDataEOra(context, nuovaDataFine);
-                      if (picked != null)
-                        setModalState(() => nuovaDataFine = picked);
-                    },
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // BOTTONE SALVA
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[800],
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                      ),
-                      onPressed: () async {
-                        if (nuovaDataFine.isBefore(nuovaDataInizio)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    "La fine non può essere prima dell'inizio")),
-                          );
-                          return;
-                        }
-
-                        Navigator.pop(ctx); // Chiude il BottomSheet
-
-                        try {
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => StatefulBuilder(
+            builder: (context, setModalState) => Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text("Modifica Orari",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    _buildDateTimePickerTile(
+                        label: "Inizio",
+                        dateTime: inizio,
+                        onTap: () async {
+                          final p = await _selezionaDataEOra(context, inizio);
+                          if (p != null) setModalState(() => inizio = p);
+                        }),
+                    _buildDateTimePickerTile(
+                        label: "Fine",
+                        dateTime: fine,
+                        onTap: () async {
+                          final p = await _selezionaDataEOra(context, fine);
+                          if (p != null) setModalState(() => fine = p);
+                        }),
+                    ElevatedButton(
+                        onPressed: () async {
+                          if (fine.isBefore(inizio)) return;
+                          Navigator.pop(ctx);
                           await context
                               .read<FleetProvider>()
-                              .modificaPrenotazione(p.idPrenotazione,
-                                  nuovaDataInizio, nuovaDataFine);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text("Modifica salvata con successo!")),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(e.toString()),
-                                  backgroundColor: Colors.red),
-                            );
-                          }
-                        }
-                      },
-                      child: const Text("SALVA MODIFICHE",
-                          style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+                              .modificaPrenotazione(
+                                  p.idPrenotazione, inizio, fine);
+                        },
+                        child: const Text("SALVA")),
+                  ]),
+                )));
   }
 
-// Funzione Helper per mostrare DataPicker e poi TimePicker in sequenza
+  void _mostraDialogAnnullamento(BuildContext context, Prenotazione p) {
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              title: const Text("Annulla"),
+              content: const Text("Confermi l'annullamento?"),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("NO")),
+                ElevatedButton(
+                    onPressed: () async {
+                      await context
+                          .read<FleetProvider>()
+                          .annullaPrenotazione(p.idPrenotazione);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: const Text("SÌ")),
+              ],
+            ));
+  }
+
   Future<DateTime?> _selezionaDataEOra(
       BuildContext context, DateTime iniziale) async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: iniziale,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-
-    if (date == null) return null;
-
-    if (!context.mounted) return null;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(iniziale),
-    );
-
-    if (time == null) return null;
-
-    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final d = await showDatePicker(
+        context: context,
+        initialDate: iniziale,
+        firstDate: DateTime.now().subtract(const Duration(days: 30)),
+        lastDate: DateTime.now().add(const Duration(days: 365)));
+    if (d == null || !context.mounted) return null;
+    final t = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(iniziale));
+    if (t == null) return null;
+    return DateTime(d.year, d.month, d.day, t.hour, t.minute);
   }
 
-// Widget grafico per la riga del selettore
   Widget _buildDateTimePickerTile(
       {required String label,
       required DateTime dateTime,
       required VoidCallback onTap}) {
     return ListTile(
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(dateTime)),
-      trailing: const Icon(Icons.edit_calendar, color: Colors.blue),
-      onTap: onTap,
-    );
-  }
-
-  void _mostraDialogAnnullamento(BuildContext context, Prenotazione p) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Annulla Prenotazione"),
-        content: Text("Vuoi davvero annullare la prenotazione per ${p.targa}?"),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text("NO")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              await context
-                  .read<FleetProvider>()
-                  .annullaPrenotazione(p.idPrenotazione);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text("SÌ, ANNULLA",
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+        title: Text(label),
+        subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(dateTime)),
+        trailing: const Icon(Icons.edit),
+        onTap: onTap);
   }
 }

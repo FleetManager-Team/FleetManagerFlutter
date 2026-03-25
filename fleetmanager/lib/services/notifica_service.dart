@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/notifica.dart';
 import '../models/enums/tipo_notifica.dart';
@@ -51,15 +50,14 @@ class NotificaService {
     );
   }
 
-Future<void> notificaRichiestaPrenotazione(
-    int idUtenteDestinatario, String nomeDriver, String targa, DateTime inizio, DateTime fine) async {
-  
-  await _creaNotifica(
-    idUtente: idUtenteDestinatario,
-    messaggio: "Nuova richiesta da $nomeDriver per l'auto $targa",
-    tipo: TipoNotifica.info, 
-  );
-}
+  Future<void> notificaRichiestaPrenotazione(int idUtenteDestinatario,
+      String nomeDriver, String targa, DateTime inizio, DateTime fine) async {
+    await _creaNotifica(
+      idUtente: idUtenteDestinatario,
+      messaggio: "Nuova richiesta da $nomeDriver per l'auto $targa",
+      tipo: TipoNotifica.info,
+    );
+  }
 
   Future<void> notificaConfermaPrenotazione(int idDriver, String targa,
       DateTime dataInizio, DateTime dataFine) async {
