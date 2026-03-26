@@ -1,6 +1,7 @@
 import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
 import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
+import 'package:fleetmanager/models/restituzione.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/veicolo.dart';
@@ -406,4 +407,5 @@ class FleetProvider with ChangeNotifier {
       return await _veicoloService.getVeicoloByTarga(targaPulita);
     }
   }
+
 }

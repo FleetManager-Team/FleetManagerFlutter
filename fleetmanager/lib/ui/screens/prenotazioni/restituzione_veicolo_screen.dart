@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/services/restituzione_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
@@ -32,8 +34,8 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   bool _rifornimentoEffettuato = false;
   bool _danniPresenti = false;
 
-  File? _fotoScontrino;
-  File? _fotoDanni;
+  XFile? _fotoScontrino;
+  XFile? _fotoDanni;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -294,36 +296,101 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
-  Widget _buildPhotoSelector(String label, File? file, bool isDanni) {
+  Widget _buildPhotoSelector(String label, XFile? file, bool isDanni) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(file == null ? Icons.add_a_photo : Icons.check_circle,
           color: file == null ? Colors.grey : Colors.green),
       title: Text(label),
       trailing: file != null
-          ? Image.file(file, width: 40, height: 40, fit: BoxFit.cover)
+          ? (kIsWeb
+              ? Image.network(file.path,
+                  width: 40, height: 40, fit: BoxFit.cover)
+              : Image.file(File(file.path),
+                  width: 40, height: 40, fit: BoxFit.cover))
           : const Icon(Icons.chevron_right),
       onTap: () => _prendiFoto(context, isDanni),
     );
   }
 
   Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
-    final XFile? image =
-        await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+    final XFile? image = await _picker.pickImage(
+      // Su Chrome forziamo la galleria per evitare crash webcam
+      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+      imageQuality: 50,
+    );
     if (image != null) {
       setState(() {
         if (isDanni)
-          _fotoDanni = File(image.path);
+          _fotoDanni = image;
         else
-          _fotoScontrino = File(image.path);
+          _fotoScontrino = image;
       });
     }
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Prossimo passo: Invia i dati a Supabase
-      print("Invio dati per targa: ${widget.prenotazione.targa}");
+  void _submitForm() async {
+    // 1. Validazione dei campi (KM e campi obbligatori)
+    if (!_formKey.currentState!.validate()) return;
+
+    // 2. Controllo coerenza foto scontrino se ha dichiarato rifornimento
+    if (_rifornimentoEffettuato && _fotoScontrino == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                "Per favore, scatta una foto allo scontrino del rifornimento.")),
+      );
+      return;
+    }
+
+    // 3. Avvio caricamento
+    setState(() => _isLoading = true);
+
+    try {
+      // Istanza del service (puoi anche metterlo come variabile di classe)
+      final restituzioneService = RestituzioneService();
+
+      // 4. Chiamata al database tramite il Service
+      await restituzioneService.completaRestituzione(
+        idPrenotazione: widget.prenotazione.idPrenotazione,
+        targa: widget.prenotazione.targa,
+        kmFinali: int.parse(_kmController.text),
+        livelloCarburante: _livelloCarburante,
+        rifornimento: _rifornimentoEffettuato,
+        haDanni: _danniPresenti,
+        litri: double.tryParse(_litriController.text.replaceAll(',', '.')),
+        euro: double.tryParse(_euroController.text.replaceAll(',', '.')),
+        descDanni: _danniPresenti ? _descrizioneDanniController.text : null,
+        fotoScontrino: _fotoScontrino,
+        fotoDanni: _fotoDanni,
+      );
+
+      // 5. Successo! Aggiorniamo lo stato globale e torniamo indietro
+      if (mounted) {
+        // Refresh dei dati nel Provider (così la prenotazione sparisce da "attive")
+        await Provider.of<FleetProvider>(context, listen: false)
+            .inizializzaDati();
+
+        Navigator.pop(context); // Chiude la schermata
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✅ Veicolo restituito correttamente. Grazie!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      // 6. Gestione Errori
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ Errore durante il salvataggio: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
