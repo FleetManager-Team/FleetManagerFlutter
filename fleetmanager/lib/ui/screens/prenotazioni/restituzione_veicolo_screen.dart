@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Aggiunto per caricamento dati
 
 class RestituzioneVeicoloScreen extends StatefulWidget {
   final Prenotazione prenotazione;
@@ -21,7 +22,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Dati del Veicolo recuperati all'avvio
-  dynamic _veicolo; // Qui salviamo l'intero oggetto Veicolo
+  dynamic _veicolo;
   bool _isLoading = true;
 
   // Controller
@@ -36,32 +37,67 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
 
   XFile? _fotoScontrino;
   XFile? _fotoDanni;
+
+  // Variabili per gestire URL esistenti in caso di modifica
+  String? _urlFotoScontrinoEsistente;
+  String? _urlFotoDanniEsistente;
+
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _kmController = TextEditingController(text: "Caricamento...");
-    _recuperaDatiVeicolo();
+
+    // Eseguiamo in sequenza: recupero veicolo -> recupero dati vecchia restituzione (se esiste)
+    _recuperaDatiVeicolo().then((_) {
+      _caricaDatiRestituzioneEsistente();
+    });
   }
 
-  // LOGICA DI RECUPERO OGGETTO VEICOLO
+  Future<void> _caricaDatiRestituzioneEsistente() async {
+    try {
+      final data = await Supabase.instance.client
+          .from('restituzioni')
+          .select()
+          .eq('id_prenotazione', widget.prenotazione.idPrenotazione)
+          .maybeSingle();
+
+      if (data != null && mounted) {
+        setState(() {
+          _kmController.text = data['km_finali'].toString();
+          _livelloCarburante = (data['livello_carburante'] as num).toDouble();
+          _rifornimentoEffettuato = data['rifornimento_effettuato'] ?? false;
+
+          if (_rifornimentoEffettuato) {
+            _litriController.text = data['litri_carburante']?.toString() ?? "";
+            _euroController.text = data['importo_euro']?.toString() ?? "";
+            _urlFotoScontrinoEsistente = data['url_scontrino'];
+          }
+
+          _danniPresenti = data['danni_presenti'] ?? false;
+          if (_danniPresenti) {
+            _descrizioneDanniController.text = data['descrizione_danni'] ?? "";
+            _urlFotoDanniEsistente = data['url_foto_danni'];
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Errore recupero dati per modifica: $e");
+    }
+  }
+
   Future<void> _recuperaDatiVeicolo() async {
     try {
-      // Usiamo il FleetProvider che è già nel tuo main.dart
       final fleetProvider = Provider.of<FleetProvider>(context, listen: false);
-
-      // Recuperiamo l'oggetto veicolo
       final vFound =
           await fleetProvider.getVeicoloDallaTarga(widget.prenotazione.targa);
 
       if (mounted) {
         setState(() {
           _veicolo = vFound;
-          if (_veicolo != null) {
+          if (_veicolo != null && _kmController.text == "Caricamento...") {
             _kmController.text = _veicolo!.km.toString();
-          } else {
-            _kmController.text = "Non trovato";
           }
           _isLoading = false;
         });
@@ -106,8 +142,6 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 15),
-
-                    // Chilometri con validazione basata sul veicolo reale
                     TextFormField(
                       controller: _kmController,
                       keyboardType: TextInputType.number,
@@ -131,11 +165,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                       },
                     ),
                     const SizedBox(height: 25),
-
                     const Text("Livello Carburante",
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     _buildFuelSelector(),
-
                     SwitchListTile(
                       title: const Text("Hai fatto rifornimento?"),
                       value: _rifornimentoEffettuato,
@@ -143,7 +175,6 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                       onChanged: (val) =>
                           setState(() => _rifornimentoEffettuato = val),
                     ),
-
                     if (_rifornimentoEffettuato) ...[
                       Row(
                         children: [
@@ -159,16 +190,13 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                       _buildPhotoSelector(
                           "Foto Scontrino", _fotoScontrino, false),
                     ],
-
                     const Divider(height: 40),
-
                     SwitchListTile(
                       title: const Text("Sono presenti nuovi danni?"),
                       value: _danniPresenti,
                       activeColor: Colors.red,
                       onChanged: (val) => setState(() => _danniPresenti = val),
                     ),
-
                     if (_danniPresenti) ...[
                       TextFormField(
                         controller: _descrizioneDanniController,
@@ -180,9 +208,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                       ),
                       _buildPhotoSelector("Foto Danno", _fotoDanni, true),
                     ],
-
                     const SizedBox(height: 40),
-
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -205,7 +231,6 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
-  // HEADER DINAMICO: Usa i dati del veicolo se trovato
   Widget _buildVehicleHeader() {
     return Container(
       padding: const EdgeInsets.all(15),
@@ -237,7 +262,6 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
-  // Metodi Helper (Slider, TextField, PhotoSelector...)
   Widget _buildFuelSelector() {
     return Column(
       children: [
@@ -296,71 +320,70 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
+  // MODIFICATO: Gestione anteprima sia per file locale che per URL remoto
   Widget _buildPhotoSelector(String label, XFile? file, bool isDanni) {
+    String? urlEsistente =
+        isDanni ? _urlFotoDanniEsistente : _urlFotoScontrinoEsistente;
+    bool hasPhoto = file != null || urlEsistente != null;
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(file == null ? Icons.add_a_photo : Icons.check_circle,
-          color: file == null ? Colors.grey : Colors.green),
+      leading: Icon(hasPhoto ? Icons.check_circle : Icons.add_a_photo,
+          color: hasPhoto ? Colors.green : Colors.grey),
       title: Text(label),
-      trailing: file != null
-          ? (kIsWeb
-              ? Image.network(file.path,
-                  width: 40, height: 40, fit: BoxFit.cover)
-              : Image.file(File(file.path),
-                  width: 40, height: 40, fit: BoxFit.cover))
+      trailing: hasPhoto
+          ? _buildPreview(file, urlEsistente)
           : const Icon(Icons.chevron_right),
       onTap: () => _prendiFoto(context, isDanni),
     );
   }
 
-Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
-  try {
-    // Evitiamo il crash su Desktop/Web forzando la gallery
-    final source = (kIsWeb || Platform.isWindows || Platform.isMacOS) 
-        ? ImageSource.gallery 
-        : ImageSource.camera;
-
-    final XFile? image = await _picker.pickImage(
-      source: source,
-      imageQuality: 50,
-    );
-    
-    if (image != null) {
-      setState(() {
-        if (isDanni) _fotoDanni = image;
-        else _fotoScontrino = image;
-      });
+  Widget _buildPreview(XFile? file, String? url) {
+    if (file != null) {
+      return kIsWeb
+          ? Image.network(file.path, width: 40, height: 40, fit: BoxFit.cover)
+          : Image.file(File(file.path),
+              width: 40, height: 40, fit: BoxFit.cover);
     }
-  } catch (e) {
-    debugPrint("Errore fotocamera: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Impossibile aprire la sorgente: $e"))
-    );
+    return Image.network(url!, width: 40, height: 40, fit: BoxFit.cover);
   }
-}
+
+  Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
+    try {
+      final source = (kIsWeb || Platform.isWindows || Platform.isMacOS)
+          ? ImageSource.gallery
+          : ImageSource.camera;
+      final XFile? image =
+          await _picker.pickImage(source: source, imageQuality: 50);
+      if (image != null) {
+        setState(() {
+          if (isDanni)
+            _fotoDanni = image;
+          else
+            _fotoScontrino = image;
+        });
+      }
+    } catch (e) {
+      debugPrint("Errore fotocamera: $e");
+    }
+  }
 
   void _submitForm() async {
-    // 1. Validazione dei campi (KM e campi obbligatori)
     if (!_formKey.currentState!.validate()) return;
 
-    // 2. Controllo coerenza foto scontrino se ha dichiarato rifornimento
-    if (_rifornimentoEffettuato && _fotoScontrino == null) {
+    // Controllo foto solo se è il primo inserimento (o se il driver ha rimosso la vecchia)
+    if (_rifornimentoEffettuato &&
+        _fotoScontrino == null &&
+        _urlFotoScontrinoEsistente == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                "Per favore, scatta una foto allo scontrino del rifornimento.")),
-      );
+          const SnackBar(content: Text("Inserisci la foto dello scontrino.")));
       return;
     }
 
-    // 3. Avvio caricamento
     setState(() => _isLoading = true);
 
     try {
-      // Istanza del service (puoi anche metterlo come variabile di classe)
       final restituzioneService = RestituzioneService();
-
-      // 4. Chiamata al database tramite il Service
       await restituzioneService.completaRestituzione(
         idPrenotazione: widget.prenotazione.idPrenotazione,
         targa: widget.prenotazione.targa,
@@ -375,31 +398,19 @@ Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
         fotoDanni: _fotoDanni,
       );
 
-      // 5. Successo! Aggiorniamo lo stato globale e torniamo indietro
       if (mounted) {
-        // Refresh dei dati nel Provider (così la prenotazione sparisce da "attive")
         await Provider.of<FleetProvider>(context, listen: false)
             .inizializzaDati();
-
-        Navigator.pop(context); // Chiude la schermata
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("✅ Veicolo restituito correttamente. Grazie!"),
-            backgroundColor: Colors.green,
-          ),
-        );
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("✅ Operazione completata!"),
+            backgroundColor: Colors.green));
       }
     } catch (e) {
-      // 6. Gestione Errori
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("❌ Errore durante il salvataggio: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("❌ Errore: $e"), backgroundColor: Colors.red));
       }
     }
   }

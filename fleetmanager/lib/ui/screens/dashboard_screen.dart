@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
+import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/restituzione_veicolo_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/storico_prenotazioni_screen.dart';
@@ -348,12 +349,24 @@ class _HomeScreenState extends State<HomeScreen> {
         final bool canEditOrCancel = !isManager &&
             (p.statoPrenotazione == StatoPrenotazione.richiesta ||
                 p.statoPrenotazione == StatoPrenotazione.confermata);
+
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 10),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
+            // --- AGGIUNTA PUNTO 3: Navigazione al dettaglio per il Manager ---
+            onTap: isManager
+                ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            DettaglioPrenotazioneManager(prenotazione: p),
+                      ),
+                    )
+                : null,
+            // ----------------------------------------------------------------
             leading: CircleAvatar(
               backgroundColor:
                   _getStatusColor(p.statoPrenotazione).withOpacity(0.1),
@@ -365,9 +378,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             subtitle: Text(
-  "Dal: ${df.format(p.dataInizio.toLocal())}\nAl: ${df.format(p.dataFine.toLocal())}",
-  style: const TextStyle(fontSize: 12),
-),
+              "Dal: ${df.format(p.dataInizio.toLocal())}\nAl: ${df.format(p.dataFine.toLocal())}",
+              style: const TextStyle(fontSize: 12),
+            ),
             trailing: canEditOrCancel
                 ? Row(
                     mainAxisSize: MainAxisSize.min,

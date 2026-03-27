@@ -23,24 +23,25 @@ class RestituzioneService {
     String? urlDanni;
 
     // --- 1. LOGICA CARICAMENTO FOTO ---
-if (fotoScontrino != null) {
-  final path = 'scontrini/pre_$idPrenotazione.jpg';
-  if (kIsWeb) {
-    final bytes = await fotoScontrino.readAsBytes();
-    await _supabase.storage.from('restituzioni').uploadBinary(path, bytes,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: true));
-  } else {
-    final file = File(fotoScontrino.path);
-    if (await file.exists()) {
-      await _supabase.storage.from('restituzioni').upload(
-        path, 
-        file,
-        fileOptions: const FileOptions(upsert: true), // Upsert fondamentale per Windows
-      );
+    if (fotoScontrino != null) {
+      final path = 'scontrini/pre_$idPrenotazione.jpg';
+      if (kIsWeb) {
+        final bytes = await fotoScontrino.readAsBytes();
+        await _supabase.storage.from('restituzioni').uploadBinary(path, bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true));
+      } else {
+        final file = File(fotoScontrino.path);
+        if (await file.exists()) {
+          await _supabase.storage.from('restituzioni').upload(
+                path,
+                file,
+                fileOptions: const FileOptions(
+                    upsert: true), // Upsert fondamentale per Windows
+              );
+        }
+      }
+      urlScontrino = _supabase.storage.from('restituzioni').getPublicUrl(path);
     }
-  }
-  urlScontrino = _supabase.storage.from('restituzioni').getPublicUrl(path);
-}
 
     if (fotoDanni != null) {
       final path = 'danni/pre_$idPrenotazione.jpg';
@@ -56,8 +57,7 @@ if (fotoScontrino != null) {
       urlDanni = _supabase.storage.from('restituzioni').getPublicUrl(path);
     }
 
-    // --- 2. SALVATAGGIO DATI SU TABELLA 'restituzioni' ---
-    await _supabase.from('restituzioni').insert({
+    await _supabase.from('restituzioni').upsert({
       'id_prenotazione': idPrenotazione,
       'km_finali': kmFinali,
       'rifornimento_effettuato': rifornimento,
@@ -68,9 +68,8 @@ if (fotoScontrino != null) {
       'danni_presenti': haDanni,
       'descrizione_danni': descDanni,
       'url_foto_danni': urlDanni,
-      'data_restituzione':
-          DateTime.now().toIso8601String(), // Salviamo l'istante reale
-    });
+      'data_restituzione': DateTime.now().toIso8601String(),
+    }, onConflict: 'id_prenotazione');
 
     // --- 3. AGGIORNAMENTO VEICOLO ---
     await _supabase.from('veicoli').update({
