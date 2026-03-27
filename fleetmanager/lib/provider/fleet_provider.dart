@@ -370,28 +370,38 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  bool _isSlotDisponibile(
-      {required String targa,
-      required int idUtente,
-      required DateTime inizio,
-      required DateTime fine,
-      int? idDaEscludere}) {
-    final veicoloInOfficina = _manutenzioni.any((m) =>
-        m.targa == targa &&
-        m.oraFine == null &&
-        inizio.isBefore(m.data.add(const Duration(hours: 8))) &&
-        fine.isAfter(m.data));
-    if (veicoloInOfficina) return false;
-    return !_prenotazioni.any((p) {
-      if (idDaEscludere != null && p.idPrenotazione == idDaEscludere)
-        return false;
-      if (p.statoPrenotazione == StatoPrenotazione.annullata) return false;
-      final haSovrapposizioneOraria =
-          inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);
-      return haSovrapposizioneOraria &&
-          (p.targa == targa || (idUtente != 0 && p.idUtente == idUtente));
-    });
-  }
+bool _isSlotDisponibile({
+  required String targa,
+  required int idUtente,
+  required DateTime inizio,
+  required DateTime fine,
+  int? idDaEscludere,
+}) {
+  // 1. Controllo Manutenzioni (rimane uguale)
+  final veicoloInOfficina = _manutenzioni.any((m) =>
+      m.targa == targa &&
+      m.oraFine == null &&
+      inizio.isBefore(m.data.add(const Duration(hours: 8))) &&
+      fine.isAfter(m.data));
+  if (veicoloInOfficina) return false;
+
+  // 2. Controllo Prenotazioni
+  return !_prenotazioni.any((p) {
+    if (idDaEscludere != null && p.idPrenotazione == idDaEscludere) return false;
+
+    if (p.statoPrenotazione == StatoPrenotazione.annullata || 
+        p.statoPrenotazione == StatoPrenotazione.completata) {
+      return false;
+    }
+    // --------------------
+
+    final haSovrapposizioneOraria =
+        inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);
+
+    return haSovrapposizioneOraria &&
+        (p.targa == targa || (idUtente != 0 && p.idUtente == idUtente));
+  });
+}
 
   Future<Veicolo?> getVeicoloDallaTarga(String targa) async {
     final targaPulita = targa.trim().toUpperCase();

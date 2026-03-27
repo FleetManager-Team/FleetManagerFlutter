@@ -66,5 +66,16 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<key>NSCameraUsageDescription</key>
+<string>Serve per fotografare lo scontrino.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Serve per selezionare lo scontrino dalla galleria.</string>
+<key>NSCameraUsageDescription</key>
+<string>Questa app ha bisogno di accedere alla fotocamera per fotografare gli scontrini e i danni.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Questa app ha bisogno di accedere alla galleria per selezionare le foto dei rifornimenti.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Questa app non usa il microfono, ma alcune librerie video potrebbero richiederlo.</string>
 </dict>
 </plist>

@@ -365,8 +365,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             subtitle: Text(
-                "Dal: ${df.format(p.dataInizio)}\nAl: ${df.format(p.dataFine)}",
-                style: const TextStyle(fontSize: 12)),
+  "Dal: ${df.format(p.dataInizio.toLocal())}\nAl: ${df.format(p.dataFine.toLocal())}",
+  style: const TextStyle(fontSize: 12),
+),
             trailing: canEditOrCancel
                 ? Row(
                     mainAxisSize: MainAxisSize.min,

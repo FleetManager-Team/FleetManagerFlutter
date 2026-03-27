@@ -23,19 +23,24 @@ class RestituzioneService {
     String? urlDanni;
 
     // --- 1. LOGICA CARICAMENTO FOTO ---
-    if (fotoScontrino != null) {
-      final path = 'scontrini/pre_$idPrenotazione.jpg';
-      if (kIsWeb) {
-        final bytes = await fotoScontrino.readAsBytes();
-        await _supabase.storage.from('restituzioni').uploadBinary(path, bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true));
-      } else {
-        await _supabase.storage
-            .from('restituzioni')
-            .upload(path, File(fotoScontrino.path));
-      }
-      urlScontrino = _supabase.storage.from('restituzioni').getPublicUrl(path);
+if (fotoScontrino != null) {
+  final path = 'scontrini/pre_$idPrenotazione.jpg';
+  if (kIsWeb) {
+    final bytes = await fotoScontrino.readAsBytes();
+    await _supabase.storage.from('restituzioni').uploadBinary(path, bytes,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true));
+  } else {
+    final file = File(fotoScontrino.path);
+    if (await file.exists()) {
+      await _supabase.storage.from('restituzioni').upload(
+        path, 
+        file,
+        fileOptions: const FileOptions(upsert: true), // Upsert fondamentale per Windows
+      );
     }
+  }
+  urlScontrino = _supabase.storage.from('restituzioni').getPublicUrl(path);
+}
 
     if (fotoDanni != null) {
       final path = 'danni/pre_$idPrenotazione.jpg';

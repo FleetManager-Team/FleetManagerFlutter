@@ -313,21 +313,31 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
-  Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
+Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
+  try {
+    // Evitiamo il crash su Desktop/Web forzando la gallery
+    final source = (kIsWeb || Platform.isWindows || Platform.isMacOS) 
+        ? ImageSource.gallery 
+        : ImageSource.camera;
+
     final XFile? image = await _picker.pickImage(
-      // Su Chrome forziamo la galleria per evitare crash webcam
-      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+      source: source,
       imageQuality: 50,
     );
+    
     if (image != null) {
       setState(() {
-        if (isDanni)
-          _fotoDanni = image;
-        else
-          _fotoScontrino = image;
+        if (isDanni) _fotoDanni = image;
+        else _fotoScontrino = image;
       });
     }
+  } catch (e) {
+    debugPrint("Errore fotocamera: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Impossibile aprire la sorgente: $e"))
+    );
   }
+}
 
   void _submitForm() async {
     // 1. Validazione dei campi (KM e campi obbligatori)
