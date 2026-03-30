@@ -3,26 +3,29 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - develop
+      - develop  # <--- IMPORTANTE: scrivete il nome del branch su cui state lavorando (es. develop o main)
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          
-      - name: Build Web
-        run: flutter build web --release --base-href /FleetManagerFlutter/
 
-      - name: Deploy
+      - name: Build Web
+        run: |
+          flutter pub get
+          flutter build web --release --base-href "/FleetManagerFlutter/"
+
+      - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/web
           branch: gh-pages
-
-          #commit per save
