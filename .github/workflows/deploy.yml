@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - develop  # Questo dice a GitHub: "Ogni volta che faccio push su develop, lavora"
+      - develop  # Questo dice a GitHub: "Ogni volta che fcio push su develop, lavora"
 
 permissions:
   contents: write
