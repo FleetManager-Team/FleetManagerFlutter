@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/utente.dart';
 
@@ -49,7 +50,7 @@ class AuthService {
           .select()
           .eq('email', email)
           .maybeSingle();
-      
+
       if (response == null) return null;
       return Utente.fromJson(response);
     } catch (e) {
@@ -71,17 +72,21 @@ class AuthService {
     }
   }
 
-  // Crea un nuovo utente
   Future<bool> createUtente(Utente nuovoUtente) async {
     try {
       final data = nuovoUtente.toJson();
-      // Rimuoviamo l'id se è 0 o null per lasciarlo generare al database
-      if (nuovoUtente.idUtente == 0) data.remove('id_utente');
-      
+
+      debugPrint("Tentativo di inserimento dati: $data");
+
       await _supabase.from('utenti').insert(data);
+
       return true;
+    } on PostgrestException catch (e) {
+      print("Errore Database (Codice ${e.code}): ${e.message}");
+      print("Dettagli: ${e.details}");
+      return false;
     } catch (e) {
-      print("Errore creazione: $e");
+      print("Errore generico creazione: $e");
       return false;
     }
   }
@@ -89,10 +94,7 @@ class AuthService {
   // Elimina utente
   Future<bool> eliminaUtente(int idUtente) async {
     try {
-      await _supabase
-          .from('utenti')
-          .delete()
-          .eq('id_utente', idUtente);
+      await _supabase.from('utenti').delete().eq('id_utente', idUtente);
       return true;
     } catch (e) {
       print("Errore eliminazione: $e");

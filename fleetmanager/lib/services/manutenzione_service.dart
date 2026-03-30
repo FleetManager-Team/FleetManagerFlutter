@@ -62,4 +62,15 @@ class ManutenzioneService {
       throw Exception('Errore nel database durante la segnalazione: $e');
     }
   }
+
+  Future<void> updateManutenzione(int id, Map<String, dynamic> dati) async {
+    try {
+      await _supabase
+          .from('manutenzioni')
+          .update(dati)
+          .eq('id_manutenzione', id);
+    } catch (e) {
+      throw Exception('Errore durante l\'aggiornamento della manutenzione: $e');
+    }
+  }
 }

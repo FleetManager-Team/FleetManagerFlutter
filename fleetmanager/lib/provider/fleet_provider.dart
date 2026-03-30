@@ -2,6 +2,7 @@ import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
 import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/veicolo.dart';
 import '../models/prenotazione.dart';
@@ -52,13 +53,12 @@ class FleetProvider with ChangeNotifier {
   /// --- INIZIALIZZAZIONE ---
   Future<void> inizializzaDati() async {
     _isLoading = true;
-    notifyListeners();
+    _safeNotify(); // Notifica sicura dell'inizio caricamento
 
     try {
       final risultati = await Future.wait([
         _veicoloService.fetchAllVeicoli(),
-        _prenotazioneService
-            .fetchPrenotazioni(), // Scaricherà i dati già aggiornati dal server
+        _prenotazioneService.fetchPrenotazioni(),
         _authService.getTuttiUtenti(),
         _manutenzioneService.fetchTutte(),
         if (_utenteLoggato != null)
@@ -76,7 +76,7 @@ class FleetProvider with ChangeNotifier {
       debugPrint("Errore inizializzazione: $e");
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify(); // Notifica sicura della fine caricamento
     }
   }
 
@@ -277,6 +277,28 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
+  Future<void> modificaManutenzione({
+    required int idManutenzione,
+    required String descrizione,
+    required String luogo,
+    required DateTime data,
+    required TipoManutenzione tipo,
+  }) async {
+    try {
+      await _manutenzioneService.updateManutenzione(idManutenzione, {
+        'descrizione': descrizione,
+        'luogo': luogo,
+        'data': data.toIso8601String(),
+        'tipo': tipo.name,
+      });
+
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("Errore in modificaManutenzione: $e");
+      rethrow;
+    }
+  }
+
   bool isVeicoloDisponibile(
           String targa, DateTime inizioReq, DateTime fineReq) =>
       _isSlotDisponibile(
@@ -419,6 +441,15 @@ class FleetProvider with ChangeNotifier {
       // 2. Se non lo trova in locale, interroga il database tramite il service
       debugPrint("Veicolo non in memoria, lo cerco sul DB...");
       return await _veicoloService.getVeicoloByTarga(targaPulita);
+    }
+  }
+
+  void _safeNotify() {
+    if (WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    } else {
+      notifyListeners();
     }
   }
 }

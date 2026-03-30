@@ -25,11 +25,15 @@ class _MaintenanceDashboardScreenState
   @override
   void initState() {
     super.initState();
-    _caricaDati();
+    Future.microtask(() {
+      if (mounted) {
+        context.read<FleetProvider>().inizializzaDati();
+      }
+    });
   }
 
   Future<void> _caricaDati() async {
-    setState(() => _isLoading = true);
+    // Rimuovi il setState qui se il provider gestisce già il suo isLoading
     try {
       await context.read<FleetProvider>().inizializzaDati();
     } catch (e) {
@@ -38,8 +42,6 @@ class _MaintenanceDashboardScreenState
           SnackBar(content: Text("Errore nel caricamento: $e")),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -47,9 +49,9 @@ class _MaintenanceDashboardScreenState
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
 
-    final veicoliInManutenzione = provider.veicoli
-        .where((v) => v.statoVeicolo == StatoVeicolo.inManutenzione)
-        .toList();
+    // FILTRO: Tutte le manutenzioni che non hanno ancora una data di fine
+    final manutenzioniAttive =
+        provider.manutenzioni.where((m) => m.oraFine == null).toList();
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -69,16 +71,27 @@ class _MaintenanceDashboardScreenState
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                _buildSummaryHeader(veicoliInManutenzione.length),
+                _buildSummaryHeader(manutenzioniAttive.length),
                 Expanded(
-                  child: veicoliInManutenzione.isEmpty
+                  child: manutenzioniAttive.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
                           padding: const EdgeInsets.all(16),
-                          itemCount: veicoliInManutenzione.length,
+                          itemCount: manutenzioniAttive.length,
                           itemBuilder: (context, index) {
-                            return _buildMaintenanceCard(
-                                veicoliInManutenzione[index], provider);
+                            final m = manutenzioniAttive[index];
+                            final v = provider.veicoli.firstWhere(
+                              (veicolo) => veicolo.targa == m.targa,
+                              orElse: () => Veicolo(
+                                  targa: m.targa,
+                                  marca: "N.D.",
+                                  modello: "",
+                                  km: 0,
+                                  annoImmatricolazione: 0,
+                                  tipoVeicolo: TipoVeicolo.auto,
+                                  statoVeicolo: StatoVeicolo.disponibile),
+                            );
+                            return _buildMaintenanceCard(m, v, provider);
                           },
                         ),
                 ),
@@ -87,7 +100,7 @@ class _MaintenanceDashboardScreenState
       floatingActionButton:
           provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager
               ? FloatingActionButton.extended(
-                  onPressed: () => _showNewMaintenanceDialog(context),
+                  onPressed: () => _showMaintenanceForm(context),
                   backgroundColor: Colors.orange[800],
                   icon: const Icon(Icons.build, color: Colors.white),
                   label: const Text("NUOVO INTERVENTO",
@@ -112,34 +125,59 @@ class _MaintenanceDashboardScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "$count Veicoli in Service",
+            "$count Interventi in Agenda",
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          Text("Interventi attivi nella flotta",
+          Text("Lista degli interventi attivi e programmati",
               style: TextStyle(color: Colors.grey[600])),
         ],
       ),
     );
   }
 
-  Widget _buildMaintenanceCard(Veicolo v, FleetProvider provider) {
+  Widget _buildMaintenanceCard(
+      Manutenzione m, Veicolo v, FleetProvider provider) {
+    final isFuture = m.data.isAfter(DateTime.now());
+    final df = DateFormat('dd/MM HH:mm');
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: isFuture ? 1 : 4,
+      color: isFuture ? Colors.orange[50] : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isFuture ? Colors.orange[200]! : Colors.orange[800]!,
+          width: isFuture ? 1 : 2,
+        ),
+      ),
       child: ListTile(
         onTap: () => _showMaintenanceDetails(v, provider),
         leading: CircleAvatar(
-          backgroundColor: Colors.orange[100],
+          backgroundColor: isFuture ? Colors.orange[100] : Colors.orange[800],
           child: Icon(
             v.tipoVeicolo == TipoVeicolo.furgone
                 ? Icons.local_shipping
                 : Icons.directions_car,
-            color: Colors.orange[800],
+            color: isFuture ? Colors.orange[800] : Colors.white,
           ),
         ),
         title: Text("${v.marca} ${v.modello}",
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("Targa: ${v.targa}"),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Targa: ${v.targa} | ${df.format(m.data.toLocal())}"),
+            Text(
+                isFuture
+                    ? "PROGRAMMATA - presso ${m.luogo}"
+                    : "IN CORSO - presso ${m.luogo}",
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isFuture ? FontWeight.normal : FontWeight.bold,
+                    color: isFuture ? Colors.orange[900] : Colors.orange[800])),
+          ],
+        ),
         trailing: const Icon(Icons.chevron_right),
       ),
     );
@@ -148,13 +186,6 @@ class _MaintenanceDashboardScreenState
   void _showMaintenanceDetails(Veicolo v, FleetProvider provider) {
     final intervento = provider.manutenzioni.firstWhere(
       (m) => m.targa == v.targa && m.oraFine == null,
-      orElse: () => Manutenzione(
-          idManutenzione: -1,
-          data: DateTime.now(),
-          tipoManutenzione: TipoManutenzione.straordinaria,
-          descrizione: "N.D.",
-          targa: v.targa,
-          luogo: "N.D."), // Aggiunto luogo di fallback
     );
 
     final kmController = TextEditingController(text: v.km.toString());
@@ -162,19 +193,20 @@ class _MaintenanceDashboardScreenState
     showDialog(
       context: context,
       builder: (context) => DetailsPopUp(
-        title: "Dettaglio Manutenzione",
+        title: "Dettaglio Intervento",
         titleIcon: Icons.build_circle,
         details: [
           _detailRow(Icons.pin, "Targa", v.targa),
-          _detailRow(Icons.speed, "Km ingresso", "${v.km} km"),
-          _detailRow(Icons.location_on, "Luogo",
-              intervento.luogo), // Visualizzazione luogo
+          _detailRow(Icons.speed, "Km attuali", "${v.km} km"),
+          _detailRow(Icons.location_on, "Luogo", intervento.luogo),
+          _detailRow(Icons.calendar_today, "Data prevista",
+              DateFormat('dd/MM/yyyy HH:mm').format(intervento.data.toLocal())),
           _detailRow(Icons.description, "Motivo", intervento.descrizione),
         ],
-        extraSectionTitle: "Chiusura Intervento",
+        extraSectionTitle: "Chiusura",
         extraContent: Column(
           children: [
-            const Text("Inserisci i chilometri attuali al rientro:",
+            const Text("Inserisci i km al rientro per liberare il veicolo:",
                 style: TextStyle(fontSize: 12, color: Colors.black54)),
             TextField(
               controller: kmController,
@@ -186,58 +218,59 @@ class _MaintenanceDashboardScreenState
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("INDIETRO")),
+              child: const Text("CHIUDI")),
+          if (provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager)
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.orange),
+              onPressed: () {
+                Navigator.pop(context);
+                _showMaintenanceForm(context,
+                    manutenzioneEsistente: intervento);
+              },
+            ),
           ElevatedButton(
             onPressed: () async {
               int nuoviKm = int.tryParse(kmController.text) ?? v.km;
               await provider.chiudiManutenzione(
                   intervento.idManutenzione, v.targa,
                   nuoviKm: nuoviKm);
-
-              if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text("Veicolo ${v.targa} rientrato con $nuoviKm km")),
-                );
-              }
+              if (mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green, foregroundColor: Colors.white),
-            child: const Text("CHIUDI INTERVENTO"),
+            child: const Text("RIENTRO VEICOLO"),
           ),
         ],
       ),
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.grey[600]),
-          const SizedBox(width: 10),
-          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
-        ],
-      ),
-    );
-  }
+  // ... (Widget _detailRow e _buildEmptyState rimangono identici a prima)
 
-  void _showNewMaintenanceDialog(BuildContext context) {
+  void _showMaintenanceForm(BuildContext context,
+      {Manutenzione? manutenzioneEsistente}) {
     final provider = context.read<FleetProvider>();
+    final isEditing = manutenzioneEsistente != null;
+
     final veicoliDisponibili = provider.veicoli
-        .where((v) => v.statoVeicolo != StatoVeicolo.inManutenzione)
+        .where((v) =>
+            v.statoVeicolo != StatoVeicolo.inManutenzione ||
+            (isEditing && v.targa == manutenzioneEsistente.targa))
         .toList();
 
-    Veicolo? veicoloSelezionato;
-    TipoManutenzione tipoSelezionato = TipoManutenzione.ordinaria;
-    final descController = TextEditingController();
-    final luogoController = TextEditingController(); // Controller per il luogo
-    DateTime dataSelezionata = DateTime.now();
-    TimeOfDay oraSelezionata = TimeOfDay.now();
+    Veicolo? veicoloSelezionato = isEditing
+        ? provider.veicoli
+            .firstWhere((v) => v.targa == manutenzioneEsistente.targa)
+        : null;
+
+    TipoManutenzione tipoSelezionato =
+        manutenzioneEsistente?.tipoManutenzione ?? TipoManutenzione.ordinaria;
+    final descController =
+        TextEditingController(text: manutenzioneEsistente?.descrizione ?? "");
+    final luogoController =
+        TextEditingController(text: manutenzioneEsistente?.luogo ?? "");
+    DateTime dataSelezionata = manutenzioneEsistente?.data ?? DateTime.now();
+    TimeOfDay oraSelezionata = TimeOfDay.fromDateTime(dataSelezionata);
 
     showModalBottomSheet(
       context: context,
@@ -255,37 +288,34 @@ class _MaintenanceDashboardScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text("Nuovo Intervento Officina",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(isEditing ? "Modifica Intervento" : "Nuova Manutenzione",
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
               DropdownButtonFormField<Veicolo>(
+                value: veicoloSelezionato,
                 items: veicoliDisponibili
-                    .map((v) => DropdownMenuItem(
-                        value: v,
-                        child: Text("${v.targa} - ${v.marca} ${v.modello}")))
+                    .map(
+                        (v) => DropdownMenuItem(value: v, child: Text(v.targa)))
                     .toList(),
-                onChanged: (val) => veicoloSelezionato = val,
+                onChanged: isEditing ? null : (val) => veicoloSelezionato = val,
                 decoration: const InputDecoration(
-                    labelText: "Veicolo",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.directions_car)),
+                    labelText: "Veicolo", border: OutlineInputBorder()),
               ),
               const SizedBox(height: 15),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(
+                    child: OutlinedButton(
+                      child: Text(
                           DateFormat('dd/MM/yyyy').format(dataSelezionata)),
                       onPressed: () async {
                         final picked = await showDatePicker(
-                          context: context,
-                          initialDate: dataSelezionata,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
+                            context: context,
+                            initialDate: dataSelezionata,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100));
                         if (picked != null)
                           setModalState(() => dataSelezionata = picked);
                       },
@@ -293,14 +323,11 @@ class _MaintenanceDashboardScreenState
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.access_time),
-                      label: Text(oraSelezionata.format(context)),
+                    child: OutlinedButton(
+                      child: Text(oraSelezionata.format(context)),
                       onPressed: () async {
                         final picked = await showTimePicker(
-                          context: context,
-                          initialTime: oraSelezionata,
-                        );
+                            context: context, initialTime: oraSelezionata);
                         if (picked != null)
                           setModalState(() => oraSelezionata = picked);
                       },
@@ -309,79 +336,43 @@ class _MaintenanceDashboardScreenState
                 ],
               ),
               const SizedBox(height: 15),
-              DropdownButtonFormField<TipoManutenzione>(
-                value: tipoSelezionato,
-                items: TipoManutenzione.values
-                    .map((t) => DropdownMenuItem(
-                        value: t, child: Text(t.name.toUpperCase())))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) setModalState(() => tipoSelezionato = val);
-                },
-                decoration: const InputDecoration(
-                    labelText: "Tipo Intervento",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.settings_suggest)),
-              ),
-              const SizedBox(height: 15),
-              // CAMPO LUOGO AGGIUNTO
               TextField(
-                controller: luogoController,
-                decoration: const InputDecoration(
-                    labelText: "Luogo / Officina",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on)),
-              ),
+                  controller: luogoController,
+                  decoration: const InputDecoration(
+                      labelText: "Officina", border: OutlineInputBorder())),
               const SizedBox(height: 15),
               TextField(
-                controller: descController,
-                decoration: const InputDecoration(
-                    labelText: "Dettagli intervento",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.edit_note)),
-                maxLines: 2,
-              ),
+                  controller: descController,
+                  decoration: const InputDecoration(
+                      labelText: "Descrizione", border: OutlineInputBorder()),
+                  maxLines: 2),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  if (veicoloSelezionato != null &&
-                      descController.text.isNotEmpty &&
-                      luogoController.text.isNotEmpty) {
-                    // Controllo anche sul luogo
-                    final dataCompleta = DateTime(
-                        dataSelezionata.year,
-                        dataSelezionata.month,
-                        dataSelezionata.day,
-                        oraSelezionata.hour,
-                        oraSelezionata.minute);
-
-                    try {
-                      await provider.programmareManutenzione(
-                        veicoloSelezionato!,
-                        dataCompleta,
-                        tipoSelezionato,
-                        descController.text,
-                        luogo:
-                            luogoController.text, // Passaggio del nuovo campo
-                      );
-                      if (context.mounted) Navigator.pop(context);
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text("Errore: $e"),
-                          backgroundColor: Colors.red));
-                    }
+                  final dataCompleta = DateTime(
+                      dataSelezionata.year,
+                      dataSelezionata.month,
+                      dataSelezionata.day,
+                      oraSelezionata.hour,
+                      oraSelezionata.minute);
+                  if (isEditing) {
+                    await provider.modificaManutenzione(
+                        idManutenzione: manutenzioneEsistente.idManutenzione,
+                        descrizione: descController.text,
+                        luogo: luogoController.text,
+                        data: dataCompleta,
+                        tipo: tipoSelezionato);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content:
-                            Text("Compila tutti i campi, incluso il luogo")));
+                    await provider.programmareManutenzione(veicoloSelezionato!,
+                        dataCompleta, tipoSelezionato, descController.text,
+                        luogo: luogoController.text);
                   }
+                  Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange[800],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15)),
-                child: const Text("AVVIA INTERVENTO",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                    foregroundColor: Colors.white),
+                child: Text(isEditing ? "SALVA MODIFICHE" : "PROGRAMMA"),
               ),
             ],
           ),
@@ -390,20 +381,19 @@ class _MaintenanceDashboardScreenState
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.build_circle_outlined, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text("Nessun veicolo in manutenzione",
-              style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500)),
-        ],
-      ),
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Icon(icon, size: 16, color: Colors.grey),
+        const SizedBox(width: 8),
+        Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(value)
+      ]),
     );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(child: Text("Nessun intervento in programma"));
   }
 }
