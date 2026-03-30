@@ -184,8 +184,8 @@ class FleetProvider with ChangeNotifier {
       }
       Prenotazione p = Prenotazione(
         idPrenotazione: 0,
-        dataInizio: inizio,
-        dataFine: fine,
+        dataInizio: inizio.toUtc(),
+        dataFine: fine.toUtc(),
         statoPrenotazione: StatoPrenotazione.richiesta,
         tipoPrenotazione: TipoPrenotazione.utente,
         idUtente: driver.idUtente,
