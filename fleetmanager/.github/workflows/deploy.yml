@@ -24,3 +24,5 @@ jobs:
         with:
           folder: build/web
           branch: gh-pages
+
+          #commit per save
