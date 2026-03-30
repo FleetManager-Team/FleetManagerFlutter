@@ -41,8 +41,8 @@ class Prenotazione {
   Map<String, dynamic> toJson() {
     return {
       'id_prenotazione': idPrenotazione,
-      'data_inizio': dataInizio.toIso8601String(),
-      'data_fine': dataFine.toIso8601String(),
+      'data_inizio': dataInizio.toUtc().toIso8601String(),
+      'data_fine': dataFine.toUtc().toIso8601String(),
       'stato': statoPrenotazione.name,
       'tipo': tipoPrenotazione.name,
       'id_utente': idUtente,

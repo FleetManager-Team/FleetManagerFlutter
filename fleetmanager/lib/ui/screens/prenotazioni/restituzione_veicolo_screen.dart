@@ -403,14 +403,14 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
             .inizializzaDati();
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("✅ Operazione completata!"),
+            content: Text("Operazione completata!"),
             backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("❌ Errore: $e"), backgroundColor: Colors.red));
+            content: Text("Errore: $e"), backgroundColor: Colors.red));
       }
     }
   }
