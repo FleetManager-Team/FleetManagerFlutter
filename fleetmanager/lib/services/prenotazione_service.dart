@@ -83,7 +83,7 @@ class PrenotazioneService {
   }
 
   /// Sincronizza gli stati in base al tempo corrente.
-  Future<void> aggiornaStatiPrenotazioni() async {
+  /*Future<void> aggiornaStatiPrenotazioni() async {
     try {
       final ora = DateTime.now().toIso8601String();
 
@@ -101,9 +101,9 @@ class PrenotazioneService {
           .eq('stato', StatoPrenotazione.attiva.name)
           .lte('data_fine', ora);
 
-      debugPrint("✅ Stati prenotazioni aggiornati correttamente.");
+      debugPrint("Stati prenotazioni aggiornati correttamente.");
     } catch (e) {
       print("Errore aggiornamento automatico stati: $e");
     }
-  }
+  }*/
 }

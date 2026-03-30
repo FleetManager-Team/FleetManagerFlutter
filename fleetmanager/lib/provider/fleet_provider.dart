@@ -53,11 +53,12 @@ class FleetProvider with ChangeNotifier {
   Future<void> inizializzaDati() async {
     _isLoading = true;
     notifyListeners();
+
     try {
-      await _prenotazioneService.aggiornaStatiPrenotazioni();
       final risultati = await Future.wait([
         _veicoloService.fetchAllVeicoli(),
-        _prenotazioneService.fetchPrenotazioni(),
+        _prenotazioneService
+            .fetchPrenotazioni(), // Scaricherà i dati già aggiornati dal server
         _authService.getTuttiUtenti(),
         _manutenzioneService.fetchTutte(),
         if (_utenteLoggato != null)
@@ -65,11 +66,14 @@ class FleetProvider with ChangeNotifier {
         else
           Future.value(<Notifica>[]),
       ]);
+
       _veicoli = risultati[0] as List<Veicolo>;
       _prenotazioni = risultati[1] as List<Prenotazione>;
       _utenti = risultati[2] as List<Utente>;
       _manutenzioni = risultati[3] as List<Manutenzione>;
       _notifiche = risultati[4] as List<Notifica>;
+    } catch (e) {
+      debugPrint("Errore inizializzazione: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -369,38 +373,39 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-bool _isSlotDisponibile({
-  required String targa,
-  required int idUtente,
-  required DateTime inizio,
-  required DateTime fine,
-  int? idDaEscludere,
-}) {
-  // 1. Controllo Manutenzioni (rimane uguale)
-  final veicoloInOfficina = _manutenzioni.any((m) =>
-      m.targa == targa &&
-      m.oraFine == null &&
-      inizio.isBefore(m.data.add(const Duration(hours: 8))) &&
-      fine.isAfter(m.data));
-  if (veicoloInOfficina) return false;
+  bool _isSlotDisponibile({
+    required String targa,
+    required int idUtente,
+    required DateTime inizio,
+    required DateTime fine,
+    int? idDaEscludere,
+  }) {
+    // 1. Controllo Manutenzioni (rimane uguale)
+    final veicoloInOfficina = _manutenzioni.any((m) =>
+        m.targa == targa &&
+        m.oraFine == null &&
+        inizio.isBefore(m.data.add(const Duration(hours: 8))) &&
+        fine.isAfter(m.data));
+    if (veicoloInOfficina) return false;
 
-  // 2. Controllo Prenotazioni
-  return !_prenotazioni.any((p) {
-    if (idDaEscludere != null && p.idPrenotazione == idDaEscludere) return false;
+    // 2. Controllo Prenotazioni
+    return !_prenotazioni.any((p) {
+      if (idDaEscludere != null && p.idPrenotazione == idDaEscludere)
+        return false;
 
-    if (p.statoPrenotazione == StatoPrenotazione.annullata || 
-        p.statoPrenotazione == StatoPrenotazione.completata) {
-      return false;
-    }
-    // --------------------
+      if (p.statoPrenotazione == StatoPrenotazione.annullata ||
+          p.statoPrenotazione == StatoPrenotazione.completata) {
+        return false;
+      }
+      // --------------------
 
-    final haSovrapposizioneOraria =
-        inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);
+      final haSovrapposizioneOraria =
+          inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);
 
-    return haSovrapposizioneOraria &&
-        (p.targa == targa || (idUtente != 0 && p.idUtente == idUtente));
-  });
-}
+      return haSovrapposizioneOraria &&
+          (p.targa == targa || (idUtente != 0 && p.idUtente == idUtente));
+    });
+  }
 
   Future<Veicolo?> getVeicoloDallaTarga(String targa) async {
     final targaPulita = targa.trim().toUpperCase();
@@ -416,5 +421,4 @@ bool _isSlotDisponibile({
       return await _veicoloService.getVeicoloByTarga(targaPulita);
     }
   }
-
 }
