@@ -349,22 +349,67 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   }
 
   Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
+    // 1. Definiamo se siamo su un computer/browser
+    bool isDesktopOrWeb = kIsWeb;
+    if (!kIsWeb) {
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        isDesktopOrWeb = true;
+      }
+    }
+
+    // 2. Se siamo su Desktop/Web, apriamo subito la galleria (non c'è fotocamera mobile)
+    if (isDesktopOrWeb) {
+      _eseguiPick(ImageSource.gallery, isDanni);
+      return;
+    }
+
+    // 3. Solo se siamo su vero Mobile (iOS/Android) mostriamo la scelta
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galleria Foto'),
+                onTap: () {
+                  _eseguiPick(ImageSource.gallery, isDanni);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Fotocamera'),
+                onTap: () {
+                  _eseguiPick(ImageSource.camera, isDanni);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _eseguiPick(ImageSource source, bool isDanni) async {
     try {
-      final source = (kIsWeb || Platform.isWindows || Platform.isMacOS)
-          ? ImageSource.gallery
-          : ImageSource.camera;
-      final XFile? image =
-          await _picker.pickImage(source: source, imageQuality: 50);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 50,
+      );
       if (image != null) {
         setState(() {
-          if (isDanni)
+          if (isDanni) {
             _fotoDanni = image;
-          else
+          } else {
             _fotoScontrino = image;
+          }
         });
       }
     } catch (e) {
-      debugPrint("Errore fotocamera: $e");
+      debugPrint("Errore selezione immagine: $e");
     }
   }
 
@@ -409,8 +454,8 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("Errore: $e"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red));
       }
     }
   }
