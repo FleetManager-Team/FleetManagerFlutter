@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - develop  # <--- IMPORTANTE: scrivete il nome del branch su cui state lavorando (es. develop o main)
+      - develop  # Questo dice a GitHub: "Ogni volta che faccio push su develop, lavora"
 
 permissions:
   contents: write
