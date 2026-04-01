@@ -226,7 +226,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   decoration:
                       const InputDecoration(labelText: "Patente (opzionale)")),
               DropdownButtonFormField<RuoloUtente>(
-                value: ruoloSelezionato,
+                initialValue: ruoloSelezionato,
                 items: [RuoloUtente.driver, RuoloUtente.manager]
                     .map((r) => DropdownMenuItem(
                         value: r, child: Text(r.name.toUpperCase())))

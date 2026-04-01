@@ -97,7 +97,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                       prefixIcon: Icon(Icons.directions_car),
                     ),
                     hint: const Text("Seleziona Veicolo"),
-                    value: _targaSelezionata,
+                    initialValue: _targaSelezionata,
                     onChanged: (val) => setState(() => _targaSelezionata = val),
                     items: veicoliDisponibili
                         .map((v) => DropdownMenuItem(
@@ -151,8 +151,9 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                         ? null
                         : () async {
                             try {
-                              if (provider.utenteLoggato == null)
+                              if (provider.utenteLoggato == null) {
                                 throw "Utente non loggato";
+                              }
 
                               // 1. Troviamo il veicolo che l'utente sta cercando di prenotare
                               final veicolo = veicoliDisponibili.firstWhere(

@@ -20,7 +20,7 @@ class MaintenanceDashboardScreen extends StatefulWidget {
 
 class _MaintenanceDashboardScreenState
     extends State<MaintenanceDashboardScreen> {
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   void initState() {
@@ -294,7 +294,7 @@ class _MaintenanceDashboardScreenState
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
               DropdownButtonFormField<Veicolo>(
-                value: veicoloSelezionato,
+                initialValue: veicoloSelezionato,
                 items: veicoliDisponibili
                     .map(
                         (v) => DropdownMenuItem(value: v, child: Text(v.targa)))
@@ -316,8 +316,9 @@ class _MaintenanceDashboardScreenState
                             initialDate: dataSelezionata,
                             firstDate: DateTime.now(),
                             lastDate: DateTime(2100));
-                        if (picked != null)
+                        if (picked != null) {
                           setModalState(() => dataSelezionata = picked);
+                        }
                       },
                     ),
                   ),
@@ -328,8 +329,9 @@ class _MaintenanceDashboardScreenState
                       onPressed: () async {
                         final picked = await showTimePicker(
                             context: context, initialTime: oraSelezionata);
-                        if (picked != null)
+                        if (picked != null) {
                           setModalState(() => oraSelezionata = picked);
+                        }
                       },
                     ),
                   ),

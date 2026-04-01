@@ -233,7 +233,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 Navigator.pop(context); // Chiude il popup
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => NuovaPrenotazioneScreen()),
+                  MaterialPageRoute(builder: (_) => const NuovaPrenotazioneScreen()),
                 );
               },
               child: const Text("PRENOTA ORA",
@@ -351,7 +351,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   keyboardType: TextInputType.number),
               const SizedBox(height: 15),
               DropdownButtonFormField<TipoVeicolo>(
-                value: tipoSelezionato,
+                initialValue: tipoSelezionato,
                 decoration: const InputDecoration(labelText: "Tipo Veicolo"),
                 items: TipoVeicolo.values
                     .map((t) => DropdownMenuItem(

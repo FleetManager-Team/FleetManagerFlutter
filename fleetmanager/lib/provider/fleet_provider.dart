@@ -511,10 +511,13 @@ class FleetProvider with ChangeNotifier {
     if (veicoloInOfficina) return false;
 
     return !_prenotazioni.any((p) {
-      if (idDaEscludere != null && p.idPrenotazione == idDaEscludere)
+      if (idDaEscludere != null && p.idPrenotazione == idDaEscludere) {
         return false;
+      }
       if (p.statoPrenotazione == StatoPrenotazione.annullata ||
-          p.statoPrenotazione == StatoPrenotazione.completata) return false;
+          p.statoPrenotazione == StatoPrenotazione.completata) {
+        return false;
+      }
 
       final haSovrapposizioneOraria =
           inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);

@@ -436,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     : null),
           ),
         );
-        ;
+        
       },
     );
   }
@@ -526,11 +526,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       builder: (_) => const BookingHistoryScreen()));
             }),
         ListTile(
-          leading: Icon(Icons.bar_chart_rounded, color: Colors.blue),
-          title: Text("Analisi Costi"),
+          leading: const Icon(Icons.bar_chart_rounded, color: Colors.blue),
+          title: const Text("Analisi Costi"),
           onTap: () {
             Navigator.push(context,
-                MaterialPageRoute(builder: (context) => AnalisiCostiScreen()));
+                MaterialPageRoute(builder: (context) => const AnalisiCostiScreen()));
           },
         ),
         const Spacer(),

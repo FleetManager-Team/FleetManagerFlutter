@@ -171,7 +171,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     SwitchListTile(
                       title: const Text("Hai fatto rifornimento?"),
                       value: _rifornimentoEffettuato,
-                      activeColor: const Color(0xFF388E3C),
+                      activeThumbColor: const Color(0xFF388E3C),
                       onChanged: (val) =>
                           setState(() => _rifornimentoEffettuato = val),
                     ),
@@ -194,7 +194,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     SwitchListTile(
                       title: const Text("Sono presenti nuovi danni?"),
                       value: _danniPresenti,
-                      activeColor: Colors.red,
+                      activeThumbColor: Colors.red,
                       onChanged: (val) => setState(() => _danniPresenti = val),
                     ),
                     if (_danniPresenti) ...[
