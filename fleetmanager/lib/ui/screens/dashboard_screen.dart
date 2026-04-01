@@ -350,10 +350,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final bool canEditOrCancel = !isManager &&
             (p.statoPrenotazione == StatoPrenotazione.richiesta ||
                 p.statoPrenotazione == StatoPrenotazione.confermata);
-// 1. Recupera il provider (assicurati di essere dentro un widget che ha accesso al contesto)
+
         final provider = Provider.of<FleetProvider>(context, listen: false);
 
-// 2. Trova il driver usando l'idUtente della prenotazione 'p'
         final driver = provider.utenti.firstWhere(
           (u) => u.idUtente == p.idUtente,
           orElse: () => Utente(
@@ -389,8 +388,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 "${p.targa} - ${p.statoPrenotazione.name.toUpperCase()}",
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-
-            // --- SUBTITLE MODIFICATO ---
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
