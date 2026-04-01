@@ -350,6 +350,19 @@ class _HomeScreenState extends State<HomeScreen> {
         final bool canEditOrCancel = !isManager &&
             (p.statoPrenotazione == StatoPrenotazione.richiesta ||
                 p.statoPrenotazione == StatoPrenotazione.confermata);
+// 1. Recupera il provider (assicurati di essere dentro un widget che ha accesso al contesto)
+        final provider = Provider.of<FleetProvider>(context, listen: false);
+
+// 2. Trova il driver usando l'idUtente della prenotazione 'p'
+        final driver = provider.utenti.firstWhere(
+          (u) => u.idUtente == p.idUtente,
+          orElse: () => Utente(
+              idUtente: -1,
+              nome: "Utente",
+              cognome: "Sconosciuto",
+              email: "",
+              ruoloUtente: RuoloUtente.driver),
+        );
 
         return Card(
           elevation: 2,
@@ -357,7 +370,6 @@ class _HomeScreenState extends State<HomeScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
-            // --- AGGIUNTA PUNTO 3: Navigazione al dettaglio per il Manager ---
             onTap: isManager
                 ? () => Navigator.push(
                       context,
@@ -367,7 +379,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     )
                 : null,
-            // ----------------------------------------------------------------
             leading: CircleAvatar(
               backgroundColor:
                   _getStatusColor(p.statoPrenotazione).withOpacity(0.1),
@@ -378,10 +389,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 "${p.targa} - ${p.statoPrenotazione.name.toUpperCase()}",
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: Text(
-              "Dal: ${df.format(p.dataInizio.toLocal())}\nAl: ${df.format(p.dataFine.toLocal())}",
-              style: const TextStyle(fontSize: 12),
+
+            // --- SUBTITLE MODIFICATO ---
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                // Mostra Nome e Cognome del Driver
+                Row(
+                  children: [
+                    const Icon(Icons.person, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      "${driver.nome} ${driver.cognome}",
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Dal: ${df.format(p.dataInizio.toLocal())}\nAl: ${df.format(p.dataFine.toLocal())}",
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
             ),
+            // ---------------------------
+
             trailing: canEditOrCancel
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
@@ -399,15 +435,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 : (isManager &&
                         p.statoPrenotazione == StatoPrenotazione.richiesta
-                    ? IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const BookingListScreen())))
+                    ? const Icon(Icons.arrow_forward_ios, size: 16)
                     : null),
           ),
         );
+        ;
       },
     );
   }
