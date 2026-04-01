@@ -8,6 +8,7 @@ import '../models/veicolo.dart';
 import '../models/prenotazione.dart';
 import '../models/utente.dart';
 import '../models/notifica.dart';
+import '../models/restituzione.dart'; // <--- Assicurati che il path sia corretto
 import '../models/enums/stato_veicolo.dart';
 import '../models/enums/stato_prenotazione.dart';
 import '../models/enums/tipo_manutenzione.dart';
@@ -29,6 +30,7 @@ class FleetProvider with ChangeNotifier {
   List<Manutenzione> _manutenzioni = [];
   List<Utente> _utenti = [];
   List<Notifica> _notifiche = [];
+  List<Restituzione> _restituzioni = []; // <--- AGGIUNTO
   Utente? _utenteLoggato;
   bool _isLoading = false;
 
@@ -37,9 +39,103 @@ class FleetProvider with ChangeNotifier {
   List<Prenotazione> get prenotazioni => _prenotazioni;
   List<Manutenzione> get manutenzioni => _manutenzioni;
   List<Notifica> get notifiche => _notifiche;
+  List<Restituzione> get restituzioni => _restituzioni; // <--- AGGIUNTO
   Utente? get utenteLoggato => _utenteLoggato;
   List<Utente> get utenti => _utenti;
   bool get isLoading => _isLoading;
+
+  /// Calcola il totale speso in carburante da tutte le restituzioni
+  double get totaleSpesaCarburante {
+    return _restituzioni
+        .where((r) => r.importoEuro != null)
+        .fold(0.0, (sum, r) => sum + r.importoEuro!);
+  }
+
+  /// Mappa la spesa carburante per ogni Driver: {"Nome Cognome": 120.50}
+  Map<String, double> get spesaCarburantePerDriver {
+    Map<String, double> stats = {};
+    for (var res in _restituzioni) {
+      if (res.importoEuro == null || res.importoEuro! <= 0) continue;
+
+      // Trova la prenotazione collegata alla restituzione
+      final preno = _prenotazioni.firstWhere(
+        (p) => p.idPrenotazione == res.idPrenotazione,
+        orElse: () => Prenotazione(
+            idPrenotazione: -1,
+            idUtente: -1,
+            dataInizio: DateTime.now(),
+            dataFine: DateTime.now(),
+            statoPrenotazione: StatoPrenotazione.annullata,
+            tipoPrenotazione: TipoPrenotazione.utente,
+            targa: ''),
+      );
+
+      if (preno.idUtente != -1) {
+        // Trova il driver
+        final driver = _utenti.firstWhere(
+          (u) => u.idUtente == preno.idUtente,
+          orElse: () => Utente(
+              idUtente: -1,
+              nome: "Sconosciuto",
+              cognome: "",
+              email: "",
+              ruoloUtente: RuoloUtente.driver),
+        );
+
+        String nomeCompleto = "${driver.nome} ${driver.cognome}";
+        stats[nomeCompleto] = (stats[nomeCompleto] ?? 0.0) + res.importoEuro!;
+      }
+    }
+    return stats;
+  }
+
+  /// Restituisce la spesa carburante filtrata per un range di date specifico
+  Map<String, double> getSpesaCarburanteFiltrata(
+      DateTime inizio, DateTime fine) {
+    Map<String, double> stats = {};
+
+    // Filtriamo le restituzioni che rientrano nel periodo (inclusivo)
+    final restituzioniFiltrate = _restituzioni.where((r) {
+      return r.importoEuro != null &&
+          r.dataRestituzione
+              .isAfter(inizio.subtract(const Duration(seconds: 1))) &&
+          r.dataRestituzione.isBefore(fine.add(const Duration(days: 1)));
+    });
+
+    for (var res in restituzioniFiltrate) {
+      final preno = _prenotazioni.firstWhere(
+        (p) => p.idPrenotazione == res.idPrenotazione,
+        orElse: () => _prenoVuota(), // Helper per evitare crash
+      );
+
+      if (preno.idUtente != -1) {
+        final driver = _utenti.firstWhere(
+          (u) => u.idUtente == preno.idUtente,
+          orElse: () => _utenteVuoto(),
+        );
+
+        String nomeCompleto = "${driver.nome} ${driver.cognome}";
+        stats[nomeCompleto] = (stats[nomeCompleto] ?? 0.0) + res.importoEuro!;
+      }
+    }
+    return stats;
+  }
+
+// Helper rapidi per i casi "orElse"
+  Prenotazione _prenoVuota() => Prenotazione(
+      idPrenotazione: -1,
+      idUtente: -1,
+      dataInizio: DateTime.now(),
+      dataFine: DateTime.now(),
+      statoPrenotazione: StatoPrenotazione.annullata,
+      tipoPrenotazione: TipoPrenotazione.utente,
+      targa: '');
+  Utente _utenteVuoto() => Utente(
+      idUtente: -1,
+      nome: "Sconosciuto",
+      cognome: "",
+      email: "",
+      ruoloUtente: RuoloUtente.driver);
 
   /// HELPER: Recupera gli ID di TUTTI i Manager (senza duplicati)
   List<int> get _tuttiManagerIds {
@@ -53,7 +149,7 @@ class FleetProvider with ChangeNotifier {
   /// --- INIZIALIZZAZIONE ---
   Future<void> inizializzaDati() async {
     _isLoading = true;
-    _safeNotify(); // Notifica sicura dell'inizio caricamento
+    _safeNotify();
 
     try {
       final risultati = await Future.wait([
@@ -61,6 +157,7 @@ class FleetProvider with ChangeNotifier {
         _prenotazioneService.fetchPrenotazioni(),
         _authService.getTuttiUtenti(),
         _manutenzioneService.fetchTutte(),
+        Supabase.instance.client.from('restituzioni').select(),
         if (_utenteLoggato != null)
           _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
         else
@@ -71,19 +168,22 @@ class FleetProvider with ChangeNotifier {
       _prenotazioni = risultati[1] as List<Prenotazione>;
       _utenti = risultati[2] as List<Utente>;
       _manutenzioni = risultati[3] as List<Manutenzione>;
-      _notifiche = risultati[4] as List<Notifica>;
+      _restituzioni = (risultati[4] as List)
+          .map((json) => Restituzione.fromJson(json))
+          .toList();
+      _notifiche = risultati[5] as List<Notifica>;
     } catch (e) {
       debugPrint("Errore inizializzazione: $e");
     } finally {
       _isLoading = false;
-      _safeNotify(); // Notifica sicura della fine caricamento
+      _safeNotify();
     }
   }
 
   /// --- LOGICA AUTENTICAZIONE ---
   Future<bool> login(String email, String password) async {
     _isLoading = true;
-    notifyListeners();
+    _safeNotify();
     try {
       final user = await _authService.login(email, password);
       if (user != null) {
@@ -94,7 +194,7 @@ class FleetProvider with ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -104,14 +204,14 @@ class FleetProvider with ChangeNotifier {
     _prenotazioni = [];
     _manutenzioni = [];
     _notifiche = [];
+    _restituzioni = [];
     notifyListeners();
   }
 
-  /// --- LOGICA NOTIFICHE (CORRETTA) ---
+  /// --- LOGICA NOTIFICHE ---
   Future<void> segnaNotificaLetta(int id) async {
     try {
       await _notificaService.segnaLetta(id);
-      // Invece di rimuovere, aggiorniamo l'oggetto in lista
       final index = _notifiche.indexWhere((n) => n.idNotifica == id);
       if (index != -1) {
         final n = _notifiche[index];
@@ -120,7 +220,7 @@ class FleetProvider with ChangeNotifier {
           tipoNotifica: n.tipoNotifica,
           messaggio: n.messaggio,
           dataInvio: n.dataInvio,
-          letta: true, // Ora resta visibile ma come "letta"
+          letta: true,
           idUtente: n.idUtente,
           idScadenza: n.idScadenza,
         );
@@ -173,7 +273,7 @@ class FleetProvider with ChangeNotifier {
       throw Exception('Patente mancante.');
     }
     _isLoading = true;
-    notifyListeners();
+    _safeNotify();
     try {
       if (!_isSlotDisponibile(
           targa: veicolo.targa,
@@ -193,7 +293,6 @@ class FleetProvider with ChangeNotifier {
       );
       await _prenotazioneService.creaPrenotazione(p);
 
-      // CICLO NOTIFICHE CORRETTO
       for (var idManager in _tuttiManagerIds) {
         await _notificaService.notificaRichiestaPrenotazione(idManager,
             "${driver.nome} ${driver.cognome}", veicolo.targa, inizio, fine);
@@ -201,7 +300,7 @@ class FleetProvider with ChangeNotifier {
       await inizializzaDati();
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotify();
     }
   }
 
@@ -238,7 +337,7 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  /// --- MANUTENZIONI & CRUD (MANTENUTI ORIGINALI) ---
+  /// --- MANUTENZIONI ---
   Future<void> programmareManutenzione(Veicolo veicolo, DateTime inizio,
       TipoManutenzione tipo, String descrizione,
       {required String luogo}) async {
@@ -291,7 +390,6 @@ class FleetProvider with ChangeNotifier {
         'data': data.toIso8601String(),
         'tipo': tipo.name,
       });
-
       await inizializzaDati();
     } catch (e) {
       debugPrint("Errore in modificaManutenzione: $e");
@@ -299,11 +397,7 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  bool isVeicoloDisponibile(
-          String targa, DateTime inizioReq, DateTime fineReq) =>
-      _isSlotDisponibile(
-          targa: targa, idUtente: 0, inizio: inizioReq, fine: fineReq);
-
+  /// --- UTENTI & VEICOLI ---
   Future<void> aggiungiNuovoUtente(
       {required String email,
       required String passwordScelta,
@@ -381,6 +475,7 @@ class FleetProvider with ChangeNotifier {
         'data_fine': nuovaFine.toIso8601String(),
         'stato': 'richiesta'
       }).eq('id_prenotazione', idPrenotazione);
+
       for (var idMan in _tuttiManagerIds) {
         await _notificaService.notificaRichiestaPrenotazione(
             idMan,
@@ -395,6 +490,12 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
+  /// --- HELPER METHODS ---
+  bool isVeicoloDisponibile(
+          String targa, DateTime inizioReq, DateTime fineReq) =>
+      _isSlotDisponibile(
+          targa: targa, idUtente: 0, inizio: inizioReq, fine: fineReq);
+
   bool _isSlotDisponibile({
     required String targa,
     required int idUtente,
@@ -402,7 +503,6 @@ class FleetProvider with ChangeNotifier {
     required DateTime fine,
     int? idDaEscludere,
   }) {
-    // 1. Controllo Manutenzioni (rimane uguale)
     final veicoloInOfficina = _manutenzioni.any((m) =>
         m.targa == targa &&
         m.oraFine == null &&
@@ -410,20 +510,14 @@ class FleetProvider with ChangeNotifier {
         fine.isAfter(m.data));
     if (veicoloInOfficina) return false;
 
-    // 2. Controllo Prenotazioni
     return !_prenotazioni.any((p) {
       if (idDaEscludere != null && p.idPrenotazione == idDaEscludere)
         return false;
-
       if (p.statoPrenotazione == StatoPrenotazione.annullata ||
-          p.statoPrenotazione == StatoPrenotazione.completata) {
-        return false;
-      }
-      // --------------------
+          p.statoPrenotazione == StatoPrenotazione.completata) return false;
 
       final haSovrapposizioneOraria =
           inizio.isBefore(p.dataFine) && fine.isAfter(p.dataInizio);
-
       return haSovrapposizioneOraria &&
           (p.targa == targa || (idUtente != 0 && p.idUtente == idUtente));
     });
@@ -431,15 +525,10 @@ class FleetProvider with ChangeNotifier {
 
   Future<Veicolo?> getVeicoloDallaTarga(String targa) async {
     final targaPulita = targa.trim().toUpperCase();
-
-    // 1. Cerchiamo nella lista locale che abbiamo già nel Provider
     try {
-      return _veicoli.firstWhere(
-        (v) => v.targa.trim().toUpperCase() == targaPulita,
-      );
+      return _veicoli
+          .firstWhere((v) => v.targa.trim().toUpperCase() == targaPulita);
     } catch (_) {
-      // 2. Se non lo trova in locale, interroga il database tramite il service
-      debugPrint("Veicolo non in memoria, lo cerco sul DB...");
       return await _veicoloService.getVeicoloByTarga(targaPulita);
     }
   }

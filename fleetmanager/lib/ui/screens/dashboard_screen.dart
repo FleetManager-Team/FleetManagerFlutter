@@ -1,4 +1,5 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/ui/screens/analisi_costi_screen.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
@@ -495,6 +496,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                       builder: (_) => const BookingHistoryScreen()));
             }),
+        ListTile(
+          leading: Icon(Icons.bar_chart_rounded, color: Colors.blue),
+          title: Text("Analisi Costi"),
+          onTap: () {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => AnalisiCostiScreen()));
+          },
+        ),
         const Spacer(),
         const Divider(),
         ListTile(
