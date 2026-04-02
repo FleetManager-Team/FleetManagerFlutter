@@ -45,8 +45,6 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   String? _urlFotoPedaggioEsistente;
   String? _urlFotoDanniEsistente;
 
-  final ImagePicker _picker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
@@ -70,14 +68,24 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         setState(() {
           _kmController.text = data['km_finali'].toString();
           _livelloCarburante = (data['livello_carburante'] as num).toDouble();
-          _rifornimentoEffettuato = data['rifornimento_effettuato'] ?? false;
 
+          // --- CARBURANTE ---
+          _rifornimentoEffettuato = data['rifornimento_effettuato'] ?? false;
           if (_rifornimentoEffettuato) {
             _litriController.text = data['litri_carburante']?.toString() ?? "";
             _euroController.text = data['importo_euro']?.toString() ?? "";
             _urlFotoScontrinoEsistente = data['url_scontrino'];
           }
 
+          // --- PEDAGGI ---
+          _haPedaggi = data['ha_pedaggi'] ?? false;
+          if (_haPedaggi) {
+            _euroPedaggiController.text =
+                data['importo_pedaggi']?.toString() ?? "";
+            _urlFotoPedaggioEsistente = data['url_foto_pedaggio'];
+          }
+
+          // --- DANNI ---
           _danniPresenti = data['danni_presenti'] ?? false;
           if (_danniPresenti) {
             _descrizioneDanniController.text = data['descrizione_danni'] ?? "";
@@ -194,8 +202,10 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                       _buildPhotoSelector(
                           "Foto Scontrino", _fotoScontrino, "scontrino"),
                     ],
+                    const SizedBox(height: 10),
+                    const Divider(height: 40),
                     SwitchListTile(
-                      title: const Text("Hai pagato pedaggi¢ o parcheggi?"),
+                      title: const Text("Hai pagato pedaggi o parcheggi?"),
                       value: _haPedaggi,
                       activeColor: Colors
                           .blueAccent, // Un colore diverso per distinguerlo
@@ -440,9 +450,10 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   }
 
   void _submitForm() async {
+    // 1. Validazione iniziale del form
     if (!_formKey.currentState!.validate()) return;
 
-    // Controllo foto solo se è il primo inserimento (o se il driver ha rimosso la vecchia)
+    // 2. Controllo obbligatorietà foto scontrino (se rifornimento effettuato)
     if (_rifornimentoEffettuato &&
         _fotoScontrino == null &&
         _urlFotoScontrinoEsistente == null) {
@@ -451,10 +462,17 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       return;
     }
 
+    // 3. Salvataggio riferimenti ai servizi prima degli await (per evitare errori di context)
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final fleetProvider = Provider.of<FleetProvider>(context, listen: false);
+
     setState(() => _isLoading = true);
 
     try {
       final restituzioneService = RestituzioneService();
+
+      // 4. Chiamata al servizio con tutti i dati (inclusi i nuovi pedaggi)
       await restituzioneService.completaRestituzione(
         idPrenotazione: widget.prenotazione.idPrenotazione,
         targa: widget.prenotazione.targa,
@@ -462,6 +480,12 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         livelloCarburante: _livelloCarburante,
         rifornimento: _rifornimentoEffettuato,
         haDanni: _danniPresenti,
+        // Nuovi campi pedaggi
+        haPedaggi: _haPedaggi,
+        euroPedaggi:
+            double.tryParse(_euroPedaggiController.text.replaceAll(',', '.')),
+        fotoPedaggio: _fotoPedaggio,
+        // Fine nuovi campi
         litri: double.tryParse(_litriController.text.replaceAll(',', '.')),
         euro: double.tryParse(_euroController.text.replaceAll(',', '.')),
         descDanni: _danniPresenti ? _descrizioneDanniController.text : null,
@@ -469,20 +493,31 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         fotoDanni: _fotoDanni,
       );
 
-      if (mounted) {
-        await Provider.of<FleetProvider>(context, listen: false)
-            .inizializzaDati();
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Operazione completata!"),
-            backgroundColor: Colors.green));
-      }
+      // 5. Verifica se il widget è ancora a schermo prima di procedere
+      if (!mounted) return;
+
+      // 6. Aggiornamento dati globali e chiusura pagina
+      await fleetProvider.inizializzaDati();
+
+      navigator.pop(); // Chiude la schermata
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text("Operazione completata!"),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red));
-      }
+      // Gestione errori
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text("Errore durante il salvataggio: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

@@ -143,7 +143,8 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, DateFormat df, dynamic kmVeicolo, FleetProvider provider) {
+  Widget _buildHeader(BuildContext context, DateFormat df, dynamic kmVeicolo,
+      FleetProvider provider) {
     IconData iconaStato;
     Color coloreStato;
 
@@ -286,6 +287,17 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
             ],
             dati['url_scontrino'],
             color: Colors.blue[50]!,
+          ),
+        if (dati['ha_pedaggi'] == true)
+          _buildSectionWithImage(
+            context,
+            "Pedaggi e Parcheggi",
+            [
+              _row("Importo", "${dati['importo_pedaggi']} €"),
+            ],
+            dati['url_foto_pedaggio'],
+            color: Colors.orange[
+                50]!, // Un colore diverso (arancio) per distinguerlo dal blu della benzina
           ),
         if (dati['danni_presenti'] == true)
           _buildSectionWithImage(
