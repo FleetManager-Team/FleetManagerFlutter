@@ -29,17 +29,20 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   late TextEditingController _kmController;
   final _litriController = TextEditingController();
   final _euroController = TextEditingController();
+  final _euroPedaggiController = TextEditingController();
   final _descrizioneDanniController = TextEditingController();
 
   double _livelloCarburante = 16.0;
   bool _rifornimentoEffettuato = false;
+  bool _haPedaggi = false;
   bool _danniPresenti = false;
 
   XFile? _fotoScontrino;
+  XFile? _fotoPedaggio;
   XFile? _fotoDanni;
 
-  // Variabili per gestire URL esistenti in caso di modifica
   String? _urlFotoScontrinoEsistente;
+  String? _urlFotoPedaggioEsistente;
   String? _urlFotoDanniEsistente;
 
   final ImagePicker _picker = ImagePicker();
@@ -114,6 +117,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     _litriController.dispose();
     _euroController.dispose();
     _descrizioneDanniController.dispose();
+    _euroPedaggiController.dispose();
     super.dispose();
   }
 
@@ -188,8 +192,23 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                         ],
                       ),
                       _buildPhotoSelector(
-                          "Foto Scontrino", _fotoScontrino, false),
+                          "Foto Scontrino", _fotoScontrino, "scontrino"),
                     ],
+                    SwitchListTile(
+                      title: const Text("Hai pagato pedaggi¢ o parcheggi?"),
+                      value: _haPedaggi,
+                      activeColor: Colors
+                          .blueAccent, // Un colore diverso per distinguerlo
+                      onChanged: (val) => setState(() => _haPedaggi = val),
+                    ),
+                    if (_haPedaggi) ...[
+                      _buildTextField(_euroPedaggiController,
+                          "Importo Pedaggi (Euro)", Icons.payments_outlined),
+                      const SizedBox(height: 10),
+                      _buildPhotoSelector(
+                          "Foto Ricevuta Pedaggio", _fotoPedaggio, "pedaggi"),
+                    ],
+                    const SizedBox(height: 10),
                     const Divider(height: 40),
                     SwitchListTile(
                       title: const Text("Sono presenti nuovi danni?"),
@@ -206,7 +225,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      _buildPhotoSelector("Foto Danno", _fotoDanni, true),
+                      _buildPhotoSelector("Foto Danno", _fotoDanni, "danni"),
                     ],
                     const SizedBox(height: 40),
                     SizedBox(
@@ -320,10 +339,17 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
-  // MODIFICATO: Gestione anteprima sia per file locale che per URL remoto
-  Widget _buildPhotoSelector(String label, XFile? file, bool isDanni) {
-    String? urlEsistente =
-        isDanni ? _urlFotoDanniEsistente : _urlFotoScontrinoEsistente;
+  Widget _buildPhotoSelector(String label, XFile? file, String tipo) {
+    // Determiniamo l'URL esistente in base al tipo
+    String? urlEsistente;
+    if (tipo == "danni") {
+      urlEsistente = _urlFotoDanniEsistente;
+    } else if (tipo == "pedaggi") {
+      urlEsistente = _urlFotoPedaggioEsistente;
+    } else {
+      urlEsistente = _urlFotoScontrinoEsistente;
+    }
+
     bool hasPhoto = file != null || urlEsistente != null;
 
     return ListTile(
@@ -334,7 +360,8 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       trailing: hasPhoto
           ? _buildPreview(file, urlEsistente)
           : const Icon(Icons.chevron_right),
-      onTap: () => _prendiFoto(context, isDanni),
+      onTap: () => _prendiFoto(
+          context, tipo), // Passiamo la stringa alla funzione che scatta
     );
   }
 
@@ -348,7 +375,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     return Image.network(url!, width: 40, height: 40, fit: BoxFit.cover);
   }
 
-  Future<void> _prendiFoto(BuildContext context, bool isDanni) async {
+  Future<void> _prendiFoto(BuildContext context, String tipo) async {
     // 1. Definiamo se siamo su un computer/browser
     bool isDesktopOrWeb = kIsWeb;
     if (!kIsWeb) {
@@ -359,7 +386,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
 
     // 2. Se siamo su Desktop/Web, apriamo subito la galleria (non c'è fotocamera mobile)
     if (isDesktopOrWeb) {
-      _eseguiPick(ImageSource.gallery, isDanni);
+      _eseguiPick(ImageSource.gallery, tipo);
       return;
     }
 
@@ -374,7 +401,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Galleria Foto'),
                 onTap: () {
-                  _eseguiPick(ImageSource.gallery, isDanni);
+                  _eseguiPick(ImageSource.gallery, tipo);
                   Navigator.of(context).pop();
                 },
               ),
@@ -382,7 +409,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                 leading: const Icon(Icons.photo_camera),
                 title: const Text('Fotocamera'),
                 onTap: () {
-                  _eseguiPick(ImageSource.camera, isDanni);
+                  _eseguiPick(ImageSource.camera, tipo);
                   Navigator.of(context).pop();
                 },
               ),
@@ -393,23 +420,22 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     );
   }
 
-  Future<void> _eseguiPick(ImageSource source, bool isDanni) async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        imageQuality: 50,
-      );
-      if (image != null) {
-        setState(() {
-          if (isDanni) {
-            _fotoDanni = image;
-          } else {
-            _fotoScontrino = image;
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint("Errore selezione immagine: $e");
+  Future<void> _eseguiPick(ImageSource source, String tipo) async {
+    // <-- CAMBIA in String tipo
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+
+    if (image != null) {
+      setState(() {
+        // Qui usiamo la logica a 3 casi che abbiamo scritto prima
+        if (tipo == "danni") {
+          _fotoDanni = image;
+        } else if (tipo == "pedaggi") {
+          _fotoPedaggio = image;
+        } else {
+          _fotoScontrino = image;
+        }
+      });
     }
   }
 

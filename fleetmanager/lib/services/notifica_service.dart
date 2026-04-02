@@ -12,7 +12,8 @@ class NotificaService {
         .eq('id_utente', idUtente)
         .order('data_invio', ascending: false);
 
-    return (response as List).map((json) => Notifica.fromJson(json)).toList();
+    final data = response as List<dynamic>;
+    return data.map((json) => Notifica.fromJson(json)).toList();
   }
 
   Future<void> segnaLetta(int id) async {

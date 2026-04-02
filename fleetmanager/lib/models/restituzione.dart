@@ -10,6 +10,11 @@ class Restituzione {
   final double? importoEuro;
   final String? urlScontrino;
 
+  // Pedaggi (NUOVO)
+  final bool haPedaggi;
+  final double? importoPedaggi;
+  final String? urlFotoPedaggio;
+
   // Danni
   final bool danniPresenti;
   final String? descrizioneDanni;
@@ -24,6 +29,10 @@ class Restituzione {
     this.litriCarburante,
     this.importoEuro,
     this.urlScontrino,
+    // Inizializzazione pedaggi
+    required this.haPedaggi,
+    this.importoPedaggi,
+    this.urlFotoPedaggio,
     required this.danniPresenti,
     this.descrizioneDanni,
     this.urlFotoDanni,
@@ -39,6 +48,10 @@ class Restituzione {
       litriCarburante: json['litri_carburante']?.toDouble(),
       importoEuro: json['importo_euro']?.toDouble(),
       urlScontrino: json['url_scontrino'],
+      // Mapping pedaggi
+      haPedaggi: json['ha_pedaggi'] ?? false,
+      importoPedaggi: json['importo_pedaggi']?.toDouble(),
+      urlFotoPedaggio: json['url_foto_pedaggio'],
       danniPresenti: json['danni_presenti'] ?? false,
       descrizioneDanni: json['descrizione_danni'],
       urlFotoDanni: json['url_foto_danni'],
@@ -55,6 +68,10 @@ class Restituzione {
       'litri_carburante': litriCarburante,
       'importo_euro': importoEuro,
       'url_scontrino': urlScontrino,
+      // Json pedaggi
+      'ha_pedaggi': haPedaggi,
+      'importo_pedaggi': importoPedaggi,
+      'url_foto_pedaggio': urlFotoPedaggio,
       'danni_presenti': danniPresenti,
       'descrizione_danni': descrizioneDanni,
       'url_foto_danni': urlFotoDanni,

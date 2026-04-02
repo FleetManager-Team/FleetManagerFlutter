@@ -147,6 +147,7 @@ class FleetProvider with ChangeNotifier {
   }
 
   /// --- INIZIALIZZAZIONE ---
+  /// --- INIZIALIZZAZIONE ---
   Future<void> inizializzaDati() async {
     _isLoading = true;
     _safeNotify();
@@ -160,17 +161,23 @@ class FleetProvider with ChangeNotifier {
         Supabase.instance.client.from('restituzioni').select(),
         _utenteLoggato != null
             ? _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
-            : Future.value([]),
+            : Future.value(<Notifica>[]), // Forza il tipo Notifica qui
       ]);
 
-      _veicoli = risultati[0] as List<Veicolo>;
-      _prenotazioni = risultati[1] as List<Prenotazione>;
-      _utenti = risultati[2] as List<Utente>;
-      _manutenzioni = risultati[3] as List<Manutenzione>;
-      _restituzioni = (risultati[4] as List)
-          .map((json) => Restituzione.fromJson(json))
+      _veicoli = List<Veicolo>.from(risultati[0]);
+      _prenotazioni = List<Prenotazione>.from(risultati[1]);
+      _utenti = List<Utente>.from(risultati[2]);
+      _manutenzioni = List<Manutenzione>.from(risultati[3]);
+
+      // Gestione sicura per le Restituzioni
+      final datiRestituzioni = risultati[4] as List<dynamic>;
+      _restituzioni =
+          datiRestituzioni.map((json) => Restituzione.fromJson(json)).toList();
+
+      final datiNotifiche = risultati[5] as List<dynamic>;
+      _notifiche = datiNotifiche
+          .map((json) => json is Notifica ? json : Notifica.fromJson(json))
           .toList();
-      _notifiche = risultati[5] as List<Notifica>;
     } catch (e) {
       debugPrint("Errore inizializzazione: $e");
     } finally {
@@ -542,5 +549,17 @@ class FleetProvider with ChangeNotifier {
     } else {
       notifyListeners();
     }
+  }
+
+  Utente getDriverDallaPrenotazione(Prenotazione prenotazione) {
+    return _utenti.firstWhere(
+      (u) => u.idUtente == prenotazione.idUtente,
+      orElse: () => Utente(
+          idUtente: -1,
+          nome: "Driver",
+          cognome: "Non Trovato",
+          email: "",
+          ruoloUtente: RuoloUtente.driver),
+    );
   }
 }
