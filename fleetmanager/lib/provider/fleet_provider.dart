@@ -18,6 +18,12 @@ import '../services/manutenzione_service.dart';
 import '../services/notifica_service.dart';
 import '../services/veicolo_service.dart';
 
+class SpesaDriver {
+  double carburante = 0;
+  double pedaggi = 0;
+  double get totale => carburante + pedaggi;
+}
+
 class FleetProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final VeicoloService _veicoloService = VeicoloService();
@@ -561,5 +567,71 @@ class FleetProvider with ChangeNotifier {
           email: "",
           ruoloUtente: RuoloUtente.driver),
     );
+  }
+
+  Map<String, SpesaDriver> getSpesaFiltrata({
+    required DateTime inizio,
+    required DateTime fine,
+  }) {
+    final Map<String, SpesaDriver> res = {};
+
+    for (var r in restituzioni) {
+      if (r.dataRestituzione.isAfter(inizio) &&
+          r.dataRestituzione.isBefore(fine.add(const Duration(days: 1)))) {
+        String nome = "Sconosciuto";
+        try {
+          final p = prenotazioni
+              .firstWhere((p) => p.idPrenotazione == r.idPrenotazione);
+          final u = utenti.firstWhere((u) => u.idUtente == p.idUtente);
+          nome = "${u.nome} ${u.cognome}";
+        } catch (_) {}
+
+        if (!res.containsKey(nome)) {
+          res[nome] = SpesaDriver();
+        }
+
+        res[nome]!.carburante += (r.importoEuro ?? 0.0);
+        res[nome]!.pedaggi += (r.importoPedaggi ?? 0.0);
+      }
+    }
+    return res;
+  }
+
+  Map<String, SpesaDriver> getDatiAnalisiCompleta({
+    required DateTime inizio,
+    required DateTime fine,
+  }) {
+    Map<String, SpesaDriver> res = {};
+
+    for (var r in restituzioni) {
+      // 1. Filtro data (concorde con quanto visto prima)
+      if (r.dataRestituzione.isAfter(inizio) &&
+          r.dataRestituzione.isBefore(fine.add(const Duration(days: 1)))) {
+        // 2. TROVIAMO IL NOME DEL DRIVER
+        String nomeDriver = "Sconosciuto";
+
+        try {
+          // Cerchiamo la prenotazione corrispondente alla restituzione
+          final preno = prenotazioni
+              .firstWhere((p) => p.idPrenotazione == r.idPrenotazione);
+
+          // Cerchiamo l'utente (il driver) che ha fatto quella prenotazione
+          final utente = utenti.firstWhere((u) => u.idUtente == preno.idUtente);
+
+          nomeDriver = utente.nome; // o utente.cognome, o entrambi
+        } catch (e) {
+          // Se non trova corrispondenze, rimane "Sconosciuto"
+        }
+
+        // 3. RAGGRUPPAMENTO DATI
+        if (!res.containsKey(nomeDriver)) {
+          res[nomeDriver] = SpesaDriver();
+        }
+
+        res[nomeDriver]!.carburante += (r.importoEuro ?? 0.0);
+        res[nomeDriver]!.pedaggi += (r.importoPedaggi ?? 0.0);
+      }
+    }
+    return res;
   }
 }
