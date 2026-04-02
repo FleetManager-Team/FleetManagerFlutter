@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -22,41 +20,39 @@ class RestituzioneService {
     String? urlScontrino;
     String? urlDanni;
 
-    // --- 1. LOGICA CARICAMENTO FOTO ---
+    // --- 1. LOGICA CARICAMENTO FOTO SCONTRINO ---
     if (fotoScontrino != null) {
       final path = 'scontrini/pre_$idPrenotazione.jpg';
-      if (kIsWeb) {
-        final bytes = await fotoScontrino.readAsBytes();
-        await _supabase.storage.from('restituzioni').uploadBinary(path, bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true));
-      } else {
-        final file = File(fotoScontrino.path);
-        if (await file.exists()) {
-          await _supabase.storage.from('restituzioni').upload(
-                path,
-                file,
-                fileOptions: const FileOptions(
-                    upsert: true), // Upsert fondamentale per Windows
-              );
-        }
-      }
+
+      // Leggiamo i bytes: questo metodo funziona su TUTTE le piattaforme
+      final bytes = await fotoScontrino.readAsBytes();
+
+      // Usiamo uploadBinary o upload passandogli i bytes direttamente
+      await _supabase.storage.from('restituzioni').uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
       urlScontrino = _supabase.storage.from('restituzioni').getPublicUrl(path);
     }
 
+    // --- 2. LOGICA CARICAMENTO FOTO DANNI ---
     if (fotoDanni != null) {
       final path = 'danni/pre_$idPrenotazione.jpg';
-      if (kIsWeb) {
-        final bytes = await fotoDanni.readAsBytes();
-        await _supabase.storage.from('restituzioni').uploadBinary(path, bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true));
-      } else {
-        await _supabase.storage
-            .from('restituzioni')
-            .upload(path, File(fotoDanni.path));
-      }
+
+      final bytes = await fotoDanni.readAsBytes();
+
+      await _supabase.storage.from('restituzioni').uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
       urlDanni = _supabase.storage.from('restituzioni').getPublicUrl(path);
     }
 
+    // --- 3. AGGIORNAMENTO DATABASE ---
     await _supabase.from('restituzioni').upsert({
       'id_prenotazione': idPrenotazione,
       'km_finali': kmFinali,
@@ -69,19 +65,17 @@ class RestituzioneService {
       'descrizione_danni': descDanni,
       'url_foto_danni': urlDanni,
       'data_restituzione': DateTime.now().toIso8601String(),
-    }, onConflict: 'id_prenotazione');
+    });
 
-    // --- 3. AGGIORNAMENTO VEICOLO ---
+    // --- 4. AGGIORNAMENTO VEICOLO ---
     await _supabase.from('veicoli').update({
       'km': kmFinali,
       'stato': 'disponibile',
     }).eq('targa', targa);
 
-    // --- 4. CHIUSURA PRENOTAZIONE (IL PUNTO CRITICO) ---
+    // --- 5. CHIUSURA PRENOTAZIONE ---
     await _supabase.from('prenotazioni').update({
       'stato': 'completata',
-      // Sovrascriviamo la data di fine prevista con quella reale
-      // Questo "libera" lo slot temporale per il FleetProvider
       'data_fine': DateTime.now().toIso8601String(),
     }).eq('id_prenotazione', idPrenotazione);
   }

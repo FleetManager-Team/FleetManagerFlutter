@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Aggiunto per caricamento dati
+import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
 class RestituzioneVeicoloScreen extends StatefulWidget {
   final Prenotazione prenotazione;
@@ -171,7 +171,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     SwitchListTile(
                       title: const Text("Hai fatto rifornimento?"),
                       value: _rifornimentoEffettuato,
-                      activeThumbColor: const Color(0xFF388E3C),
+                      activeColor: const Color(0xFF388E3C),
                       onChanged: (val) =>
                           setState(() => _rifornimentoEffettuato = val),
                     ),
@@ -194,7 +194,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     SwitchListTile(
                       title: const Text("Sono presenti nuovi danni?"),
                       value: _danniPresenti,
-                      activeThumbColor: Colors.red,
+                      activeColor: Colors.red,
                       onChanged: (val) => setState(() => _danniPresenti = val),
                     ),
                     if (_danniPresenti) ...[

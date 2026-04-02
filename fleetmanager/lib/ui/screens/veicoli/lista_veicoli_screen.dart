@@ -351,7 +351,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   keyboardType: TextInputType.number),
               const SizedBox(height: 15),
               DropdownButtonFormField<TipoVeicolo>(
-                initialValue: tipoSelezionato,
+                value: tipoSelezionato,
                 decoration: const InputDecoration(labelText: "Tipo Veicolo"),
                 items: TipoVeicolo.values
                     .map((t) => DropdownMenuItem(

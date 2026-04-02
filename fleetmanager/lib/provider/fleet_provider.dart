@@ -152,16 +152,15 @@ class FleetProvider with ChangeNotifier {
     _safeNotify();
 
     try {
-      final risultati = await Future.wait([
+      final risultati = await Future.wait<dynamic>([
         _veicoloService.fetchAllVeicoli(),
         _prenotazioneService.fetchPrenotazioni(),
         _authService.getTuttiUtenti(),
         _manutenzioneService.fetchTutte(),
         Supabase.instance.client.from('restituzioni').select(),
-        if (_utenteLoggato != null)
-          _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
-        else
-          Future.value(<Notifica>[]),
+        _utenteLoggato != null
+            ? _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
+            : Future.value([]),
       ]);
 
       _veicoli = risultati[0] as List<Veicolo>;

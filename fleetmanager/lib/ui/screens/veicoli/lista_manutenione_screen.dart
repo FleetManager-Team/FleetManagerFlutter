@@ -294,7 +294,7 @@ class _MaintenanceDashboardScreenState
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
               DropdownButtonFormField<Veicolo>(
-                initialValue: veicoloSelezionato,
+                value: veicoloSelezionato,
                 items: veicoliDisponibili
                     .map(
                         (v) => DropdownMenuItem(value: v, child: Text(v.targa)))

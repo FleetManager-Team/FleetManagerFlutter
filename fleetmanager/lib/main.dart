@@ -2,7 +2,7 @@ import 'package:fleetmanager/services/veicolo_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:fleetmanager/ui/screens/login_screen.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 
