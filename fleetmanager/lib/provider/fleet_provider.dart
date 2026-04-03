@@ -19,8 +19,12 @@ import '../services/notifica_service.dart';
 import '../services/veicolo_service.dart';
 
 class SpesaDriver {
+  int idUtente;
   double carburante = 0;
   double pedaggi = 0;
+
+  SpesaDriver({this.idUtente = 0, this.carburante = 0, this.pedaggi = 0});
+
   double get totale => carburante + pedaggi;
 }
 
@@ -579,15 +583,19 @@ class FleetProvider with ChangeNotifier {
       if (r.dataRestituzione.isAfter(inizio) &&
           r.dataRestituzione.isBefore(fine.add(const Duration(days: 1)))) {
         String nome = "Sconosciuto";
+        int idTrovato = 0; // <--- Aggiungiamo questa variabile d'appoggio
+
         try {
           final p = prenotazioni
               .firstWhere((p) => p.idPrenotazione == r.idPrenotazione);
           final u = utenti.firstWhere((u) => u.idUtente == p.idUtente);
+
           nome = "${u.nome} ${u.cognome}";
+          idTrovato = u.idUtente; // <--- Salviamo l'ID dell'utente!
         } catch (_) {}
 
         if (!res.containsKey(nome)) {
-          res[nome] = SpesaDriver();
+          res[nome] = SpesaDriver(idUtente: idTrovato);
         }
 
         res[nome]!.carburante += (r.importoEuro ?? 0.0);
@@ -633,5 +641,42 @@ class FleetProvider with ChangeNotifier {
       }
     }
     return res;
+  }
+
+  Map<DateTime, SpesaDriver> getSpesaTemporaleDriver({
+    required int idDriver, // Usiamo l'ID come richiesto
+    required DateTime inizio,
+    required DateTime fine,
+  }) {
+    final Map<DateTime, SpesaDriver> reportTemporale = {};
+    final fineGiorno = DateTime(fine.year, fine.month, fine.day, 23, 59, 59);
+
+    for (var r in _restituzioni) {
+      final prenotazioniTrovate =
+          _prenotazioni.where((p) => p.idPrenotazione == r.idPrenotazione);
+
+      if (prenotazioniTrovate.isNotEmpty) {
+        final prenotazione = prenotazioniTrovate.first;
+
+        // 2. Filtriamo per ID Utente (ho visto dallo screenshot che usi idUtente)
+        if (prenotazione.idUtente == idDriver &&
+            r.dataRestituzione
+                .isAfter(inizio.subtract(const Duration(seconds: 1))) &&
+            r.dataRestituzione.isBefore(fineGiorno)) {
+          // ... resto della logica per aggiungere i dati a reportTemporale ...
+          DateTime soloGiorno = DateTime(r.dataRestituzione.year,
+              r.dataRestituzione.month, r.dataRestituzione.day);
+
+          if (!reportTemporale.containsKey(soloGiorno)) {
+            reportTemporale[soloGiorno] = SpesaDriver();
+          }
+
+          reportTemporale[soloGiorno]!.carburante += r.importoEuro ?? 0.0;
+          reportTemporale[soloGiorno]!.pedaggi += r.importoPedaggi ?? 0.0;
+        }
+      }
+    }
+
+    return reportTemporale;
   }
 }

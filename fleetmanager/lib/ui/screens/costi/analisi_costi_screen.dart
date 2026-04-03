@@ -1,4 +1,5 @@
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/ui/screens/costi/dettaglio_costi_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -25,9 +26,20 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     final provider = context.watch<FleetProvider>();
 
     // Prendiamo i dati completi
-    final datiDriver = provider.getSpesaFiltrata(
+    // 1. Prendi tutti i dati dal provider
+    final Map<String, SpesaDriver> tuttiIDati = provider.getSpesaFiltrata(
       inizio: _rangeSelezionato.start,
       fine: _rangeSelezionato.end,
+    );
+
+    // 2. CREA UNA MAPPA FILTRATA: tieni solo chi ha spesa > 0 basandoti sui filtri UI
+    final Map<String, SpesaDriver> datiDriver = Map.fromEntries(
+      tuttiIDati.entries.where((entry) {
+        double totaleVisibile = 0;
+        if (_mostraCarburante) totaleVisibile += entry.value.carburante;
+        if (_mostraPedaggi) totaleVisibile += entry.value.pedaggi;
+        return totaleVisibile > 0; // Fondamentale: se è 0, sparisce dal grafico
+      }),
     );
 
     // Calcoliamo il totale pesando i filtri della UI
@@ -89,13 +101,142 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
   }
 
   Widget _buildGrafico(Map<String, SpesaDriver> dati) {
+    // 1. SE LA MAPPA È VUOTA, NON DISEGNARE NULLA (evita nomi senza barre)
+    if (dati.isEmpty) {
+      return const SizedBox(
+        height: 300,
+        child: Center(
+          child: Text(
+            "Nessun dato disponibile per questo periodo",
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 300,
       child: BarChart(
         BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+
+          // --- TOOLTIP DINAMICO ---
+          barTouchData: BarTouchData(
+            touchCallback: (FlTouchEvent event, barResponse) {
+              if (!event.isInterestedForInteractions ||
+                  barResponse == null ||
+                  barResponse.spot == null) {
+                return;
+              }
+
+              if (event is FlTapUpEvent) {
+                final int index = barResponse.spot!.touchedBarGroupIndex;
+
+                final int idDelDriver = dati.values.elementAt(index).idUtente;
+                final String nomeDelDriver = dati.keys.elementAt(index);
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DettaglioCostiDriver(
+                      idDriver: idDelDriver,
+                      nomeDriver: nomeDelDriver,
+                      rangeIniziale: _rangeSelezionato,
+                    ),
+                  ),
+                );
+              }
+            },
+            touchTooltipData: BarTouchTooltipData(
+              tooltipRoundedRadius: 8,
+              // Se tooltipBgColor dà errore, cancellalo o usa tooltipColor
+              tooltipBgColor: Colors.blueGrey.shade800,
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final nome = dati.keys.elementAt(groupIndex);
+                final spesa = dati.values.elementAt(groupIndex);
+
+                Color coloreTesto;
+                if (_mostraCarburante && !_mostraPedaggi) {
+                  coloreTesto = Colors.orange.shade400;
+                } else if (!_mostraCarburante && _mostraPedaggi) {
+                  coloreTesto = Colors.blue.shade400;
+                } else {
+                  coloreTesto = spesa.carburante >= spesa.pedaggi
+                      ? Colors.orange.shade400
+                      : Colors.blue.shade400;
+                }
+
+                return BarTooltipItem(
+                  '$nome\n',
+                  const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                  children: [
+                    TextSpan(
+                      text: '€ ${rod.toY.toStringAsFixed(2)}',
+                      style: TextStyle(
+                          color: coloreTesto, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+
+          // --- TITOLI (NOMI DRIVER DINAMICI) ---
+          titlesData: FlTitlesData(
+            show: true,
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (double value, TitleMeta meta) {
+                  int index = value.toInt();
+                  // Verifichiamo SEMPRE che l'indice esista nella mappa attuale
+                  if (index >= 0 && index < dati.length) {
+                    String nome = dati.keys.elementAt(index);
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      space: 10,
+                      child: Text(
+                        nome.split(' ')[0], // Prende solo il primo nome
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  // MODIFICA QUI: Mostra il titolo solo se è un numero intero
+                  // Se vuoi toglierli del tutto, imposta showTitles: false sopra
+                  if (value % 1 == 0 && value > 0) {
+                    return Text("€${value.toInt()}",
+                        style:
+                            const TextStyle(fontSize: 10, color: Colors.grey));
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+
+          gridData: const FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+
+          // --- GENERAZIONE DELLE BARRE (SOLO QUELLE CHE ESISTONO) ---
           barGroups: List.generate(dati.length, (index) {
             final spesa = dati.values.elementAt(index);
-            // Calcoliamo l'altezza totale visibile in base ai filtri
+
             double altezzaVisibile = 0;
             if (_mostraCarburante) altezzaVisibile += spesa.carburante;
             if (_mostraPedaggi) altezzaVisibile += spesa.pedaggi;
@@ -105,7 +246,9 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
               barRods: [
                 BarChartRodData(
                   toY: altezzaVisibile,
-                  width: 25,
+                  width: 22,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(4)),
                   rodStackItems: [
                     if (_mostraCarburante)
                       BarChartRodStackItem(
@@ -113,7 +256,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
                     if (_mostraPedaggi)
                       BarChartRodStackItem(
                           _mostraCarburante ? spesa.carburante : 0,
-                          _mostraCarburante ? spesa.totale : spesa.pedaggi,
+                          altezzaVisibile,
                           Colors.blue.shade700),
                   ],
                 ),

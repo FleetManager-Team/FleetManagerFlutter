@@ -1,5 +1,5 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
-import 'package:fleetmanager/ui/screens/analisi_costi_screen.dart';
+import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
