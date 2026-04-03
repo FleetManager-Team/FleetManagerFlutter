@@ -256,7 +256,9 @@ class _HomeScreenState extends State<HomeScreen> {
           "Prenotazioni",
           // Filtriamo per escludere le completate dal conteggio
           provider.prenotazioni
-              .where((p) => p.statoPrenotazione != StatoPrenotazione.completata)
+              .where((p) =>
+                  p.statoPrenotazione != StatoPrenotazione.completata &&
+                  p.statoPrenotazione != StatoPrenotazione.annullata)
               .length
               .toString(),
           Icons.assignment,
@@ -507,12 +509,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Icon(Icons.person, size: 40)),
         ),
         ListTile(
-            leading: const Icon(Icons.home),
+            leading: const Icon(Icons.home, color: Colors.blue),
             title: const Text("Dashboard"),
             onTap: () => Navigator.pop(context)),
         if (isManager)
           ListTile(
-              leading: const Icon(Icons.people),
+              leading: const Icon(Icons.people, color: Colors.green),
               title: const Text("Gestione Utenti"),
               onTap: () {
                 Navigator.pop(context);
@@ -522,7 +524,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) => const UserManagementScreen()));
               }),
         ListTile(
-            leading: const Icon(Icons.history),
+            leading: const Icon(Icons.history, color: Colors.brown),
             title: const Text("Storico Prenotazioni"),
             onTap: () {
               Navigator.pop(context);
@@ -531,16 +533,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                       builder: (_) => const BookingHistoryScreen()));
             }),
-        ListTile(
-          leading: const Icon(Icons.bar_chart_rounded, color: Colors.blue),
-          title: const Text("Analisi Costi"),
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const AnalisiCostiScreen()));
-          },
-        ),
+        if (isManager)
+          ListTile(
+            leading: const Icon(Icons.bar_chart_rounded, color: Colors.orange),
+            title: const Text("Analisi Costi"),
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const AnalisiCostiScreen()));
+            },
+          ),
         const Spacer(),
         const Divider(),
         ListTile(

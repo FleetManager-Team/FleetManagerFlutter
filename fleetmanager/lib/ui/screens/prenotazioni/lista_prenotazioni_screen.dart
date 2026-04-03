@@ -38,6 +38,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     List<Prenotazione> lista = provider.prenotazioni.where((p) {
       // Esclude sempre le prenotazioni completate dal registro principale
       if (p.statoPrenotazione == StatoPrenotazione.completata) return false;
+      if (p.statoPrenotazione == StatoPrenotazione.annullata) return false;
 
       // Filtro per stato selezionato nel Dropdown
       final matchStato =
