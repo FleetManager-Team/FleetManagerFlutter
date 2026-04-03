@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:collection/collection.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
-import 'package:collection/collection.dart';
 
 class BookingListScreen extends StatefulWidget {
   const BookingListScreen({super.key});
@@ -22,7 +22,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
   @override
   void initState() {
     super.initState();
-    // Al caricamento, assicuriamoci che gli stati siano aggiornati (es. da confermata ad attiva)
+    // Aggiorna i dati dal server all'apertura della pagina
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FleetProvider>().inizializzaDati();
     });
@@ -34,21 +34,27 @@ class _BookingListScreenState extends State<BookingListScreen> {
     final isManager =
         provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager;
 
-    // Filtro e ricerca
+    // Logica di filtraggio della lista
     List<Prenotazione> lista = provider.prenotazioni.where((p) {
+      // Esclude sempre le prenotazioni completate dal registro principale
+      if (p.statoPrenotazione == StatoPrenotazione.completata) return false;
+
+      // Filtro per stato selezionato nel Dropdown
       final matchStato =
           filtroStato == null || p.statoPrenotazione == filtroStato;
+
+      // Ricerca testuale per targa
       final matchRicerca =
           p.targa.toLowerCase().contains(queryRicerca.toLowerCase());
 
-      // Se non è manager, vede solo le sue (Logica opzionale, dipende dal tuo business)
-      bool matchUtente =
+      // Se l'utente non è manager, vede solo le proprie prenotazioni
+      final matchUtente =
           isManager || p.idUtente == provider.utenteLoggato?.idUtente;
 
       return matchStato && matchRicerca && matchUtente;
     }).toList();
 
-    // Ordinamento
+    // Ordinamento cronologico
     lista.sort((a, b) {
       int cmp = a.dataInizio.compareTo(b.dataInizio);
       return ordineCrescente ? cmp : -cmp;
@@ -56,26 +62,10 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: const Text("Registro Prenotazioni",
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue[900],
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(
-                ordineCrescente ? Icons.arrow_upward : Icons.arrow_downward),
-            onPressed: () => setState(() => ordineCrescente = !ordineCrescente),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => provider.inizializzaDati(),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(provider),
       body: Column(
         children: [
-          _buildTopActions(),
+          _buildSearchAndFilters(),
           Expanded(
             child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -96,7 +86,27 @@ class _BookingListScreenState extends State<BookingListScreen> {
     );
   }
 
-  Widget _buildTopActions() {
+  PreferredSizeWidget _buildAppBar(FleetProvider provider) {
+    return AppBar(
+      title: const Text("Registro Prenotazioni",
+          style: TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.blue[900],
+      foregroundColor: Colors.white,
+      actions: [
+        IconButton(
+          icon:
+              Icon(ordineCrescente ? Icons.arrow_upward : Icons.arrow_downward),
+          onPressed: () => setState(() => ordineCrescente = !ordineCrescente),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () => provider.inizializzaDati(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchAndFilters() {
     return Container(
       padding: const EdgeInsets.all(12),
       color: Colors.white,
@@ -110,10 +120,11 @@ class _BookingListScreenState extends State<BookingListScreen> {
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                contentPadding: EdgeInsets.zero,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none),
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
@@ -126,10 +137,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
             onChanged: (val) => setState(() => filtroStato = val),
             items: [
               const DropdownMenuItem(value: null, child: Text("Tutti")),
-              ...StatoPrenotazione.values.map((s) => DropdownMenuItem(
-                  value: s,
-                  child: Text(s.name.toUpperCase(),
-                      style: const TextStyle(fontSize: 12)))),
+              ...StatoPrenotazione.values
+                  .where((s) => s != StatoPrenotazione.completata)
+                  .map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s.name.toUpperCase(),
+                          style: const TextStyle(fontSize: 12)))),
             ],
           ),
         ],
@@ -178,100 +191,55 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: !provider.isLoading,
-      builder: (context) => StatefulBuilder(
-        // Per gestire il caricamento dentro il dialog
-        builder: (context, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          title: const Text("Dettaglio Prenotazione"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _detailRow(Icons.directions_car, "Veicolo", p.targa),
-              _detailRow(Icons.person, "Driver", nomeDriver),
-              _detailRow(Icons.access_time, "Dalle",
-                  DateFormat('dd/MM/yy HH:mm').format(p.dataInizio)),
-              _detailRow(Icons.access_time_filled, "Alle",
-                  DateFormat('dd/MM/yy HH:mm').format(p.dataFine)),
-              const Divider(height: 30),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Text(p.statoPrenotazione.name.toUpperCase(),
-                    style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2)),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed:
-                    provider.isLoading ? null : () => Navigator.pop(context),
-                child: const Text("CHIUDI")),
-            if (isManager &&
-                p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
-              ElevatedButton(
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.red[400]),
-                onPressed: provider.isLoading
-                    ? null
-                    : () async {
-                        await provider.annullaPrenotazione(p.idPrenotazione);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                child: const Text("RIFIUTA",
-                    style: TextStyle(color: Colors.white)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[600]),
-                onPressed: provider.isLoading
-                    ? null
-                    : () async {
-                        await provider.confermaPrenotazione(p.idPrenotazione);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                child: const Text("APPROVA",
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text("Dettaglio Prenotazione"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _detailRow(Icons.directions_car, "Veicolo", p.targa),
+            _detailRow(Icons.person, "Driver", nomeDriver),
+            _detailRow(Icons.access_time, "Dalle",
+                DateFormat('dd/MM/yy HH:mm').format(p.dataInizio)),
+            _detailRow(Icons.access_time_filled, "Alle",
+                DateFormat('dd/MM/yy HH:mm').format(p.dataFine)),
+            const Divider(height: 30),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Text(p.statoPrenotazione.name.toUpperCase(),
+                  style: TextStyle(
+                      color: statusColor, fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Supporto UI
-  Widget _buildStatusTag(StatoPrenotazione stato, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-      child: Text(
-        stato.name.toUpperCase(),
-        style: const TextStyle(
-            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.event_busy, size: 60, color: Colors.grey[400]),
-          const SizedBox(height: 10),
-          Text("Nessuna prenotazione trovata",
-              style: TextStyle(color: Colors.grey[600])),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("CHIUDI")),
+          if (isManager &&
+              p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
+            _actionButton("RIFIUTA", Colors.red[400]!, () async {
+              await provider.annullaPrenotazione(p.idPrenotazione);
+              if (mounted) Navigator.pop(context);
+            }),
+            _actionButton("APPROVA", Colors.green[600]!, () async {
+              await provider.confermaPrenotazione(p.idPrenotazione);
+              if (mounted) Navigator.pop(context);
+            }),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _actionButton(String label, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(backgroundColor: color),
+      onPressed: onPressed,
+      child: Text(label, style: const TextStyle(color: Colors.white)),
     );
   }
 
@@ -292,6 +260,33 @@ class _BookingListScreenState extends State<BookingListScreen> {
                       fontWeight: FontWeight.w500, fontSize: 14)),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusTag(StatoPrenotazione stato, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+      child: Text(
+        stato.name.toUpperCase(),
+        style: const TextStyle(
+            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.event_busy, size: 60, color: Colors.grey[400]),
+          const SizedBox(height: 10),
+          Text("Nessuna prenotazione attiva",
+              style: TextStyle(color: Colors.grey[600])),
         ],
       ),
     );

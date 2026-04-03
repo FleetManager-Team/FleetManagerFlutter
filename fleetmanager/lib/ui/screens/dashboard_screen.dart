@@ -253,12 +253,19 @@ class _HomeScreenState extends State<HomeScreen> {
             () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const VehicleListScreen()))),
         _statCard(
-            "Prenotazioni",
-            provider.prenotazioni.length.toString(),
-            Icons.assignment,
-            Colors.purple,
-            () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const BookingListScreen()))),
+          "Prenotazioni",
+          // Filtriamo per escludere le completate dal conteggio
+          provider.prenotazioni
+              .where((p) => p.statoPrenotazione != StatoPrenotazione.completata)
+              .length
+              .toString(),
+          Icons.assignment,
+          Colors.purple,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BookingListScreen()),
+          ),
+        ),
         _statCard(
             "Officina",
             inManutenzione.toString(),
@@ -436,7 +443,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     : null),
           ),
         );
-        
       },
     );
   }
@@ -529,8 +535,10 @@ class _HomeScreenState extends State<HomeScreen> {
           leading: const Icon(Icons.bar_chart_rounded, color: Colors.blue),
           title: const Text("Analisi Costi"),
           onTap: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const AnalisiCostiScreen()));
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const AnalisiCostiScreen()));
           },
         ),
         const Spacer(),
