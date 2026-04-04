@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html>
-
-<head>
-  <meta charset="utf-8">
-  <title>Fleet Manager Redirect</title>
-  <script type="text/javascript">
-    // Questo script "salva" il token del reset e lo riporta alla index.html
-    var l = window.location;
-    var segment = '/FleetManagerFlutter/';
-    l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + segment + 'index.html' + l.search + l.hash);
-  </script>
-</head>
-
-<body>
-  Reindirizzamento in corso...
-</body>
-
+  <head>
+    <meta charset="utf-8">
+    <title>Fleet Manager</title>
+    <script type="text/javascript">
+      // Questo script reindirizza l'utente alla index.html 
+      // mantenendo intatti i parametri del reset password (#access_token)
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1).join('/') + '/?p=/' +
+        l.pathname.slice(1).replace(/&/g, '~and~') + l.hash
+      );
+    </script>
+  </head>
+  <body>
+  </body>
 </html>
