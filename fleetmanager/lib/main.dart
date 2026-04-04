@@ -13,7 +13,8 @@ void main() async {
   // Inizializza Supabase con le tue credenziali reali
   await Supabase.initialize(
     url: 'https://zkmolzwrnuglwbogsrjv.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbW9sendybnVnbHdib2dzcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTgzNDYsImV4cCI6MjA4OTU5NDM0Nn0.DtQ3ENR2QJsE8Jo0Sg-GJ1nMBMoEUhbztFPQiN5q_m0',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprbW9sendybnVnbHdib2dzcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMTgzNDYsImV4cCI6MjA4OTU5NDM0Nn0.DtQ3ENR2QJsE8Jo0Sg-GJ1nMBMoEUhbztFPQiN5q_m0',
   );
 
   runApp(
@@ -49,7 +50,7 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const MainEntryWrapper(), 
+      home: const MainEntryWrapper(),
     );
   }
 }
@@ -65,9 +66,11 @@ class _MainEntryWrapperState extends State<MainEntryWrapper> {
   @override
   void initState() {
     super.initState();
-    // Questo caricherà i dati che inserirai manualmente su Supabase
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FleetProvider>().inizializzaDati();
+      // Solo se c'è già una sessione attiva carichiamo i dati
+      if (Supabase.instance.client.auth.currentSession != null) {
+        context.read<FleetProvider>().inizializzaDati();
+      }
     });
   }
 
