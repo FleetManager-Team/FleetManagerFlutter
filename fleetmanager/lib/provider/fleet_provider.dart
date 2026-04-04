@@ -54,6 +54,8 @@ class FleetProvider with ChangeNotifier {
   List<Utente> get utenti => _utenti;
   bool get isLoading => _isLoading;
 
+  final supabase = Supabase.instance.client;
+
   /// Calcola il totale speso in carburante da tutte le restituzioni
   double get totaleSpesaCarburante {
     return _restituzioni
@@ -223,22 +225,17 @@ class FleetProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> recuperaPassword(String email) async {
-    _isLoading = true;
-    _safeNotify();
-
+  // Aggiungi {String? redirectTo} tra le graffe per renderlo opzionale
+  Future<bool> recuperaPassword(String email, {String? redirectTo}) async {
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(
-        email.trim(),
+      await supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectTo, // Ora lo passerà correttamente a Supabase
       );
-
       return true;
     } catch (e) {
       debugPrint("Errore recupero password: $e");
       return false;
-    } finally {
-      _isLoading = false;
-      _safeNotify();
     }
   }
 
@@ -252,7 +249,7 @@ class FleetProvider with ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint("Errore aggiornamento: $e");
-      rethrow; 
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();

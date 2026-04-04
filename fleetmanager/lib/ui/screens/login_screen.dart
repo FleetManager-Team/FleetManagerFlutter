@@ -158,8 +158,12 @@ class _LoginScreenState extends State<LoginScreen>
             onPressed: () async {
               final email = _recoveryEmailController.text.trim();
               if (email.isNotEmpty) {
+                // NUOVO CODICE
                 final success =
-                    await context.read<FleetProvider>().recuperaPassword(email);
+                    await context.read<FleetProvider>().recuperaPassword(
+                          email,
+                          redirectTo: 'io.supabase.flutter://reset-callback/',
+                        );
                 Navigator.pop(context); // Chiude il dialog
 
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -390,7 +394,6 @@ class _LoginScreenState extends State<LoginScreen>
                     style: TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
-
                   TextFormField(
                     controller: _passController,
                     obscureText: _obscureText,
@@ -415,7 +418,6 @@ class _LoginScreenState extends State<LoginScreen>
                     },
                   ),
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: _confirmPassController,
                     obscureText: _obscureText,
