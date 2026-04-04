@@ -244,18 +244,18 @@ class FleetProvider with ChangeNotifier {
 
   Future<bool> aggiornaPassword(String nuovaPassword) async {
     _isLoading = true;
-    _safeNotify();
+    notifyListeners();
     try {
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(password: nuovaPassword),
       );
       return true;
     } catch (e) {
-      debugPrint("Errore aggiornamento password: $e");
-      return false;
+      debugPrint("Errore aggiornamento: $e");
+      rethrow; 
     } finally {
       _isLoading = false;
-      _safeNotify();
+      notifyListeners();
     }
   }
 

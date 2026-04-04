@@ -357,81 +357,133 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _mostraDialogNuovaPassword() {
-    final TextEditingController _newPassController = TextEditingController();
+    final _formKeyReset = GlobalKey<FormState>();
+    final _passController = TextEditingController();
+    final _confirmPassController = TextEditingController();
+    bool _obscureText = true;
 
     showDialog(
       context: context,
-      barrierDismissible: false, // L'utente deve completare l'operazione
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Row(
-          children: [
-            Icon(Icons.lock_reset, color: Colors.blue),
-            SizedBox(width: 10),
-            Text("Nuova Password"),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-                "Inserisci la nuova password per il tuo account (minimo 6 caratteri)."),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _newPassController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: "Password",
-                hintText: "Scrivi qui...",
-                prefixIcon: const Icon(Icons.password),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Column(
+            children: [
+              Icon(Icons.security_rounded,
+                  size: 50, color: Theme.of(context).primaryColor),
+              const SizedBox(height: 10),
+              const Text("Metti in sicurezza l'account",
+                  textAlign: TextAlign.center),
+            ],
+          ),
+          content: Form(
+            key: _formKeyReset,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Scegli una password forte che non hai usato in precedenza.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+
+                  TextFormField(
+                    controller: _passController,
+                    obscureText: _obscureText,
+                    decoration: InputDecoration(
+                      labelText: "Nuova Password",
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscureText
+                            ? Icons.visibility
+                            : Icons.visibility_off),
+                        onPressed: () =>
+                            setState(() => _obscureText = !_obscureText),
+                      ),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty)
+                        return "Inserisci la password";
+                      if (value.length < 6) return "Minimo 6 caratteri";
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _confirmPassController,
+                    obscureText: _obscureText,
+                    decoration: InputDecoration(
+                      labelText: "Conferma Password",
+                      prefixIcon: const Icon(Icons.verified_user_outlined),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (value) {
+                      if (value != _passController.text)
+                        return "Le password non coincidono";
+                      return null;
+                    },
+                  ),
+                ],
               ),
             ),
+          ),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Annulla"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                if (_formKeyReset.currentState!.validate()) {
+                  try {
+                    final success = await context
+                        .read<FleetProvider>()
+                        .aggiornaPassword(_passController.text);
+                    if (success && mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text("✅ Password aggiornata! Ora puoi accedere."),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    String erroreMessaggio = "Errore durante l'aggiornamento";
+                    if (e.toString().contains("same as the old one")) {
+                      erroreMessaggio =
+                          "La nuova password non può essere uguale alla vecchia!";
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(erroreMessaggio),
+                          backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              child: const Text("AGGIORNA PASSWORD"),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Annulla"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final nuovaPass = _newPassController.text.trim();
-
-              if (nuovaPass.length >= 6) {
-                final success = await context
-                    .read<FleetProvider>()
-                    .aggiornaPassword(nuovaPass);
-
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success
-                          ? "Password aggiornata con successo! Ora puoi accedere."
-                          : "Errore durante l'aggiornamento. Riprova."),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          "La password deve essere di almeno 6 caratteri")),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue[800],
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("SALVA"),
-          ),
-        ],
       ),
     );
   }
