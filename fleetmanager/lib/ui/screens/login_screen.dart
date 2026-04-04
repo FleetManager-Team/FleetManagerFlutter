@@ -2,6 +2,7 @@ import 'package:fleetmanager/ui/screens/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,7 +11,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -21,20 +23,35 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
+
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
+        duration: const Duration(milliseconds: 800), vsync: this);
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+        CurvedAnimation(parent: _animationController, curve: Curves.easeIn));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+            CurvedAnimation(
+                parent: _animationController, curve: Curves.easeOut));
     _animationController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        final AuthChangeEvent event = data.event;
+
+        debugPrint("SUPABASE EVENT: $event");
+
+        if (event == AuthChangeEvent.passwordRecovery ||
+            event == AuthChangeEvent.signedIn && _isRecoveryUrl()) {
+          _mostraDialogNuovaPassword();
+        }
+      });
+    });
+  }
+
+  bool _isRecoveryUrl() {
+    final Uri uri = Uri.base;
+    return uri.toString().contains('type=recovery') ||
+        uri.fragment.contains('access_token');
   }
 
   @override
@@ -64,12 +81,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             // 3. Navigazione alla dashboard con la tua animazione originale
             Navigator.of(context).pushReplacement(
               PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const HomeScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
                   const begin = Offset(1.0, 0.0);
                   const end = Offset.zero;
                   const curve = Curves.easeInOut;
-                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var tween = Tween(begin: begin, end: end)
+                      .chain(CurveTween(curve: curve));
                   return SlideTransition(
                     position: animation.drive(tween),
                     child: child,
@@ -86,7 +106,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 content: const Text('Email o password errati'),
                 backgroundColor: Theme.of(context).colorScheme.error,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             );
           }
@@ -104,6 +125,58 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         }
       }
     }
+  }
+
+  void _mostraDialogRecupero(BuildContext context) {
+    final TextEditingController _recoveryEmailController =
+        TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Recupero Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Inserisci la tua email per ricevere il link di reset."),
+            const SizedBox(height: 15),
+            TextField(
+              controller: _recoveryEmailController,
+              decoration: const InputDecoration(
+                labelText: "Email",
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Annulla")),
+          ElevatedButton(
+            onPressed: () async {
+              final email = _recoveryEmailController.text.trim();
+              if (email.isNotEmpty) {
+                final success =
+                    await context.read<FleetProvider>().recuperaPassword(email);
+                Navigator.pop(context); // Chiude il dialog
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? "Email di reset inviata! Controlla la tua posta."
+                        : "Errore: verifica l'email inserita."),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text("Invia"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -187,7 +260,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 if (value == 'a' || value == 'b') {
                                   return null;
                                 }
-                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                    .hasMatch(value)) {
                                   return 'Email non valida';
                                 }
                                 return null;
@@ -214,7 +288,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   return 'Inserisci la password';
                                 }
                                 if ((value == 'a' || value == 'b') &&
-                                    (_emailController.text == 'a' || _emailController.text == 'b')) {
+                                    (_emailController.text == 'a' ||
+                                        _emailController.text == 'b')) {
                                   return null;
                                 }
                                 if (value.length < 6) {
@@ -243,26 +318,28 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
                                         ),
                                       )
                                     : const Text(
                                         'Accedi',
-                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600),
                                       ),
                               ),
                             ),
 
                             const SizedBox(height: 16),
                             TextButton(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Funzionalità in sviluppo')),
-                                );
-                              },
+                              onPressed: () => _mostraDialogRecupero(
+                                  context), // <--- Cambia qui
                               child: Text(
                                 'Password dimenticata?',
-                                style: TextStyle(color: theme.colorScheme.primary),
+                                style:
+                                    TextStyle(color: theme.colorScheme.primary),
                               ),
                             ),
                           ],
@@ -275,6 +352,86 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _mostraDialogNuovaPassword() {
+    final TextEditingController _newPassController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // L'utente deve completare l'operazione
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_reset, color: Colors.blue),
+            SizedBox(width: 10),
+            Text("Nuova Password"),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                "Inserisci la nuova password per il tuo account (minimo 6 caratteri)."),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _newPassController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: "Password",
+                hintText: "Scrivi qui...",
+                prefixIcon: const Icon(Icons.password),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Annulla"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final nuovaPass = _newPassController.text.trim();
+
+              if (nuovaPass.length >= 6) {
+                final success = await context
+                    .read<FleetProvider>()
+                    .aggiornaPassword(nuovaPass);
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success
+                          ? "Password aggiornata con successo! Ora puoi accedere."
+                          : "Errore durante l'aggiornamento. Riprova."),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text(
+                          "La password deve essere di almeno 6 caratteri")),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue[800],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text("SALVA"),
+          ),
+        ],
       ),
     );
   }

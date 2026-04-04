@@ -223,6 +223,42 @@ class FleetProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> recuperaPassword(String email) async {
+    _isLoading = true;
+    _safeNotify();
+
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email.trim(),
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint("Errore recupero password: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<bool> aggiornaPassword(String nuovaPassword) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: nuovaPassword),
+      );
+      return true;
+    } catch (e) {
+      debugPrint("Errore aggiornamento password: $e");
+      return false;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
   /// --- LOGICA NOTIFICHE ---
   Future<void> segnaNotificaLetta(int id) async {
     try {
