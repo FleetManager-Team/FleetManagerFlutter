@@ -200,16 +200,12 @@ class FleetProvider with ChangeNotifier {
     _isLoading = true;
     _safeNotify();
     try {
-      final user = await _authService.login(email.trim(), password);
-
+      final user = await _authService.login(email, password);
       if (user != null) {
         _utenteLoggato = user;
         await inizializzaDati();
         return true;
       }
-      return false;
-    } catch (e) {
-      debugPrint("Errore login nel Provider: $e");
       return false;
     } finally {
       _isLoading = false;
@@ -256,7 +252,7 @@ class FleetProvider with ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint("Errore aggiornamento: $e");
-      rethrow;
+      rethrow; 
     } finally {
       _isLoading = false;
       notifyListeners();

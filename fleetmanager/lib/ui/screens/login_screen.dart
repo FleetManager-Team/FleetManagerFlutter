@@ -67,15 +67,18 @@ class _LoginScreenState extends State<LoginScreen>
       final provider = context.read<FleetProvider>();
 
       try {
+        // 1. Esegui il login su Supabase
         final success = await provider.login(
           _emailController.text.trim(),
           _passwordController.text,
         );
 
         if (success) {
-          if (mounted) {
-            await Future.delayed(const Duration(milliseconds: 100));
+          // 2. Carica i dati dal database prima di entrare
+          await provider.inizializzaDati();
 
+          if (mounted) {
+            // 3. Navigazione alla dashboard con la tua animazione originale
             Navigator.of(context).pushReplacement(
               PageRouteBuilder(
                 pageBuilder: (context, animation, secondaryAnimation) =>
@@ -88,12 +91,15 @@ class _LoginScreenState extends State<LoginScreen>
                   var tween = Tween(begin: begin, end: end)
                       .chain(CurveTween(curve: curve));
                   return SlideTransition(
-                      position: animation.drive(tween), child: child);
+                    position: animation.drive(tween),
+                    child: child,
+                  );
                 },
               ),
             );
           }
         } else {
+          // 4. Gestione errore credenziali
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -107,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen>
           }
         }
       } catch (e) {
+        // 5. Gestione errori di rete/connessione
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -383,6 +390,7 @@ class _LoginScreenState extends State<LoginScreen>
                     style: TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
+
                   TextFormField(
                     controller: _passController,
                     obscureText: _obscureText,
@@ -407,6 +415,7 @@ class _LoginScreenState extends State<LoginScreen>
                     },
                   ),
                   const SizedBox(height: 16),
+
                   TextFormField(
                     controller: _confirmPassController,
                     obscureText: _obscureText,
