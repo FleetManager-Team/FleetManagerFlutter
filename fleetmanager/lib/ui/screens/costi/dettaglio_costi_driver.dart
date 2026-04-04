@@ -66,7 +66,6 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
               alignment: WrapAlignment.center,
               children: [_buildPickerPeriodo()],
             ),
-
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(
@@ -311,33 +310,6 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
         const PopupMenuItem(value: 'Ultimo Anno', child: Text('Ultimo Anno')),
       ],
     );
-  }
-
-  Widget _buildSelettoreDate() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: OutlinedButton.icon(
-        icon: const Icon(Icons.calendar_today, size: 18),
-        label: Text(
-          "${DateFormat('dd/MM/yy').format(_rangeSelezionato.start)} - ${DateFormat('dd/MM/yy').format(_rangeSelezionato.end)}",
-        ),
-        onPressed: _selezionaDate,
-      ),
-    );
-  }
-
-  Future<void> _selezionaDate() async {
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      initialDateRange: _rangeSelezionato,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null && picked != _rangeSelezionato) {
-      setState(() {
-        _rangeSelezionato = picked;
-      });
-    }
   }
 
   Widget _buildFiltri() {
