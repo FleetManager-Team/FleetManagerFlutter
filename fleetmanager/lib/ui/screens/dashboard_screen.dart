@@ -216,22 +216,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            // Pulsante reso identico a quello della card blu
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RestituzioneVeicoloScreen(
-                      prenotazione: attiva!,
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.green[700]),
-              child: const Text("RESTITUISCI VEICOLO"),
+
+            // Riga con i bottoni ai lati opposti
+            Row(
+              mainAxisAlignment: MainAxisAlignment
+                  .spaceBetween, // Uno a sinistra, uno a destra
+              children: [
+                // Bottone RESTITUISCI (Largo quanto il testo)
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RestituzioneVeicoloScreen(
+                          prenotazione: attiva!,
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.green[700]),
+                  child: const Text("RESTITUISCI VEICOLO"),
+                ),
+
+                // Bottone SEGNALAZIONE (Largo quanto il testo)
+                ElevatedButton(
+                  onPressed: () {
+                    // Qui la tua logica per la segnalazione
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white),
+                  child: const Text("SEGNALAZIONE"),
+                ),
+              ],
             ),
           ],
         ),
