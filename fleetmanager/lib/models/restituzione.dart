@@ -10,7 +10,7 @@ class Restituzione {
   final double? importoEuro;
   final String? urlScontrino;
 
-  // Pedaggi (NUOVO)
+  // Pedaggi
   final bool haPedaggi;
   final double? importoPedaggi;
   final String? urlFotoPedaggio;
@@ -19,6 +19,12 @@ class Restituzione {
   final bool danniPresenti;
   final String? descrizioneDanni;
   final String? urlFotoDanni;
+
+  // --- SEZIONE EMERGENZA / SEGNALAZIONE STRAORDINARIA ---
+  final bool isEmergenza; // Identifica se è un'interruzione forzata
+  final String? noteEmergenza; // Descrizione del guasto o imprevisto
+  final String?
+      posizioneEmergenza; // Stringa per GPS (es. "45.1, 9.1") o Indirizzo manuale
 
   Restituzione({
     this.idRestituzione,
@@ -29,13 +35,16 @@ class Restituzione {
     this.litriCarburante,
     this.importoEuro,
     this.urlScontrino,
-    // Inizializzazione pedaggi
     required this.haPedaggi,
     this.importoPedaggi,
     this.urlFotoPedaggio,
     required this.danniPresenti,
     this.descrizioneDanni,
     this.urlFotoDanni,
+    // Parametri opzionali per emergenza
+    this.isEmergenza = false,
+    this.noteEmergenza,
+    this.posizioneEmergenza,
   });
 
   factory Restituzione.fromJson(Map<String, dynamic> json) {
@@ -48,13 +57,16 @@ class Restituzione {
       litriCarburante: json['litri_carburante']?.toDouble(),
       importoEuro: json['importo_euro']?.toDouble(),
       urlScontrino: json['url_scontrino'],
-      // Mapping pedaggi
       haPedaggi: json['ha_pedaggi'] ?? false,
       importoPedaggi: json['importo_pedaggi']?.toDouble(),
       urlFotoPedaggio: json['url_foto_pedaggio'],
       danniPresenti: json['danni_presenti'] ?? false,
       descrizioneDanni: json['descrizione_danni'],
       urlFotoDanni: json['url_foto_danni'],
+      // Mapping emergenza
+      isEmergenza: json['is_emergenza'] ?? false,
+      noteEmergenza: json['note_emergenza'],
+      posizioneEmergenza: json['posizione_emergenza'],
     );
   }
 
@@ -68,13 +80,16 @@ class Restituzione {
       'litri_carburante': litriCarburante,
       'importo_euro': importoEuro,
       'url_scontrino': urlScontrino,
-      // Json pedaggi
       'ha_pedaggi': haPedaggi,
       'importo_pedaggi': importoPedaggi,
       'url_foto_pedaggio': urlFotoPedaggio,
       'danni_presenti': danniPresenti,
       'descrizione_danni': descrizioneDanni,
       'url_foto_danni': urlFotoDanni,
+      // Json emergenza
+      'is_emergenza': isEmergenza,
+      'note_emergenza': noteEmergenza,
+      'posizione_emergenza': posizioneEmergenza,
     };
   }
 }

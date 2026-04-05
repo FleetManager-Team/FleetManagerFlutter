@@ -1,6 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/restituzione_veicolo_screen.dart';
+import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:intl/intl.dart';

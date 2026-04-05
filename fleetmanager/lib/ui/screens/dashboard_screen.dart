@@ -3,7 +3,7 @@ import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/restituzione_veicolo_screen.dart';
+import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/storico_prenotazioni_screen.dart';
 import 'package:fleetmanager/ui/screens/utenti/lista_utenti_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
@@ -243,13 +243,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Bottone SEGNALAZIONE (Largo quanto il testo)
                 ElevatedButton(
                   onPressed: () {
-                    // Qui la tua logica per la segnalazione
+                    // Navighiamo alla stessa schermata, ma attiviamo la modalità emergenza
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RestituzioneVeicoloScreen(
+                          prenotazione: attiva!,
+                          isEmergenza:
+                              true, // <--- FONDAMENTALE: attiva la modalità SOS
+                        ),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white),
-                  child: const Text("SEGNALAZIONE"),
-                ),
+                    backgroundColor: Colors.red, // Sfondo rosso
+                    foregroundColor: Colors.white, // Icona bianca
+                    shape:
+                        const CircleBorder(), // Forma perfettamente circolare
+                    padding: const EdgeInsets.all(
+                        16), // Padding uniforme per centrare l'icona
+                    elevation: 2, // Leggera ombra per l'effetto "elevated"
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded, // L'icona di pericolo
+                    size: 28, // Dimensione dell'icona
+                  ),
+                )
               ],
             ),
           ],

@@ -12,6 +12,11 @@ class RestituzioneService {
     required bool rifornimento,
     required bool haDanni,
     required bool haPedaggi,
+    // --- Nuovi campi per segnalazione straordinaria ---
+    bool isEmergenza = false,
+    String? noteEmergenza,
+    String? posizioneEmergenza,
+    // --------------------------------------------------
     double? litri,
     double? euro,
     double? euroPedaggi,
@@ -20,76 +25,72 @@ class RestituzioneService {
     XFile? fotoDanni,
     XFile? fotoPedaggio,
   }) async {
-    String? urlScontrino;
-    String? urlDanni;
-    String? urlPedaggio;
+    // 1. Caricamento immagini (usando una funzione helper per pulizia)
+    String? urlScontrino =
+        await _uploadImage(fotoScontrino, 'scontrini', idPrenotazione);
+    String? urlDanni = await _uploadImage(fotoDanni, 'danni', idPrenotazione);
+    String? urlPedaggio =
+        await _uploadImage(fotoPedaggio, 'pedaggi', idPrenotazione);
 
-    // --- 1. LOGICA CARICAMENTO FOTO SCONTRINO ---
-    if (fotoScontrino != null) {
-      final path = 'scontrini/pre_$idPrenotazione.jpg';
-      final bytes = await fotoScontrino.readAsBytes();
-      await _supabase.storage.from('restituzioni').uploadBinary(
-            path,
-            bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-          );
-      urlScontrino = _supabase.storage.from('restituzioni').getPublicUrl(path);
-    }
+    final oraAttuale = DateTime.now().toIso8601String();
 
-    // --- 2. LOGICA CARICAMENTO FOTO DANNI ---
-    if (fotoDanni != null) {
-      final path = 'danni/pre_$idPrenotazione.jpg';
-      final bytes = await fotoDanni.readAsBytes();
-      await _supabase.storage.from('restituzioni').uploadBinary(
-            path,
-            bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-          );
-      urlDanni = _supabase.storage.from('restituzioni').getPublicUrl(path);
-    }
-
-    // --- 3. LOGICA CARICAMENTO FOTO PEDAGGIO ---
-    if (fotoPedaggio != null) {
-      final path = 'pedaggi/pre_$idPrenotazione.jpg';
-      final bytes = await fotoPedaggio.readAsBytes();
-      await _supabase.storage.from('restituzioni').uploadBinary(
-            path,
-            bytes,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-          );
-      urlPedaggio = _supabase.storage.from('restituzioni').getPublicUrl(path);
-    }
-
-    // --- 4. AGGIORNAMENTO DATABASE ---
+    // 2. Aggiornamento Database Restituzioni
     await _supabase.from('restituzioni').upsert({
       'id_prenotazione': idPrenotazione,
       'km_finali': kmFinali,
+      'data_restituzione': oraAttuale,
+      'livello_carburante': livelloCarburante,
       'rifornimento_effettuato': rifornimento,
       'litri_carburante': litri,
       'importo_euro': euro,
       'url_scontrino': urlScontrino,
-      'livello_carburante': livelloCarburante,
-      // Nuovi campi pedaggi
       'ha_pedaggi': haPedaggi,
       'importo_pedaggi': euroPedaggi,
       'url_foto_pedaggio': urlPedaggio,
-      // Fine nuovi campi
       'danni_presenti': haDanni,
       'descrizione_danni': descDanni,
       'url_foto_danni': urlDanni,
-      'data_restituzione': DateTime.now().toIso8601String(),
+      // Campi emergenza
+      'is_emergenza': isEmergenza,
+      'note_emergenza': noteEmergenza,
+      'posizione_emergenza': posizioneEmergenza,
     });
 
-    // --- 5. AGGIORNAMENTO VEICOLO ---
+    // 3. Aggiornamento Veicolo
+    // Se è un'emergenza, lo stato diventa 'manutenzione', altrimenti 'disponibile'
     await _supabase.from('veicoli').update({
       'km': kmFinali,
-      'stato': 'disponibile',
+      'stato': isEmergenza ? 'manutenzione' : 'disponibile',
     }).eq('targa', targa);
 
-    // --- 6. CHIUSURA PRENOTAZIONE ---
+    // 4. Chiusura Prenotazione
     await _supabase.from('prenotazioni').update({
-      'stato': 'completata',
-      'data_fine': DateTime.now().toIso8601String(),
+      'stato_prenotazione':
+          'completata', // Verifica se nel tuo DB è 'stato' o 'stato_prenotazione'
+      'data_fine': oraAttuale,
     }).eq('id_prenotazione', idPrenotazione);
+  }
+
+  /// Funzione di supporto per evitare duplicazione codice nel caricamento immagini
+  Future<String?> _uploadImage(
+      XFile? file, String folder, int idPrenotazione) async {
+    if (file == null) return null;
+
+    try {
+      final String fileName = 'pre_$idPrenotazione.jpg';
+      final String path = '$folder/$fileName';
+      final bytes = await file.readAsBytes();
+
+      await _supabase.storage.from('restituzioni').uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+
+      return _supabase.storage.from('restituzioni').getPublicUrl(path);
+    } catch (e) {
+      print("Errore caricamento immagine ($folder): $e");
+      return null;
+    }
   }
 }
