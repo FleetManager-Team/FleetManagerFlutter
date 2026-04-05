@@ -1,4 +1,5 @@
 import 'package:fleetmanager/ui/screens/dashboard_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
@@ -50,8 +51,12 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isRecoveryUrl() {
     final Uri uri = Uri.base;
-    return uri.toString().contains('type=recovery') ||
-        uri.fragment.contains('access_token');
+    // Controlla sia l'URL standard che la parte dopo il cancelletto (#)
+    final bool hasRecoveryType = uri.toString().contains('type=recovery') ||
+        uri.fragment.contains('type=recovery');
+    final bool hasAccessToken = uri.fragment.contains('access_token=');
+
+    return hasRecoveryType || hasAccessToken;
   }
 
   @override
@@ -162,7 +167,10 @@ class _LoginScreenState extends State<LoginScreen>
                 final success =
                     await context.read<FleetProvider>().recuperaPassword(
                           email,
-                          redirectTo: 'io.supabase.flutter://reset-callback/',
+                          // Prende l'indirizzo attuale (localhost, github o dominio finale) in automatico
+                          redirectTo: kIsWeb
+                              ? Uri.base.origin + Uri.base.path
+                              : "io.supabase.flutter://reset-callback/",
                         );
                 Navigator.pop(context); // Chiude il dialog
 
