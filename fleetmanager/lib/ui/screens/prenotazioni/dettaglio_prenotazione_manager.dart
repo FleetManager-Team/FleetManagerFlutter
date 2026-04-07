@@ -34,30 +34,49 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
   Future<void> _aggiornaStato(
       BuildContext context, StatoPrenotazione nuovoStato) async {
+    // 1. SALVIAMO I RIFERIMENTI PRIMA DI OGNI 'AWAIT'
+    // Questo è vitale: dopo un await il 'context' originale potrebbe essere scaduto
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<FleetProvider>(context, listen: false);
+
     try {
+      // Mostriamo un indicatore di caricamento (opzionale, se non lo hai già nel pulsante)
+      // Se hai già un overlay di caricamento, assicurati che non blocchi il pop.
+
       if (nuovoStato == StatoPrenotazione.attiva) {
         await provider.confermaPrenotazione(prenotazione.idPrenotazione);
-      } else if (nuovoStato == StatoPrenotazione.annullata) {
+      } else {
+        // Usiamo il metodo annulla che abbiamo verificato
         await provider.annullaPrenotazione(prenotazione.idPrenotazione);
       }
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Operazione completata con successo"),
-            backgroundColor: nuovoStato == StatoPrenotazione.attiva
-                ? Colors.green
-                : Colors.red,
-          ),
-        );
-        Navigator.pop(context);
+      // 2. FORZIAMO IL REFRESH E ASPETTIAMO CHE SIA FINITO
+      await provider.inizializzaDati();
+
+      // 3. USIAMO IL NAVIGATOR SALVATO PER TORNARE INDIETRO
+      // Non usiamo più Navigator.pop(context) perché il context potrebbe essere nullo
+      if (navigator.canPop()) {
+        navigator.pop();
       }
+
+      // 4. MESSAGGIO DI SUCCESSO
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(nuovoStato == StatoPrenotazione.attiva
+              ? "Prenotazione approvata con successo"
+              : "Prenotazione rifiutata"),
+          backgroundColor: nuovoStato == StatoPrenotazione.attiva
+              ? Colors.green
+              : Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Errore: $e")));
-      }
+      debugPrint("ERRORE AGGIORNAMENTO: $e");
+      messenger.showSnackBar(
+        SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -66,6 +85,9 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     final df = DateFormat('dd/MM/yyyy HH:mm');
     final provider = Provider.of<FleetProvider>(context);
     final utente = provider.utenteLoggato;
+
+    // Un manager è tale se ha il ruolo manager,
+    // ma qui verifichiamo anche che non stia guardando una sua stessa prenotazione
     final isManager = utente?.idUtente != prenotazione.idUtente;
 
     return Scaffold(
@@ -91,20 +113,29 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // 1. Header con Targa e Info Driver
               _buildHeader(context, df, kmVeicolo, provider),
               const SizedBox(height: 24),
+
+              // 2. LOGICA AZIONI MANAGER (Approvazione/Rifiuto + Avviso Conflitti)
               if (prenotazione.statoPrenotazione ==
                       StatoPrenotazione.richiesta &&
                   isManager)
-                _buildManagerActions(context)
-              else if (prenotazione.statoPrenotazione !=
-                  StatoPrenotazione.annullata) ...[
-                if (datiRestituzione == null)
-                  _buildNoDataWarning()
-                else
-                  _buildSezioniRestituzione(context, datiRestituzione, df),
-                if (!isManager) _buildBottoneDriver(context, datiRestituzione),
-              ] else
+                Consumer<FleetProvider>(
+                  builder: (context, currentProvider, child) {
+                    return Column(
+                      children: [
+                        _buildConflictWarning(
+                            context, currentProvider.prenotazioni),
+                        _buildManagerActions(context),
+                      ],
+                    );
+                  },
+                )
+
+              // 3. LOGICA PRENOTAZIONE ANNULLATA
+              else if (prenotazione.statoPrenotazione ==
+                  StatoPrenotazione.annullata)
                 Card(
                   color: Colors.red[50],
                   elevation: 0,
@@ -122,7 +153,20 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                               fontSize: 16)),
                     ),
                   ),
-                ),
+                )
+
+              // 4. LOGICA PRENOTAZIONE CONFERMATA/ATTIVA/COMPLETATA
+              else ...[
+                if (datiRestituzione == null)
+                  _buildNoDataWarning()
+                else
+                  _buildSezioniRestituzione(context, datiRestituzione, df),
+
+                // Se è il driver a guardare, mostriamo il tasto per restituire o modificare
+                if (!isManager) _buildBottoneDriver(context, datiRestituzione),
+              ],
+
+              // 5. FOOTER NOTA MODIFICA (Solo per Driver con dati già inseriti)
               if (datiRestituzione != null &&
                   !isManager &&
                   prenotazione.statoPrenotazione != StatoPrenotazione.annullata)
@@ -492,6 +536,106 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildConflictWarning(BuildContext context, List<Prenotazione> tutte) {
+    final df = DateFormat('dd/MM HH:mm');
+    final provider = Provider.of<FleetProvider>(context, listen: false);
+
+    // Cerchiamo le prenotazioni in conflitto (stessa targa, sovrapposte, stato richiesta)
+    final conflitti = tutte
+        .where((p) =>
+            p.idPrenotazione != prenotazione.idPrenotazione &&
+            p.targa == prenotazione.targa &&
+            p.statoPrenotazione == StatoPrenotazione.richiesta &&
+            prenotazione.dataInizio.toLocal().isBefore(p.dataFine.toLocal()) &&
+            prenotazione.dataFine.toLocal().isAfter(p.dataInizio.toLocal()))
+        .toList();
+
+    if (conflitti.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber[300]!, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: Colors.amber[900], size: 24),
+              const SizedBox(width: 8),
+              Text(
+                "ATTENZIONE: SOVRAPPOSIZIONE",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber[900],
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Approvando questa richiesta, verranno ANNULLATE automaticamente le seguenti richieste:",
+            style: TextStyle(
+                color: Colors.amber[900],
+                fontSize: 12,
+                fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          // Elenco dettagliato dei conflitti
+          ...conflitti.map((c) {
+            // Recuperiamo il nome del driver per questa specifica prenotazione in conflitto
+            final driverConflitto = provider.getDriverDallaPrenotazione(c);
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.person, size: 14, color: Colors.amber[900]),
+                        const SizedBox(width: 6),
+                        Text(
+                          "${driverConflitto.nome} ${driverConflitto.cognome}",
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.amber[900],
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20, top: 2),
+                      child: Text(
+                        "Periodo: ${df.format(c.dataInizio.toLocal())} - ${df.format(c.dataFine.toLocal())}",
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.amber[800],
+                            fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ],
       ),
     );
   }

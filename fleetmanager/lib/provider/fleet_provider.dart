@@ -354,14 +354,44 @@ class FleetProvider with ChangeNotifier {
 
   Future<void> confermaPrenotazione(int id) async {
     try {
-      await _prenotazioneService.confermaPrenotazione(id);
-      final p =
+      // 1. Troviamo i dati della prenotazione che stiamo per approvare
+      final pApprovata =
           _prenotazioni.firstWhere((element) => element.idPrenotazione == id);
-      await _notificaService.notificaConfermaPrenotazione(
-          p.idUtente, p.targa, p.dataInizio, p.dataFine);
+
+      // 2. Identifichiamo le altre richieste in "sovrapposizione"
+      // Devono avere: stessa targa, stato 'richiesta' e orari sovrapposti
+      final conflitti = _prenotazioni
+          .where((p) =>
+              p.idPrenotazione != id &&
+              p.targa == pApprovata.targa &&
+              p.statoPrenotazione == StatoPrenotazione.richiesta &&
+              pApprovata.dataInizio.isBefore(p.dataFine) &&
+              pApprovata.dataFine.isAfter(p.dataInizio))
+          .toList();
+
+      // 3. Eseguiamo l'approvazione principale tramite il tuo service
+      await _prenotazioneService.confermaPrenotazione(id);
+
+      // 4. Se ci sono conflitti, li annulliamo nel database
+      if (conflitti.isNotEmpty) {
+        for (var conf in conflitti) {
+          // Usiamo il tuo metodo esistente per annullare le altre
+          await _prenotazioneService.annullaPrenotazione(conf.idPrenotazione);
+
+          // Opzionale: invia una notifica di "rifiuto per sovrapposizione" a questi driver
+          // await _notificaService.notificaRifiutoPrenotazione(conf.idUtente, conf.targa);
+        }
+      }
+
+      // 5. Inviamo la notifica di conferma al driver "vincitore"
+      await _notificaService.notificaConfermaPrenotazione(pApprovata.idUtente,
+          pApprovata.targa, pApprovata.dataInizio, pApprovata.dataFine);
+
+      // 6. Refresh globale dei dati
       await inizializzaDati();
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("Errore in confermaPrenotazione: ${e.toString()}");
+      rethrow; // Importante per far capire alla UI che qualcosa è andato storto
     }
   }
 
@@ -559,11 +589,14 @@ class FleetProvider with ChangeNotifier {
     if (veicoloInOfficina) return false;
 
     return !_prenotazioni.any((p) {
+      // Escludi la prenotazione che stiamo eventualmente modificando
       if (idDaEscludere != null && p.idPrenotazione == idDaEscludere) {
         return false;
       }
+
       if (p.statoPrenotazione == StatoPrenotazione.annullata ||
-          p.statoPrenotazione == StatoPrenotazione.completata) {
+          p.statoPrenotazione == StatoPrenotazione.completata ||
+          p.statoPrenotazione == StatoPrenotazione.richiesta) {
         return false;
       }
 

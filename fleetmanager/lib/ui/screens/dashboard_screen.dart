@@ -357,7 +357,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final list = provider.prenotazioni
         .where((p) =>
             p.statoPrenotazione == StatoPrenotazione.richiesta ||
-            p.statoPrenotazione == StatoPrenotazione.attiva)
+            p.statoPrenotazione == StatoPrenotazione.attiva ||
+            p.statoPrenotazione == StatoPrenotazione.sospesa)
         .toList();
     return _buildPrenotazioniList(list, true);
   }
@@ -387,18 +388,30 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
       );
     }
+
     final df = DateFormat('dd/MM HH:mm');
+    final provider = Provider.of<FleetProvider>(context, listen: false);
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: prenotazioni.length,
       itemBuilder: (context, index) {
         final p = prenotazioni[index];
+
+        // --- LOGICA DI SOVRAPPOSIZIONE ---
+        // Cerchiamo se esistono ALTRE prenotazioni (non la stessa) con la stessa targa che si sovrappongono
+        final bool haConflitto = prenotazioni.any((altra) =>
+            altra.idPrenotazione != p.idPrenotazione &&
+            altra.targa == p.targa &&
+            altra.statoPrenotazione != StatoPrenotazione.annullata &&
+            altra.statoPrenotazione != StatoPrenotazione.completata &&
+            p.dataInizio.isBefore(altra.dataFine) &&
+            p.dataFine.isAfter(altra.dataInizio));
+
         final bool canEditOrCancel = !isManager &&
             (p.statoPrenotazione == StatoPrenotazione.richiesta ||
                 p.statoPrenotazione == StatoPrenotazione.confermata);
-
-        final provider = Provider.of<FleetProvider>(context, listen: false);
 
         final driver = provider.utenti.firstWhere(
           (u) => u.idUtente == p.idUtente,
@@ -431,15 +444,44 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Icon(Icons.calendar_today,
                   color: _getStatusColor(p.statoPrenotazione), size: 20),
             ),
-            title: Text(
-                "${p.targa} - ${p.statoPrenotazione.name.toUpperCase()}",
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            title: Wrap(
+              // Usiamo Wrap per evitare che il badge tagli il testo su schermi piccoli
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8, // Spazio tra il testo e il badge
+              children: [
+                Text(
+                  "${p.targa} - ${p.statoPrenotazione.name.toUpperCase()}",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                // BADGE DI SOVRAPPOSIZIONE
+                if (haConflitto &&
+                    p.statoPrenotazione == StatoPrenotazione.richiesta)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      border:
+                          Border.all(color: Colors.orange.shade700, width: 1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      "SOVRAPPOSIZIONE",
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                // Mostra Nome e Cognome del Driver
                 Row(
                   children: [
                     const Icon(Icons.person, size: 14, color: Colors.grey),
@@ -460,27 +502,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            // ---------------------------
-
-            trailing: canEditOrCancel
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                          icon: const Icon(Icons.edit_calendar,
-                              color: Colors.blue, size: 22),
-                          onPressed: () => _mostraDialogModifica(context, p)),
-                      IconButton(
-                          icon: const Icon(Icons.cancel_outlined,
-                              color: Colors.redAccent, size: 22),
-                          onPressed: () =>
-                              _mostraDialogAnnullamento(context, p)),
-                    ],
-                  )
-                : (isManager &&
-                        p.statoPrenotazione == StatoPrenotazione.richiesta
-                    ? const Icon(Icons.arrow_forward_ios, size: 16)
-                    : null),
+            // TRAILING: Pulsanti per driver O freccia per Manager
+            trailing: isManager
+                ? const Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey)
+                : (canEditOrCancel
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                              icon: const Icon(Icons.edit_calendar,
+                                  color: Colors.blue, size: 22),
+                              onPressed: () =>
+                                  _mostraDialogModifica(context, p)),
+                          IconButton(
+                              icon: const Icon(Icons.cancel_outlined,
+                                  color: Colors.redAccent, size: 22),
+                              onPressed: () =>
+                                  _mostraDialogAnnullamento(context, p)),
+                        ],
+                      )
+                    : const Icon(Icons.arrow_forward_ios,
+                        size: 16, color: Colors.transparent)),
           ),
         );
       },

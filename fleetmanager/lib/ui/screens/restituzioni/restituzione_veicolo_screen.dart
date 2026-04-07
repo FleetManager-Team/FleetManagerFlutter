@@ -472,22 +472,36 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
 
   // --- INVIO DATI ---
   void _submitForm() async {
+    // 1. Validazione preliminare del Form
     if (!_formKey.currentState!.validate()) return;
 
+    // 2. Controllo logico: se non è emergenza e c'è rifornimento, serve la foto dello scontrino
     if (!widget.isEmergenza &&
         _rifornimentoEffettuato &&
         _fotoScontrino == null &&
         _urlFotoScontrinoEsistente == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Inserisci la foto dello scontrino.")));
+        const SnackBar(
+          content:
+              Text("Inserisci la foto dello scontrino per il rifornimento."),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
+    // 3. Preparazione variabili per l'invio
     final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<FleetProvider>(context, listen: false);
+
+    // Impedisce invii multipli se il processo è già in corso
+    if (_isLoading) return;
+
     setState(() => _isLoading = true);
 
     try {
+      // 4. Chiamata al Service (che ora usa l'upsert internamente)
       await RestituzioneService().completaRestituzione(
         idPrenotazione: widget.prenotazione.idPrenotazione,
         targa: widget.prenotazione.targa,
@@ -496,11 +510,11 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         rifornimento: _rifornimentoEffettuato,
         haDanni: _danniPresenti || widget.isEmergenza,
         haPedaggi: _haPedaggi,
-        // Parametri Emergenza
+        // Dati Emergenza
         isEmergenza: widget.isEmergenza,
         noteEmergenza: _descrizioneDanniController.text,
         posizioneEmergenza: _posizioneController.text,
-        // Dati Carburante/Pedaggi
+        // Dati Economici e Foto
         litri: double.tryParse(_litriController.text.replaceAll(',', '.')),
         euro: double.tryParse(_euroController.text.replaceAll(',', '.')),
         euroPedaggi:
@@ -511,15 +525,43 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         fotoPedaggio: _fotoPedaggio,
       );
 
+      // 5. Successo: Aggiornamento stato globale e chiusura
       await provider.inizializzaDati();
-      navigator.pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Operazione completata!"),
-          backgroundColor: Colors.green));
+
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text("Restituzione completata con successo!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        navigator.pop(); // Torna alla home o alla lista
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red));
+      // 6. Gestione Errori
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        // Se l'errore è dovuto a un duplicato (anche se l'upsert dovrebbe evitarlo)
+        final errorMsg = e.toString();
+        if (errorMsg.contains("restituzioni_id_prenotazione_key")) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text("Questa restituzione risulta già inviata."),
+              backgroundColor: Colors.blue,
+            ),
+          );
+          navigator.pop();
+        } else {
+          // Altri tipi di errore (connessione, permessi, etc.)
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text("Errore durante l'invio: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 

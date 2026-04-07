@@ -305,6 +305,8 @@ class _BookingListScreenState extends State<BookingListScreen> {
         return Colors.red[700]!;
       case StatoPrenotazione.confermata:
         return Colors.blue[700]!;
+      case StatoPrenotazione.sospesa:
+        return Colors.grey;
     }
   }
 }
