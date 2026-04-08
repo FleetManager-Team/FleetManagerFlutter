@@ -1,4 +1,3 @@
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/prenotazione.dart';
 import '../models/enums/stato_prenotazione.dart';
@@ -50,8 +49,12 @@ class PrenotazioneService {
     }
   }
 
-  Future<void> confermaPrenotazione(int id) =>
-      _updateStato(id, StatoPrenotazione.confermata);
+  Future<void> confermaPrenotazione(int id) async {
+    await _supabase
+        .from('prenotazioni')
+        .update({'stato': 'confermata'}).eq('id_prenotazione', id);
+  }
+
   Future<void> annullaPrenotazione(int id) =>
       _updateStato(id, StatoPrenotazione.annullata);
   Future<void> completaPrenotazione(int id) =>

@@ -1,4 +1,5 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/ui/screens/checkup_iniziale/checkup_screen.dart';
 import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
@@ -68,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ] else ...[
                       _buildDriverActionCard(context),
                       // Card per la restituzione (solo se c'è una prenotazione attiva)
+                      _buildCheckinActionCard(context, provider),
                       _buildReturnActionCard(context, provider),
                       const SizedBox(height: 25),
                       _buildSectionTitle("Le Mie Prenotazioni"),
@@ -729,5 +731,106 @@ class _HomeScreenState extends State<HomeScreen> {
         subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(dateTime)),
         trailing: const Icon(Icons.edit),
         onTap: onTap);
+  }
+
+  Widget _buildCheckinActionCard(BuildContext context, FleetProvider provider) {
+    final utente = provider.utenteLoggato;
+    Prenotazione? daRitirare;
+
+    try {
+      // Cerchiamo la prenotazione attesa checkup
+      daRitirare = provider.prenotazioni.firstWhere((p) =>
+          p.idUtente == utente?.idUtente &&
+          p.statoPrenotazione == StatoPrenotazione.attesaCheckup);
+    } catch (_) {
+      daRitirare = null;
+    }
+
+    if (daRitirare == null) return const SizedBox.shrink();
+
+    // --- LOGICA DI CONFRONTO TEMPORALE CORRETTA ---
+    // Trasformiamo tutto in UTC per evitare problemi di fuso orario tra telefono e database
+    final DateTime oraInizioUtc = daRitirare.dataInizio.toUtc();
+    final DateTime oraAttualeUtc = DateTime.now().toUtc();
+
+    // Calcoliamo la differenza: se mancano più di 30 minuti, non mostriamo nulla
+    final minutiAllaPartenza = oraInizioUtc.difference(oraAttualeUtc).inMinutes;
+    if (minutiAllaPartenza > 30) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 15),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+              colors: [Colors.orange[700]!, Colors.orange[400]!]),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "PRENOTAZIONE PRONTA",
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1),
+                ),
+                Text(
+                  daRitirare.targa,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Ritira il veicolo adesso",
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
+            ),
+            const Text(
+              "Esegui il controllo perimetrale per partire.",
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 15),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CheckingVeicoloScreen(
+                      idPrenotazione: daRitirare!.idPrenotazione,
+                      targa: daRitirare.targa,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.camera_enhance),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.orange[800],
+                  minimumSize: const Size(double.infinity, 45)),
+              label: const Text("INIZIA ISPEZIONE E PARTI"),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

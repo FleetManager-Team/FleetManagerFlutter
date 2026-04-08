@@ -8,7 +8,8 @@ import '../models/veicolo.dart';
 import '../models/prenotazione.dart';
 import '../models/utente.dart';
 import '../models/notifica.dart';
-import '../models/restituzione.dart'; // <--- Assicurati che il path sia corretto
+import '../models/restituzione.dart';
+import '../models/checkup.dart';
 import '../models/enums/stato_veicolo.dart';
 import '../models/enums/stato_prenotazione.dart';
 import '../models/enums/tipo_manutenzione.dart';
@@ -565,6 +566,19 @@ class FleetProvider with ChangeNotifier {
       await inizializzaDati();
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// --- LOGICA ATTIVAZIONE (CHECK-UP) ---
+  Future<void> attivaPrenotazioneDopoCheckup(int idPrenotazione) async {
+    try {
+      await supabase
+          .from('prenotazioni')
+          .update({'stato': 'attiva'}).eq('id_prenotazione', idPrenotazione);
+
+      await inizializzaDati(); // Questo ricarica tutto e aggiorna la UI
+    } catch (e) {
+      debugPrint("Errore attivazione: $e");
     }
   }
 

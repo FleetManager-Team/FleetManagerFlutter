@@ -20,15 +20,34 @@ class Prenotazione {
     required this.targa,
   });
 
+  // --- AGGIUNTO: Metodo copyWith per permettere gli aggiornamenti nel Provider ---
+  Prenotazione copyWith({
+    int? idPrenotazione,
+    DateTime? dataInizio,
+    DateTime? dataFine,
+    StatoPrenotazione? statoPrenotazione,
+    TipoPrenotazione? tipoPrenotazione,
+    int? idUtente,
+    String? targa,
+  }) {
+    return Prenotazione(
+      idPrenotazione: idPrenotazione ?? this.idPrenotazione,
+      dataInizio: dataInizio ?? this.dataInizio,
+      dataFine: dataFine ?? this.dataFine,
+      statoPrenotazione: statoPrenotazione ?? this.statoPrenotazione,
+      tipoPrenotazione: tipoPrenotazione ?? this.tipoPrenotazione,
+      idUtente: idUtente ?? this.idUtente,
+      targa: targa ?? this.targa,
+    );
+  }
+
   factory Prenotazione.fromJson(Map<String, dynamic> json) {
     return Prenotazione(
       idPrenotazione: json['id_prenotazione'],
       dataInizio: DateTime.parse(json['data_inizio']).toLocal(),
       dataFine: DateTime.parse(json['data_fine']).toLocal(),
-      statoPrenotazione: StatoPrenotazione.values.firstWhere(
-        (e) => e.name.toLowerCase() == json['stato'].toString().toLowerCase(),
-        orElse: () => StatoPrenotazione.richiesta,
-      ),
+      statoPrenotazione: _mapStato(json[
+          'stato']), 
       tipoPrenotazione: TipoPrenotazione.values.firstWhere(
         (e) => e.name.toLowerCase() == json['tipo'].toString().toLowerCase(),
         orElse: () => TipoPrenotazione.utente,
@@ -36,6 +55,26 @@ class Prenotazione {
       idUtente: json['id_utente'],
       targa: json['targa'],
     );
+  }
+  static StatoPrenotazione _mapStato(String? stato) {
+    switch (stato) {
+      case 'richiesta':
+        return StatoPrenotazione.richiesta;
+      case 'confermata':
+        return StatoPrenotazione.confermata;
+      case 'attesa_checkup':
+        return StatoPrenotazione.attesaCheckup;
+      case 'attiva':
+        return StatoPrenotazione.attiva;
+      case 'completata':
+        return StatoPrenotazione.completata;
+      case 'annullata':
+        return StatoPrenotazione.annullata;
+      case 'sospesa':
+        return StatoPrenotazione.sospesa;
+      default:
+        return StatoPrenotazione.richiesta;
+    }
   }
 
   Map<String, dynamic> toJson() {

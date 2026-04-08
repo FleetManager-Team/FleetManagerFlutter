@@ -13,6 +13,7 @@ dependencies:
   supabase_flutter: ^2.6.0
   image_picker: ^1.1.2
   fl_chart: ^0.66.0  
+  signature: ^5.5.0
 
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
