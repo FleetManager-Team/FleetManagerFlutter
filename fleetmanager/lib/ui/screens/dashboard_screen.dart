@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/ui/screens/checkup_iniziale/checkup_screen.dart';
+import 'package:fleetmanager/ui/screens/checkup_iniziale/storico_checkup_screen.dart';
 import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
@@ -625,6 +626,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const AnalisiCostiScreen()));
+            },
+          ),
+        if (isManager)
+          ListTile(
+            leading: const Icon(Icons.assignment, color: Colors.blueGrey),
+            title: const Text("Storico Check-up"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const StoricoCheckupScreen()),
+              );
             },
           ),
         const Spacer(),

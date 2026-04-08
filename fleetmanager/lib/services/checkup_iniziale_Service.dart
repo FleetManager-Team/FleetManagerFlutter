@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -75,7 +76,6 @@ class CheckupService {
     }
   }
 
-
   Future<String?> _uploadImage(
       XFile? file, String folder, int idPrenotazione, String targa) async {
     if (file == null) return null;
@@ -99,6 +99,23 @@ class CheckupService {
     } catch (e) {
       print("Errore caricamento immagine in $folder: $e");
       return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getStoricoCheckup({String? targa}) async {
+    try {
+      var query = Supabase.instance.client.from('checkups').select(
+          '*, prenotazioni(targa)'); 
+
+      if (targa != null && targa.isNotEmpty) {
+        query = query.eq('targa', targa);
+      }
+
+      final response = await query.order('data_check', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint("Errore query: $e");
+      return [];
     }
   }
 }

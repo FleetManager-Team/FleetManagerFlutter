@@ -9,7 +9,6 @@ import '../models/prenotazione.dart';
 import '../models/utente.dart';
 import '../models/notifica.dart';
 import '../models/restituzione.dart';
-import '../models/checkup.dart';
 import '../models/enums/stato_veicolo.dart';
 import '../models/enums/stato_prenotazione.dart';
 import '../models/enums/tipo_manutenzione.dart';
