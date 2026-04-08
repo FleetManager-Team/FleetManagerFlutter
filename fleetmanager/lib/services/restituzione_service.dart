@@ -63,7 +63,7 @@ class RestituzioneService {
       // 3. Aggiornamento Stato Veicolo
       // Se c'è un'emergenza o danni gravi, lo stato va in manutenzione
       final nuovoStatoVeicolo =
-          (isEmergenza || haDanni) ? 'manutenzione' : 'disponibile';
+          (isEmergenza || haDanni) ? 'fuoriServizio' : 'disponibile';
 
       await _supabase.from('veicoli').update({
         'km': kmFinali,

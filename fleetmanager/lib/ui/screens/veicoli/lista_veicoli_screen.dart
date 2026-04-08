@@ -1,5 +1,6 @@
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
+import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
 import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
@@ -108,71 +109,77 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     );
   }
 
- Widget _buildVehicleCard(Veicolo v) {
-  final provider = context.watch<FleetProvider>();
-  
-  // Cerchiamo se c'è una manutenzione programmata (non ancora chiusa e futura)
-  final manutenzioneProgrammata = provider.manutenzioni.cast<Manutenzione?>().firstWhere(
-    (m) => m?.targa == v.targa && m?.oraFine == null && m!.data.isAfter(DateTime.now()),
-    orElse: () => null,
-  );
+  Widget _buildVehicleCard(Veicolo v) {
+    final provider = context.watch<FleetProvider>();
 
-  return Card(
-    elevation: 2,
-    margin: const EdgeInsets.only(bottom: 12),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    child: ListTile(
-      onTap: () => _showVehicleDetails(v),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: _getStatusColor(v.statoVeicolo).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+    // Cerchiamo se c'è una manutenzione programmata (non ancora chiusa e futura)
+    final manutenzioneProgrammata =
+        provider.manutenzioni.cast<Manutenzione?>().firstWhere(
+              (m) =>
+                  m?.targa == v.targa &&
+                  m?.oraFine == null &&
+                  m!.data.isAfter(DateTime.now()),
+              orElse: () => null,
+            );
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        onTap: () => _showVehicleDetails(v),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: _getStatusColor(v.statoVeicolo).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            v.tipoVeicolo == TipoVeicolo.furgone
+                ? Icons.local_shipping
+                : Icons.directions_car,
+            color: _getStatusColor(v.statoVeicolo),
+          ),
         ),
-        child: Icon(
-          v.tipoVeicolo == TipoVeicolo.furgone
-              ? Icons.local_shipping
-              : Icons.directions_car,
-          color: _getStatusColor(v.statoVeicolo),
-        ),
-      ),
-      title: Text("${v.marca} ${v.modello}",
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-      
-      // MODIFICA QUI: Subtitle multi-riga per mostrare i KM e l'eventuale avviso
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Targa: ${v.targa} • ${v.km} km"),
-          
-          // Se c'è una manutenzione in arrivo, mostriamo l'avviso arancione
-          if (manutenzioneProgrammata != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.event_busy, color: Colors.orange, size: 14),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Manutenzione: ${manutenzioneProgrammata.data.day}/${manutenzioneProgrammata.data.month} ore ${manutenzioneProgrammata.data.hour}:${manutenzioneProgrammata.data.minute.toString().padLeft(2, '0')}",
-                    style: const TextStyle(
-                      color: Colors.orange, 
-                      fontSize: 11, 
-                      fontWeight: FontWeight.bold
+        title: Text("${v.marca} ${v.modello}",
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+
+        // MODIFICA QUI: Subtitle multi-riga per mostrare i KM e l'eventuale avviso
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Targa: ${v.targa} • ${v.km} km"),
+
+            // Se c'è una manutenzione in arrivo, mostriamo l'avviso arancione
+            if (manutenzioneProgrammata != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_busy,
+                        color: Colors.orange, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Manutenzione: ${manutenzioneProgrammata.data.day}/${manutenzioneProgrammata.data.month} ore ${manutenzioneProgrammata.data.hour}:${manutenzioneProgrammata.data.minute.toString().padLeft(2, '0')}",
+                      style: const TextStyle(
+                          color: Colors.orange,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
+        trailing: _buildStatusChip(v.statoVeicolo),
       ),
-      trailing: _buildStatusChip(v.statoVeicolo),
-    ),
-  );
-}
+    );
+  }
 
   void _showVehicleDetails(Veicolo v) {
     final provider = context.read<FleetProvider>();
+    final bool isManager =
+        provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager;
 
     // Calcolo prossima prenotazione per questo veicolo
     List<Prenotazione> future = provider.prenotazioni
@@ -197,43 +204,50 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           _detailRow(
               Icons.calendar_today, "Anno", v.annoImmatricolazione.toString()),
           _detailRow(Icons.speed, "Km attuali", "${v.km} km"),
-          _detailRow(
-              Icons.info_outline, "Stato", v.statoVeicolo.name.toUpperCase()),
+          _detailRow(Icons.info_outline, "Stato",
+              v.statoVeicolo.nameToDisplay.toUpperCase()),
         ],
-        extraSectionTitle: "PROSSIMO IMPEGNO",
-        extraContent: prossima != null
-            ? Column(
-                children: [
-                  _detailRow(
-                      Icons.person, "Driver ID", "#${prossima.idUtente}"),
-                  _detailRow(Icons.event, "Inizio",
-                      DateFormat('dd/MM HH:mm').format(prossima.dataInizio)),
-                  _detailRow(Icons.event_available, "Fine",
-                      DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
-                ],
-              )
-            : const Text(
-                "Nessuna prenotazione futura.",
-                style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.green,
-                    fontStyle: FontStyle.italic),
-              ),
+        extraSectionTitle: isManager ? "GESTIONE STATO" : "PROSSIMO IMPEGNO",
+        extraContent: isManager
+            ? _buildManagerActions(
+                v, provider) // Sezione speciale per il Manager
+            : (prossima != null
+                ? Column(
+                    children: [
+                      _detailRow(
+                          Icons.person, "Driver ID", "#${prossima.idUtente}"),
+                      _detailRow(
+                          Icons.event,
+                          "Inizio",
+                          DateFormat('dd/MM HH:mm')
+                              .format(prossima.dataInizio)),
+                      _detailRow(Icons.event_available, "Fine",
+                          DateFormat('dd/MM HH:mm').format(prossima.dataFine)),
+                    ],
+                  )
+                : const Text(
+                    "Nessuna prenotazione futura.",
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.green,
+                        fontStyle: FontStyle.italic),
+                  )),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("CHIUDI")),
-          // Se il veicolo è disponibile e l'utente non è manager, può prenotare
-          if (provider.utenteLoggato?.ruoloUtente != RuoloUtente.manager &&
-              v.statoVeicolo == StatoVeicolo.disponibile)
+
+          // Bottone Prenota (solo per Driver e se disponibile)
+          if (!isManager && v.statoVeicolo == StatoVeicolo.disponibile)
             ElevatedButton(
               style:
                   ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
               onPressed: () {
-                Navigator.pop(context); // Chiude il popup
+                Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const NuovaPrenotazioneScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const NuovaPrenotazioneScreen()),
                 );
               },
               child: const Text("PRENOTA ORA",
@@ -241,6 +255,87 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildManagerActions(Veicolo v, FleetProvider provider) {
+    // Verifichiamo se il veicolo è attualmente in uno stato di blocco
+    bool isAttualmenteFermo = v.statoVeicolo == StatoVeicolo.fuoriServizio ||
+        v.statoVeicolo == StatoVeicolo.inManutenzione;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 8),
+
+        // 1. TASTO ARANCIONE (Sempre presente)
+        // Serve per aprire il form e programmare l'intervento tecnico
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.build_circle_outlined, color: Colors.white),
+            label: const Text("METTI IN MANUTENZIONE",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[800],
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Chiude il popup dei dettagli
+              _showMaintenanceFormFromVehicle(
+                  context, v); // Apre il form di inserimento
+            },
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // 2. TASTO DINAMICO (Cambia in base allo stato)
+        SizedBox(
+          width: double.infinity,
+          child: isAttualmenteFermo
+              ? ElevatedButton.icon(
+                  // STATO: RIPRISTINA (Verde)
+                  icon: const Icon(Icons.check_circle_outline,
+                      color: Colors.white),
+                  label: const Text("RIPRISTINA DISPONIBILITÀ",
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[700],
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    await provider.aggiornaStatoVeicolo(
+                        v.targa, StatoVeicolo.disponibile);
+                    if (mounted) Navigator.pop(context);
+                  },
+                )
+              : OutlinedButton.icon(
+                  // STATO: SEGNALA FUORI SERVIZIO (Bordo Rosso)
+                  icon: const Icon(Icons.error_outline, color: Colors.red),
+                  label: const Text("SEGNALA FUORI SERVIZIO",
+                      style: TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: Colors.red, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    await provider.aggiornaStatoVeicolo(
+                        v.targa, StatoVeicolo.fuoriServizio);
+                    if (mounted) Navigator.pop(context);
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -307,7 +402,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     final marcaController = TextEditingController();
     final modelloController = TextEditingController();
     final kmController = TextEditingController();
-    final annoController = TextEditingController(text: DateTime.now().year.toString());
+    final annoController =
+        TextEditingController(text: DateTime.now().year.toString());
     TipoVeicolo tipoSelezionato = TipoVeicolo.auto;
 
     showModalBottomSheet(
@@ -373,8 +469,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                       targa: targaController.text,
                       marca: marcaController.text,
                       modello: modelloController.text,
-                      tipo:
-                          tipoSelezionato.name, 
+                      tipo: tipoSelezionato.name,
                       anno: annoController.text,
                       kmAttuali: kmController.text,
                     );
@@ -398,6 +493,116 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                     style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMaintenanceFormFromVehicle(BuildContext context, Veicolo v) {
+    final provider = context.read<FleetProvider>();
+
+    final descController = TextEditingController();
+    final luogoController = TextEditingController();
+    DateTime dataSelezionata = DateTime.now();
+    TimeOfDay oraSelezionata = TimeOfDay.now();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              left: 20,
+              right: 20,
+              top: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text("Programma Intervento: ${v.targa}",
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+
+              // Data e Ora
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                          DateFormat('dd/MM/yyyy').format(dataSelezionata)),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                            context: context,
+                            initialDate: dataSelezionata,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100));
+                        if (picked != null)
+                          setModalState(() => dataSelezionata = picked);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.access_time),
+                      label: Text(oraSelezionata.format(context)),
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                            context: context, initialTime: oraSelezionata);
+                        if (picked != null)
+                          setModalState(() => oraSelezionata = picked);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                  controller: luogoController,
+                  decoration: const InputDecoration(
+                      labelText: "Officina / Luogo",
+                      border: OutlineInputBorder())),
+              const SizedBox(height: 15),
+              TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(
+                      labelText: "Descrizione guasto/intervento",
+                      border: OutlineInputBorder()),
+                  maxLines: 2),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange[800],
+                    foregroundColor: Colors.white),
+                onPressed: () async {
+                  final dataCompleta = DateTime(
+                      dataSelezionata.year,
+                      dataSelezionata.month,
+                      dataSelezionata.day,
+                      oraSelezionata.hour,
+                      oraSelezionata.minute);
+
+                  // Chiamata al metodo del provider che già usi nella dashboard
+                  await provider.programmareManutenzione(
+                      v,
+                      dataCompleta,
+                      TipoManutenzione
+                          .ordinaria, // Puoi aggiungere un dropdown se vuoi distinguere
+                      descController.text,
+                      luogo: luogoController.text);
+
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text("CONFERMA E METTI IN SERVICE"),
+              ),
             ],
           ),
         ),

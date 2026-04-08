@@ -1,7 +1,8 @@
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/models/restituzione.dart';
 import 'package:fleetmanager/ui/screens/checkup_iniziale/checkup_screen.dart';
-import 'package:fleetmanager/ui/screens/checkup_iniziale/storico_checkup_screen.dart';
 import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
+import 'package:fleetmanager/ui/screens/emergenze/emergenze_screen.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
@@ -20,6 +21,7 @@ import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/ui/screens/login_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,6 +48,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final utente = provider.utenteLoggato;
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
 
+    // 1. Identifichiamo solo le emergenze ATTIVE (quelle senza km finali)
+    // Usiamo il nuovo getter 'emergenzeAttive' che abbiamo creato nel provider
+    final emergenzeInCorso = provider.prenotazioni.where((p) {
+      return provider.emergenzeAttive
+          .any((r) => r.idPrenotazione == p.idPrenotazione);
+    }).toList();
+
+    // 2. Identifichiamo tutto lo storico SOS per la sezione in fondo (se serve in questa pagina)
+    final storicoSos =
+        provider.restituzioni.where((r) => r.isEmergenza == true).toList();
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: _buildAppBar(context, utente),
@@ -60,21 +73,57 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Header (Benvenuto...)
                     _buildHeader(utente),
+
+                    // --- SEZIONE EMERGENZE ATTIVE ---
+                    // Appare solo se ci sono SOS non ancora chiusi
+                    if (emergenzeInCorso.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      ...emergenzeInCorso.map((p) {
+                        // Troviamo il record specifico della restituzione/SOS
+                        final sos = provider.restituzioni.firstWhere(
+                            (r) => r.idPrenotazione == p.idPrenotazione);
+
+                        return _buildEmergencyCard(
+                          prenotazione: p,
+                          isManager: isManager,
+                          onTap: () {
+                            if (isManager) {
+                              _mostraDettaglioSosManager(context, p, sos);
+                            } else {
+                              _vaiACompletamentoDriver(context, p);
+                            }
+                          },
+                        );
+                      }),
+                    ],
+
                     const SizedBox(height: 25),
+
+                    // CONTENUTO SPECIFICO (Manager o Driver)
                     if (isManager) ...[
                       _buildAdminStats(provider),
                       const SizedBox(height: 25),
                       _buildSectionTitle("Prenotazioni in Sede / Attive"),
                       _buildManagerPrenotazioni(provider, utente),
                     ] else ...[
-                      _buildDriverActionCard(context),
-                      // Card per la restituzione (solo se c'è una prenotazione attiva)
-                      _buildCheckinActionCard(context, provider),
-                      _buildReturnActionCard(context, provider),
-                      const SizedBox(height: 25),
+                      // Se il Driver ha un SOS attivo, nascondiamo le azioni standard
+                      if (emergenzeInCorso.isEmpty) ...[
+                        _buildDriverActionCard(context),
+                        _buildCheckinActionCard(context, provider),
+                        _buildReturnActionCard(context, provider),
+                        const SizedBox(height: 25),
+                      ],
                       _buildSectionTitle("Le Mie Prenotazioni"),
                       _buildDriverPrenotazioni(provider),
+                    ],
+
+                    // --- SEZIONE STORICO (Opzionale, se vuoi mostrarlo qui in fondo) ---
+                    if (isManager && storicoSos.isNotEmpty) ...[
+                      const SizedBox(height: 30),
+                      _buildSectionTitle("Storico Segnalazioni SOS"),
+                      // Qui puoi mappare lo storicoSos se vuoi vederlo nella Home
                     ],
                   ],
                 ),
@@ -82,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
     );
   }
-
   // --- COMPONENTI DELLA UI ---
 
   AppBar _buildAppBar(BuildContext context, Utente? utente) {
@@ -630,13 +678,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         if (isManager)
           ListTile(
-            leading: const Icon(Icons.assignment, color: Colors.blueGrey),
-            title: const Text("Storico Check-up"),
+            leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            title: const Text("Emergenze"),
             onTap: () {
+              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const StoricoCheckupScreen()),
+                    builder: (context) => const EmergenzeScreen()),
               );
             },
           ),
@@ -818,7 +867,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold),
             ),
             const Text(
-              "Esegui il controllo perimetrale per partire.",
+              "Esegui il controllo perimetrale per partire",
               style: TextStyle(color: Colors.white70, fontSize: 13),
             ),
             const SizedBox(height: 15),
@@ -836,10 +885,192 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: const Icon(Icons.camera_enhance),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.orange[800],
-                  minimumSize: const Size(double.infinity, 45)),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.orange[800],
+              ),
               label: const Text("INIZIA ISPEZIONE E PARTI"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _apriMappaEsterna(String? posizione) async {
+    if (posizione == null || posizione.isEmpty) return;
+
+    // Puliamo la stringa se contiene spazi o caratteri strani
+    final query = Uri.encodeComponent(posizione);
+    final googleMapsUrl =
+        "https://www.google.com/maps/search/?api=1&query=$query";
+    final appleMapsUrl = "https://maps.apple.com/?q=$query";
+
+    try {
+      // Prova ad aprire Google Maps (funziona su Android e iOS se installata)
+      if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+        await launchUrl(Uri.parse(googleMapsUrl),
+            mode: LaunchMode.externalApplication);
+      }
+      // Altrimenti prova Apple Maps su iOS
+      else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
+        await launchUrl(Uri.parse(appleMapsUrl),
+            mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint("Impossibile aprire la mappa: $e");
+    }
+  }
+
+  // Esempio di riga dettaglio per il Manager
+  Widget _buildManagerSosDetail(Map<String, dynamic> datiSos) {
+    return Column(
+      children: [
+        // BOX POSIZIONE
+        ListTile(
+          leading: const Icon(Icons.location_on, color: Colors.red),
+          title: const Text("Posizione segnalata"),
+          subtitle: Text(datiSos['posizione_emergenza'] ?? "N/D"),
+          trailing: IconButton(
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () => _apriMappaEsterna(datiSos['posizione_emergenza']),
+          ),
+        ),
+        // BOX DANNO
+        Container(
+          padding: const EdgeInsets.all(12),
+          color: Colors.white,
+          child: Row(
+            children: [
+              const Icon(Icons.build_circle, color: Colors.orange),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text("Problema: ${datiSos['descrizione_danni']}")),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmergencyCard({
+    required Prenotazione prenotazione,
+    required bool isManager,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.red[700]!, Colors.orange[800]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.white, size: 28),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isManager
+                      ? "EMERGENZA: ${prenotazione.targa}"
+                      : "SEGNALAZIONE SOS ATTIVA",
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            isManager
+                ? "Un driver ha segnalato un guasto o incidente. Verifica subito la posizione."
+                : "Hai segnalato un'emergenza per il veicolo ${prenotazione.targa}. Completa i dati appena possibile.",
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 15),
+          ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.red[700],
+              // CORREZIONE QUI:
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(
+                isManager ? "VEDI DETTAGLI E MAPPA" : "COMPLETA PROCEDURA"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _vaiACompletamentoDriver(BuildContext context, Prenotazione p) {
+    // Sostituisci 'FormRestituzione' con il nome esatto della tua classe
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RestituzioneVeicoloScreen(
+          prenotazione: p,
+        ),
+      ),
+    );
+  }
+
+  void _mostraDettaglioSosManager(
+      BuildContext context, Prenotazione p, Restituzione sos) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Dettaglio Emergenza",
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            const Divider(height: 30),
+
+            // Passiamo i dati necessari al widget di dettaglio
+            // Se _buildManagerSosDetail vuole una Map, usiamo sos.toJson()
+            _buildManagerSosDetail({
+              'posizione_emergenza':
+                  sos.posizioneEmergenza, // o il nome che hai nel modello
+              'descrizione_danni':
+                  sos.descrizioneDanni, // o il nome che hai nel modello
+            }),
+
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Chiudi"),
+              ),
             ),
           ],
         ),

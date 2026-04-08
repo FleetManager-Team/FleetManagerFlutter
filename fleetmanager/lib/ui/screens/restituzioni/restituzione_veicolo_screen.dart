@@ -157,108 +157,124 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final Color themeColor =
-        widget.isEmergenza ? Colors.red[700]! : const Color(0xFF388E3C);
+ @override
+Widget build(BuildContext context) {
+  // 1. Definizione Colore e Titolo in base allo stato
+  final Color themeColor = widget.isEmergenza ? Colors.red[700]! : const Color(0xFF388E3C);
+  final String title = widget.isEmergenza ? "Segnalazione Emergenza" : "Restituzione Veicolo";
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(widget.isEmergenza
-            ? "Segnalazione Emergenza"
-            : "Restituzione Veicolo"),
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: themeColor))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildVehicleHeader(themeColor),
-                    const SizedBox(height: 25),
-                    const Text("Dati di rientro",
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 15),
-                    _buildKmField(),
-                    if (widget.isEmergenza) ...[
-                      const SizedBox(height: 25),
-                      const Text("Localizzazione e Guasto",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red)),
-                      const SizedBox(height: 15),
-                      _buildPosizioneField(),
-                      const SizedBox(height: 15),
-                      _buildTextField(_descrizioneDanniController,
-                          "Descrizione imprevisto/guasto", Icons.error_outline,
-                          maxLines: 3),
-                    ],
-                    if (!widget.isEmergenza) ...[
-                      const SizedBox(height: 25),
-                      const Text("Livello Carburante",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      _buildFuelSelector(),
-                      _buildSwitch(
-                          "Hai fatto rifornimento?",
-                          _rifornimentoEffettuato,
-                          (v) => setState(() => _rifornimentoEffettuato = v),
-                          const Color(0xFF388E3C)),
-                      if (_rifornimentoEffettuato) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _buildTextField(_litriController,
-                                    "Litri", Icons.local_gas_station)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                                child: _buildTextField(_euroController,
-                                    "Importo Euro", Icons.euro)),
-                          ],
-                        ),
-                        _buildPhotoSelector(
-                            "Foto Scontrino", _fotoScontrino, "scontrino"),
-                      ],
-                      const Divider(height: 40),
-                      _buildSwitch(
-                          "Hai pagato pedaggi o parcheggi?",
-                          _haPedaggi,
-                          (v) => setState(() => _haPedaggi = v),
-                          Colors.blueAccent),
-                      if (_haPedaggi) ...[
-                        _buildTextField(_euroPedaggiController,
-                            "Importo Pedaggi (Euro)", Icons.payments_outlined),
-                        _buildPhotoSelector(
-                            "Foto Ricevuta Pedaggio", _fotoPedaggio, "pedaggi"),
-                      ],
-                      const Divider(height: 40),
-                      _buildSwitch(
-                          "Sono presenti nuovi danni?",
-                          _danniPresenti,
-                          (v) => setState(() => _danniPresenti = v),
-                          Colors.red),
-                      if (_danniPresenti) ...[
-                        _buildTextField(_descrizioneDanniController,
-                            "Descrizione danni", Icons.edit_note,
-                            maxLines: 3),
-                        _buildPhotoSelector("Foto Danno", _fotoDanni, "danni"),
-                      ],
-                    ],
-                    const SizedBox(height: 40),
-                    _buildSubmitButton(themeColor),
-                  ],
-                ),
+  return Scaffold(
+    backgroundColor: Colors.white,
+    appBar: AppBar(
+      title: Text(title),
+      backgroundColor: themeColor,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    body: _isLoading
+        ? Center(child: CircularProgressIndicator(color: themeColor))
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- HEADER VEICOLO (Sempre visibile) ---
+                  _buildVehicleHeader(themeColor),
+                  const SizedBox(height: 25),
+
+                  // --- BLOCCO EMERGENZA (Solo se isEmergenza) ---
+                  if (widget.isEmergenza) ..._buildEmergencyFields(),
+
+                  // --- BLOCCO RESTITUZIONE STANDARD (Solo se NOT isEmergenza) ---
+                  if (!widget.isEmergenza) ..._buildStandardReturnFields(),
+
+                  const SizedBox(height: 40),
+
+                  // --- BOTTONE DI INVIO ---
+                  _buildSubmitButton(themeColor),
+                ],
               ),
             ),
-    );
-  }
+          ),
+  );
+}
 
+// Supporto per rendere la Column della Build più pulita
+List<Widget> _buildEmergencyFields() {
+  return [
+    const Text("Localizzazione e Guasto",
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+    const SizedBox(height: 15),
+    _buildPosizioneField(),
+    const SizedBox(height: 15),
+    _buildTextField(
+      _descrizioneDanniController,
+      "Descrizione imprevisto/guasto",
+      Icons.error_outline,
+      maxLines: 3,
+    ),
+  ];
+}
+
+List<Widget> _buildStandardReturnFields() {
+  return [
+    const Text("Dati di rientro",
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 15),
+    
+    // Chilometri
+    _buildKmField(),
+    const SizedBox(height: 25),
+
+    // Carburante
+    const Text("Livello Carburante", style: TextStyle(fontWeight: FontWeight.bold)),
+    _buildFuelSelector(),
+    _buildSwitch(
+        "Hai fatto rifornimento?",
+        _rifornimentoEffettuato,
+        (v) => setState(() => _rifornimentoEffettuato = v),
+        const Color(0xFF388E3C)),
+    
+    if (_rifornimentoEffettuato) ...[
+      Row(
+        children: [
+          Expanded(child: _buildTextField(_litriController, "Litri", Icons.local_gas_station)),
+          const SizedBox(width: 10),
+          Expanded(child: _buildTextField(_euroController, "Importo Euro", Icons.euro)),
+        ],
+      ),
+      _buildPhotoSelector("Foto Scontrino", _fotoScontrino, "scontrino"),
+    ],
+
+    const Divider(height: 40),
+
+    // Pedaggi
+    _buildSwitch(
+        "Hai pagato pedaggi o parcheggi?",
+        _haPedaggi,
+        (v) => setState(() => _haPedaggi = v),
+        Colors.blueAccent),
+    if (_haPedaggi) ...[
+      _buildTextField(_euroPedaggiController, "Importo Pedaggi (Euro)", Icons.payments_outlined),
+      _buildPhotoSelector("Foto Ricevuta Pedaggio", _fotoPedaggio, "pedaggi"),
+    ],
+
+    const Divider(height: 40),
+
+    // Danni
+    _buildSwitch(
+        "Sono presenti nuovi danni?",
+        _danniPresenti,
+        (v) => setState(() => _danniPresenti = v),
+        Colors.red),
+    if (_danniPresenti) ...[
+      _buildTextField(_descrizioneDanniController, "Descrizione danni", Icons.edit_note, maxLines: 3),
+      _buildPhotoSelector("Foto Danno", _fotoDanni, "danni"),
+    ],
+  ];
+}
   // --- COMPONENTI UI ORIGINALI MANTENUTI ---
 
   Widget _buildVehicleHeader(Color color) {
@@ -472,98 +488,96 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
 
   // --- INVIO DATI ---
   void _submitForm() async {
-    // 1. Validazione preliminare del Form
-    if (!_formKey.currentState!.validate()) return;
+  // 1. Validazione preliminare del Form
+  if (!_formKey.currentState!.validate()) return;
 
-    // 2. Controllo logico: se non è emergenza e c'è rifornimento, serve la foto dello scontrino
-    if (!widget.isEmergenza &&
-        _rifornimentoEffettuato &&
-        _fotoScontrino == null &&
-        _urlFotoScontrinoEsistente == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text("Inserisci la foto dello scontrino per il rifornimento."),
-          backgroundColor: Colors.orange,
+  // 2. Controllo logico scontrino (solo per restituzioni standard)
+  if (!widget.isEmergenza &&
+      _rifornimentoEffettuato &&
+      _fotoScontrino == null &&
+      _urlFotoScontrinoEsistente == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Inserisci la foto dello scontrino per il rifornimento."),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
+
+  // 3. Preparazione variabili
+  final navigator = Navigator.of(context);
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+  final provider = Provider.of<FleetProvider>(context, listen: false);
+
+  if (_isLoading) return;
+  setState(() => _isLoading = true);
+
+  try {
+    // 4. Calcolo del valore di isEmergenza "persistente"
+    // Se widget.isEmergenza è true (siamo in modalità SOS) 
+    // OPPURE se il controller della posizione ha già dei dati (SOS inviato in precedenza)
+    // allora il valore da inviare al DB deve essere TRUE.
+    final bool deveEssereEmergenza = widget.isEmergenza || _posizioneController.text.isNotEmpty;
+
+    // 5. Chiamata al Service
+    await RestituzioneService().completaRestituzione(
+      idPrenotazione: widget.prenotazione.idPrenotazione,
+      targa: widget.prenotazione.targa,
+      kmFinali: int.tryParse(_kmController.text) ?? (_veicolo?.km ?? 0),
+      livelloCarburante: _livelloCarburante,
+      rifornimento: _rifornimentoEffettuato,
+      haDanni: _danniPresenti || deveEssereEmergenza, // Un SOS è tecnicamente un danno/fermo
+      haPedaggi: _haPedaggi,
+      
+      // DATI EMERGENZA PERSISTENTI
+      isEmergenza: deveEssereEmergenza, 
+      noteEmergenza: _descrizioneDanniController.text,
+      posizioneEmergenza: _posizioneController.text,
+      
+      // Dati Economici e Foto
+      litri: double.tryParse(_litriController.text.replaceAll(',', '.')),
+      euro: double.tryParse(_euroController.text.replaceAll(',', '.')),
+      euroPedaggi: double.tryParse(_euroPedaggiController.text.replaceAll(',', '.')),
+      descDanni: _descrizioneDanniController.text,
+      fotoScontrino: _fotoScontrino,
+      fotoDanni: _fotoDanni,
+      fotoPedaggio: _fotoPedaggio,
+    );
+
+    // 6. Successo: Aggiornamento stato globale e chiusura
+    await provider.inizializzaDati();
+
+    if (mounted) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(widget.isEmergenza 
+              ? "Segnalazione SOS inviata correttamente!" 
+              : "Restituzione completata con successo!"),
+          backgroundColor: Colors.green,
         ),
       );
-      return;
+      navigator.pop();
     }
-
-    // 3. Preparazione variabili per l'invio
-    final navigator = Navigator.of(context);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final provider = Provider.of<FleetProvider>(context, listen: false);
-
-    // Impedisce invii multipli se il processo è già in corso
-    if (_isLoading) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      // 4. Chiamata al Service (che ora usa l'upsert internamente)
-      await RestituzioneService().completaRestituzione(
-        idPrenotazione: widget.prenotazione.idPrenotazione,
-        targa: widget.prenotazione.targa,
-        kmFinali: int.parse(_kmController.text),
-        livelloCarburante: _livelloCarburante,
-        rifornimento: _rifornimentoEffettuato,
-        haDanni: _danniPresenti || widget.isEmergenza,
-        haPedaggi: _haPedaggi,
-        // Dati Emergenza
-        isEmergenza: widget.isEmergenza,
-        noteEmergenza: _descrizioneDanniController.text,
-        posizioneEmergenza: _posizioneController.text,
-        // Dati Economici e Foto
-        litri: double.tryParse(_litriController.text.replaceAll(',', '.')),
-        euro: double.tryParse(_euroController.text.replaceAll(',', '.')),
-        euroPedaggi:
-            double.tryParse(_euroPedaggiController.text.replaceAll(',', '.')),
-        descDanni: _descrizioneDanniController.text,
-        fotoScontrino: _fotoScontrino,
-        fotoDanni: _fotoDanni,
-        fotoPedaggio: _fotoPedaggio,
-      );
-
-      // 5. Successo: Aggiornamento stato globale e chiusura
-      await provider.inizializzaDati();
-
-      if (mounted) {
+  } catch (e) {
+    // 7. Gestione Errori
+    if (mounted) {
+      setState(() => _isLoading = false);
+      final errorMsg = e.toString();
+      
+      if (errorMsg.contains("restituzioni_id_prenotazione_key")) {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text("Restituzione completata con successo!"),
-            backgroundColor: Colors.green,
-          ),
+          const SnackBar(content: Text("Questa restituzione risulta già inviata."), backgroundColor: Colors.blue),
         );
-        navigator.pop(); // Torna alla home o alla lista
-      }
-    } catch (e) {
-      // 6. Gestione Errori
-      if (mounted) {
-        setState(() => _isLoading = false);
-
-        // Se l'errore è dovuto a un duplicato (anche se l'upsert dovrebbe evitarlo)
-        final errorMsg = e.toString();
-        if (errorMsg.contains("restituzioni_id_prenotazione_key")) {
-          scaffoldMessenger.showSnackBar(
-            const SnackBar(
-              content: Text("Questa restituzione risulta già inviata."),
-              backgroundColor: Colors.blue,
-            ),
-          );
-          navigator.pop();
-        } else {
-          // Altri tipi di errore (connessione, permessi, etc.)
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text("Errore durante l'invio: $e"),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        navigator.pop();
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text("Errore durante l'invio: $e"), backgroundColor: Colors.red),
+        );
       }
     }
   }
+}
 
   Widget _buildSubmitButton(Color color) {
     return SizedBox(

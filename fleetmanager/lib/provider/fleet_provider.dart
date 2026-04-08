@@ -1,3 +1,4 @@
+import 'package:fleetmanager/models/checkup.dart';
 import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
 import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
@@ -40,7 +41,8 @@ class FleetProvider with ChangeNotifier {
   List<Manutenzione> _manutenzioni = [];
   List<Utente> _utenti = [];
   List<Notifica> _notifiche = [];
-  List<Restituzione> _restituzioni = []; // <--- AGGIUNTO
+  List<Restituzione> _restituzioni = [];
+  List<CheckupVeicolo> _checkups = [];
   Utente? _utenteLoggato;
   bool _isLoading = false;
 
@@ -49,10 +51,22 @@ class FleetProvider with ChangeNotifier {
   List<Prenotazione> get prenotazioni => _prenotazioni;
   List<Manutenzione> get manutenzioni => _manutenzioni;
   List<Notifica> get notifiche => _notifiche;
-  List<Restituzione> get restituzioni => _restituzioni; // <--- AGGIUNTO
+  List<Restituzione> get restituzioni => _restituzioni;
   Utente? get utenteLoggato => _utenteLoggato;
   List<Utente> get utenti => _utenti;
+  List<CheckupVeicolo> get checkups => _checkups;
   bool get isLoading => _isLoading;
+
+  /// EMERGENZE ATTIVE: segnalate ma con km non ancora inseriti (ancora a 0 o uguali ai km di partenza)
+  List<Restituzione> get emergenzeAttive => _restituzioni.where((r) {
+        // Usiamo solo == 0 se kmFinali è int non-nullable e di default è 0
+        return r.isEmergenza == true && r.kmFinali == 0;
+      }).toList();
+
+  /// STORICO EMERGENZE: tutto ciò che è stato marcato come SOS
+  List<Restituzione> get storicoEmergenze => _restituzioni.where((r) {
+        return r.isEmergenza == true;
+      }).toList();
 
   final supabase = Supabase.instance.client;
 
@@ -169,10 +183,12 @@ class FleetProvider with ChangeNotifier {
         _prenotazioneService.fetchPrenotazioni(),
         _authService.getTuttiUtenti(),
         _manutenzioneService.fetchTutte(),
-        Supabase.instance.client.from('restituzioni').select(),
+        supabase.from('restituzioni').select(),
+        // Carichiamo i checkup tecnici
+        supabase.from('checkups').select(),
         _utenteLoggato != null
             ? _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
-            : Future.value(<Notifica>[]), // Forza il tipo Notifica qui
+            : Future.value(<Notifica>[]),
       ]);
 
       _veicoli = List<Veicolo>.from(risultati[0]);
@@ -180,12 +196,18 @@ class FleetProvider with ChangeNotifier {
       _utenti = List<Utente>.from(risultati[2]);
       _manutenzioni = List<Manutenzione>.from(risultati[3]);
 
-      // Gestione sicura per le Restituzioni
+      // Gestione Restituzioni (indice 4)
       final datiRestituzioni = risultati[4] as List<dynamic>;
       _restituzioni =
           datiRestituzioni.map((json) => Restituzione.fromJson(json)).toList();
 
-      final datiNotifiche = risultati[5] as List<dynamic>;
+      // Gestione Checkups (indice 5)
+      final datiCheckups = risultati[5] as List<dynamic>;
+      _checkups =
+          datiCheckups.map((json) => CheckupVeicolo.fromJson(json)).toList();
+
+      // Gestione Notifiche (indice 6)
+      final datiNotifiche = risultati[6] as List<dynamic>;
       _notifiche = datiNotifiche
           .map((json) => json is Notifica ? json : Notifica.fromJson(json))
           .toList();
@@ -756,5 +778,48 @@ class FleetProvider with ChangeNotifier {
     }
 
     return reportTemporale;
+  }
+
+  /// --- NUOVO METODO PER IL MANAGER ---
+  /// Permette di cambiare manualmente lo stato di un veicolo (es. Disponibile <-> Manutenzione)
+  Future<void> aggiornaStatoVeicolo(
+      String targa, StatoVeicolo nuovoStato) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      // 1. Aggiorna sul database (Supabase)
+      await supabase.from('veicoli').update({
+        'stato': nuovoStato.name
+      }) // Assicurati che nel DB la colonna si chiami 'stato'
+          .eq('targa', targa);
+
+      // 2. Aggiorna la lista locale per riflettere il cambiamento immediatamente
+      final index = _veicoli.indexWhere((v) => v.targa == targa);
+      if (index != -1) {
+        final v = _veicoli[index];
+        _veicoli[index] = Veicolo(
+          targa: v.targa,
+          marca: v.marca,
+          modello: v.modello,
+          tipoVeicolo: v.tipoVeicolo,
+          annoImmatricolazione: v.annoImmatricolazione,
+          km: v.km,
+          statoVeicolo: nuovoStato, // Nuovo stato applicato
+        );
+      }
+
+      // Opzionale: Se metti in Fuori Servizio, potresti voler inviare una notifica automatica ai manager
+      if (nuovoStato == StatoVeicolo.fuoriServizio) {
+        for (var idMan in _tuttiManagerIds) {
+          await _notificaService.notificaInterventoStraordinario(idMan, targa);
+        }
+      }
+    } catch (e) {
+      debugPrint("Errore aggiornamento stato veicolo: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

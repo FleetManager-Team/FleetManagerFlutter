@@ -5,7 +5,6 @@ import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
-import 'package:collection/collection.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
@@ -16,7 +15,7 @@ class BookingHistoryScreen extends StatefulWidget {
 }
 
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
-  StatoPrenotazione? filtroStato; // null = TUTTE
+  StatoPrenotazione? filtroStato;
 
   Future<void> _onRefresh() async {
     await context.read<FleetProvider>().inizializzaDati();
@@ -28,33 +27,25 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     final utente = provider.utenteLoggato;
     final isManager = utente?.ruoloUtente == RuoloUtente.manager;
 
-    // --- LOGICA DI FILTRAGGIO AGGIORNATA ---
     List<Prenotazione> storico = provider.prenotazioni.where((p) {
-      // 1. Identifichiamo se è una prenotazione finita temporalmente ma "dimenticata" (non completata)
       final bool isScadutaDimenticata =
           (p.statoPrenotazione == StatoPrenotazione.confermata ||
                   p.statoPrenotazione == StatoPrenotazione.attiva) &&
               DateTime.now().isAfter(p.dataFine);
 
-      // 2. La mostriamo nello storico se è chiusa ufficialmente OPPURE se è scaduta
       bool belongsToHistory =
           p.statoPrenotazione == StatoPrenotazione.completata ||
               p.statoPrenotazione == StatoPrenotazione.annullata ||
               isScadutaDimenticata;
 
-      // 3. Controllo permessi (Manager vede tutto, Driver solo le sue)
       bool isMia = isManager ? true : p.idUtente == utente?.idUtente;
-
       return belongsToHistory && isMia;
     }).toList();
 
-    // Filtro della UI (Chip)
     if (filtroStato != null) {
-      storico =
-          storico.where((p) => p.statoPrenotazione == filtroStato).toList();
+      storico = storico.where((p) => p.statoPrenotazione == filtroStato).toList();
     }
 
-    // Ordinamento: le più recenti (per data fine) in alto
     storico.sort((a, b) => b.dataFine.compareTo(a.dataFine));
 
     return Scaffold(
@@ -64,12 +55,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blueGrey[800],
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _onRefresh,
-          )
-        ],
+        elevation: 0,
       ),
       body: Column(
         children: [
@@ -82,10 +68,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     child: storico.isEmpty
                         ? _buildEmptyState()
                         : ListView.builder(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             itemCount: storico.length,
-                            itemBuilder: (context, index) => _buildHistoryCard(
-                                storico[index], isManager, provider),
+                            itemBuilder: (context, index) => 
+                                _buildSimpleHistoryCard(storico[index], isManager, provider),
                           ),
                   ),
           ),
@@ -97,7 +83,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   Widget _buildFilterBar() {
     return Container(
       height: 60,
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -115,110 +104,96 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.blueGrey)),
+        label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
         selected: isSelected,
-        selectedColor: Colors.blueGrey,
         onSelected: (val) => setState(() => filtroStato = val ? stato : null),
+        selectedColor: Colors.blueGrey[800],
+        labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.blueGrey[800]),
       ),
     );
   }
 
-  Widget _buildHistoryCard(
-      Prenotazione p, bool isManager, FleetProvider provider) {
-    final DateFormat formatter = DateFormat('dd/MM/yyyy HH:mm');
-    final bool isAnnullata = p.statoPrenotazione == StatoPrenotazione.annullata;
-    final bool isCompletata =
-        p.statoPrenotazione == StatoPrenotazione.completata;
-
-    final bool deveCompilare = !isAnnullata &&
-        !isCompletata &&
-        DateTime.now().isAfter(p.dataFine.toLocal());
-
-    String infoSottotitolo = "Fine: ${formatter.format(p.dataFine.toLocal())}";
-    String? nomeDriver;
-    if (isManager) {
-      final d =
-          provider.utenti.firstWhereOrNull((u) => u.idUtente == p.idUtente);
-      if (d != null) nomeDriver = "Driver: ${d.nome} ${d.cognome}";
+  Widget _buildSimpleHistoryCard(Prenotazione p, bool isManager, FleetProvider provider) {
+    final df = DateFormat('dd/MM/yyyy HH:mm');
+    final driver = provider.getDriverDallaPrenotazione(p);
+    
+    // Colori e icone in base allo stato
+    Color statusColor;
+    IconData statusIcon;
+    
+    if (p.statoPrenotazione == StatoPrenotazione.annullata) {
+      statusColor = Colors.red;
+      statusIcon = Icons.cancel;
+    } else if (p.statoPrenotazione == StatoPrenotazione.completata) {
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
+    } else {
+      statusColor = Colors.orange; // Per le "scadute/dimenticate"
+      statusIcon = Icons.history;
     }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: deveCompilare ? 4 : 1,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: deveCompilare
-            ? const BorderSide(color: Colors.orange, width: 2)
-            : BorderSide.none,
+        borderRadius: BorderRadius.circular(15),
+        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
       ),
-      child: ListTile(
-        onTap: () {
-          if (isManager || p.statoPrenotazione != StatoPrenotazione.annullata) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => DettaglioPrenotazioneManager(prenotazione: p),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text(
-                      "Non è possibile gestire una prenotazione annullata.")),
-            );
-          }
-        },
-        leading: Icon(
-          isAnnullata
-              ? Icons.cancel_outlined
-              : (isCompletata ? Icons.check_circle_outline : Icons.history),
-          color: isAnnullata
-              ? Colors.red
-              : (isCompletata ? Colors.green : Colors.orange),
-          size: 32,
+      child: InkWell( // Rende tutta la card cliccabile
+        borderRadius: BorderRadius.circular(15),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => DettaglioPrenotazioneManager(prenotazione: p)),
         ),
-        title: Text("Veicolo: ${p.targa}",
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(infoSottotitolo),
-            if (nomeDriver != null)
-              Text(nomeDriver,
-                  style: const TextStyle(
-                      color: Colors.blueGrey,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
-
-            // Messaggio dinamico sotto la card
-            if (!isManager && !isAnnullata)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Row(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icona di stato a sinistra
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(statusIcon, color: statusColor, size: 24),
+              ),
+              const SizedBox(width: 16),
+              
+              // Informazioni centrali
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(isCompletata ? Icons.edit : Icons.add_a_photo,
-                        size: 14,
-                        color: isCompletata ? Colors.blue : Colors.orange),
-                    const SizedBox(width: 5),
                     Text(
-                      isCompletata
-                          ? "MODIFICA DATI INSERITI"
-                          : "AGGIUNGI DATI RESTITUZIONE",
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isCompletata ? Colors.blue : Colors.orange),
+                      p.targa,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.1),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${driver.nome} ${driver.cognome}",
+                      style: TextStyle(color: Colors.blueGrey[600], fontSize: 13),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          df.format(p.dataFine.toLocal()),
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-          ],
+              
+              // Frecciolina a destra
+              Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
+          ),
         ),
-        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
       ),
     );
   }
@@ -228,10 +203,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history_toggle_off, size: 80, color: Colors.grey),
+          Icon(Icons.history_toggle_off, size: 60, color: Colors.grey),
           SizedBox(height: 16),
-          Text("Nessun record trovato nello storico.",
-              style: TextStyle(color: Colors.grey)),
+          Text("Nessun record trovato nello storico.", style: TextStyle(color: Colors.grey)),
         ],
       ),
     );

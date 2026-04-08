@@ -1,3 +1,4 @@
+import 'package:fleetmanager/models/checkup.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
@@ -11,15 +12,25 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
   final Prenotazione prenotazione;
   const DettaglioPrenotazioneManager({super.key, required this.prenotazione});
 
+  /// Recupera i dati distribuiti su più tabelle (Restituzione, Checkup e KM attuali)
   Future<Map<String, dynamic>> _getDatiCompleti() async {
     final client = Supabase.instance.client;
 
+    // Recupero dati di chiusura pratica (km finali, carburante, scontrini)
     final resRestituzione = await client
         .from('restituzioni')
         .select()
         .eq('id_prenotazione', prenotazione.idPrenotazione)
         .maybeSingle();
 
+    // Recupero report tecnico (foto carrozzeria, checklist luci/gomme)
+    final resCheckup = await client
+        .from('checkups')
+        .select()
+        .eq('id_prenotazione', prenotazione.idPrenotazione)
+        .maybeSingle();
+
+    // Recupero km attuali del veicolo per confronto
     final resVeicolo = await client
         .from('veicoli')
         .select('km')
@@ -28,55 +39,43 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
     return {
       'restituzione': resRestituzione,
+      'checkup':
+          resCheckup != null ? CheckupVeicolo.fromJson(resCheckup) : null,
       'km_veicolo': resVeicolo['km'],
     };
   }
 
+  /// Gestisce l'approvazione o il rifiuto di una richiesta
   Future<void> _aggiornaStato(
       BuildContext context, StatoPrenotazione nuovoStato) async {
-    // 1. SALVIAMO I RIFERIMENTI PRIMA DI OGNI 'AWAIT'
-    // Questo è vitale: dopo un await il 'context' originale potrebbe essere scaduto
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final provider = Provider.of<FleetProvider>(context, listen: false);
 
     try {
-      // Mostriamo un indicatore di caricamento (opzionale, se non lo hai già nel pulsante)
-      // Se hai già un overlay di caricamento, assicurati che non blocchi il pop.
-
       if (nuovoStato == StatoPrenotazione.attiva) {
         await provider.confermaPrenotazione(prenotazione.idPrenotazione);
       } else {
-        // Usiamo il metodo annulla che abbiamo verificato
         await provider.annullaPrenotazione(prenotazione.idPrenotazione);
       }
 
-      // 2. FORZIAMO IL REFRESH E ASPETTIAMO CHE SIA FINITO
       await provider.inizializzaDati();
 
-      // 3. USIAMO IL NAVIGATOR SALVATO PER TORNARE INDIETRO
-      // Non usiamo più Navigator.pop(context) perché il context potrebbe essere nullo
-      if (navigator.canPop()) {
-        navigator.pop();
-      }
+      if (navigator.canPop()) navigator.pop();
 
-      // 4. MESSAGGIO DI SUCCESSO
       messenger.showSnackBar(
         SnackBar(
           content: Text(nuovoStato == StatoPrenotazione.attiva
-              ? "Prenotazione approvata con successo"
+              ? "Prenotazione approvata"
               : "Prenotazione rifiutata"),
           backgroundColor: nuovoStato == StatoPrenotazione.attiva
               ? Colors.green
               : Colors.red,
-          duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
-      debugPrint("ERRORE AGGIORNAMENTO: $e");
       messenger.showSnackBar(
-        SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red),
-      );
+          SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red));
     }
   }
 
@@ -85,9 +84,6 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     final df = DateFormat('dd/MM/yyyy HH:mm');
     final provider = Provider.of<FleetProvider>(context);
     final utente = provider.utenteLoggato;
-
-    // Un manager è tale se ha il ruolo manager,
-    // ma qui verifichiamo anche che non stia guardando una sua stessa prenotazione
     final isManager = utente?.idUtente != prenotazione.idUtente;
 
     return Scaffold(
@@ -96,6 +92,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
         title: Text("Dettaglio ${prenotazione.targa}"),
         backgroundColor: Colors.blueGrey[800],
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _getDatiCompleti(),
@@ -103,75 +100,55 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text("Errore: ${snapshot.error}"));
-          }
 
-          final datiRestituzione = snapshot.data?['restituzione'];
-          final kmVeicolo = snapshot.data?['km_veicolo'] ?? 'N/D';
+          final dati = snapshot.data;
+          final restituzione = dati?['restituzione'];
+          final checkup = dati?['checkup'] as CheckupVeicolo?;
+          final kmVeicolo = dati?['km_veicolo'] ?? 'N/D';
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // 1. Header con Targa e Info Driver
+              // 1. HEADER: Info principali prenotazione e driver
               _buildHeader(context, df, kmVeicolo, provider),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // 2. LOGICA AZIONI MANAGER (Approvazione/Rifiuto + Avviso Conflitti)
+              // 2. AZIONI: Solo se la prenotazione è in attesa (Stato Richiesta)
               if (prenotazione.statoPrenotazione ==
                       StatoPrenotazione.richiesta &&
-                  isManager)
-                Consumer<FleetProvider>(
-                  builder: (context, currentProvider, child) {
-                    return Column(
-                      children: [
-                        _buildConflictWarning(
-                            context, currentProvider.prenotazioni),
-                        _buildManagerActions(context),
-                      ],
-                    );
-                  },
-                )
-
-              // 3. LOGICA PRENOTAZIONE ANNULLATA
-              else if (prenotazione.statoPrenotazione ==
-                  StatoPrenotazione.annullata)
-                Card(
-                  color: Colors.red[50],
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.red[200]!),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: Center(
-                      child: Text("Prenotazione annullata.",
-                          style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16)),
-                    ),
-                  ),
-                )
-
-              // 4. LOGICA PRENOTAZIONE CONFERMATA/ATTIVA/COMPLETATA
-              else ...[
-                if (datiRestituzione == null)
-                  _buildNoDataWarning()
-                else
-                  _buildSezioniRestituzione(context, datiRestituzione, df),
-
-                // Se è il driver a guardare, mostriamo il tasto per restituire o modificare
-                if (!isManager) _buildBottoneDriver(context, datiRestituzione),
+                  isManager) ...[
+                _buildConflictWarning(context, provider.prenotazioni),
+                _buildManagerActions(context),
               ],
 
-              // 5. FOOTER NOTA MODIFICA (Solo per Driver con dati già inseriti)
-              if (datiRestituzione != null &&
-                  !isManager &&
+              // 3. STATO ANNULLATO: Messaggio chiaro se la pratica è chiusa negativamente
+              if (prenotazione.statoPrenotazione == StatoPrenotazione.annullata)
+                _buildStatusCard("Prenotazione annullata", Colors.red),
+
+              // 4. REPORT TECNICO (CHECKUP): Foto carrozzeria e checklist (NOVITÀ)
+              if (checkup != null) ...[
+                _buildSectionTitle("Report Tecnico e Ispezione"),
+                _buildCheckupSection(context, checkup),
+                const SizedBox(height: 16),
+              ],
+
+              // 5. DATI RICONSEGNA: Carburante, Km finali, Spese
+              if (restituzione != null) ...[
+                _buildSectionTitle("Dati di Riconsegna"),
+                _buildSezioniRestituzione(context, restituzione, df),
+              ] else if (prenotazione.statoPrenotazione ==
+                  StatoPrenotazione.attiva)
+                _buildNoDataWarning(),
+
+              // 6. AZIONI DRIVER: Tasto per inserire/modificare i dati
+              if (!isManager &&
                   prenotazione.statoPrenotazione != StatoPrenotazione.annullata)
+                _buildBottoneDriver(context, restituzione),
+
+              // Footer informativo
+              if (restituzione != null && !isManager)
                 const Padding(
-                  padding: EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.symmetric(vertical: 20),
                   child: Center(
                     child: Text("Puoi modificare i dati in caso di errore",
                         style: TextStyle(
@@ -187,123 +164,118 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     );
   }
 
+  // --- COMPONENTI UI ---
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8, top: 8),
+      child: Text(title.toUpperCase(),
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey,
+              letterSpacing: 1.1)),
+    );
+  }
+
   Widget _buildHeader(BuildContext context, DateFormat df, dynamic kmVeicolo,
       FleetProvider provider) {
-    IconData iconaStato;
-    Color coloreStato;
-
-    switch (prenotazione.statoPrenotazione) {
-      case StatoPrenotazione.richiesta:
-        iconaStato = Icons.pending_actions;
-        coloreStato = Colors.orange;
-        break;
-      case StatoPrenotazione.attiva:
-        iconaStato = Icons.check_circle_outline;
-        coloreStato = Colors.green;
-        break;
-      case StatoPrenotazione.annullata:
-        iconaStato = Icons.cancel_outlined;
-        coloreStato = Colors.red;
-        break;
-      default:
-        iconaStato = Icons.help_outline;
-        coloreStato = Colors.grey;
-    }
-
     final driver = provider.getDriverDallaPrenotazione(prenotazione);
+    Color coloreStato = _getColoreStato(prenotazione.statoPrenotazione);
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- TESTATA: TARGA, NOME E ICONA STATO ---
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                CircleAvatar(
+                  backgroundColor: Colors.blueGrey[50],
+                  radius: 25,
+                  child: Icon(Icons.person, color: Colors.blueGrey[800]),
+                ),
+                const SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Targa (Titolo principale)
-                      Text(
-                        prenotazione.targa,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Nome Driver (Sottotitolo della testata)
-                      Text(
-                        "${driver.nome} ${driver.cognome}",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.blueGrey[
-                              700], // Un colore che lo distingue dalle info sotto
-                        ),
-                      ),
+                      Text(prenotazione.targa,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 22)),
+                      Text("${driver.nome} ${driver.cognome}",
+                          style:
+                              TextStyle(fontSize: 16, color: Colors.grey[700])),
                     ],
                   ),
                 ),
-                // Icona Stato a destra
-                Icon(iconaStato, color: coloreStato, size: 36),
+                _statusBadge(prenotazione.statoPrenotazione.name.toUpperCase(),
+                    coloreStato),
               ],
             ),
-
-            const Divider(height: 32, thickness: 1),
-
-            // --- DETTAGLI PRENOTAZIONE ---
+            const Divider(height: 30),
             _row("Inizio", df.format(prenotazione.dataInizio.toLocal())),
             _row("Fine", df.format(prenotazione.dataFine.toLocal())),
-            _row("KM Attuali Veicolo", "$kmVeicolo"),
-            _row("Stato", prenotazione.statoPrenotazione.name.toUpperCase(),
-                colorVal: coloreStato),
+            _row("KM Iniziali Veicolo", "$kmVeicolo"),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildManagerActions(BuildContext context) {
-    return Column(
-      children: [
-        const Text("AZIONI MANAGER",
-            style:
-                TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-        const SizedBox(height: 16),
-        Row(
+  /// Nuova sezione per visualizzare il report tecnico (CheckupVeicolo)
+  Widget _buildCheckupSection(BuildContext context, CheckupVeicolo c) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () =>
-                    _aggiornaStato(context, StatoPrenotazione.attiva),
-                icon: const Icon(Icons.check),
-                label: const Text("APPROVA"),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _statusIconLabel(c.luciOk, Icons.lightbulb, "Luci"),
+                _statusIconLabel(c.gommeOk, Icons.tire_repair, "Gomme"),
+                _statusIconLabel(
+                    c.interniOk, Icons.cleaning_services, "Interni"),
+              ],
+            ),
+            const Divider(height: 24),
+            const Text("REPORT FOTOGRAFICO",
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey)),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _imgThumb(context, c.urlFotoFronte),
+                  _imgThumb(context, c.urlFotoRetro),
+                  _imgThumb(context, c.urlFotoDx),
+                  _imgPreview(
+                      context, c.urlFotoSx), // Errore corretto: urlFotoSx
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () =>
-                    _aggiornaStato(context, StatoPrenotazione.annullata),
-                icon: const Icon(Icons.close),
-                label: const Text("RIFIUTA"),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red, foregroundColor: Colors.white),
-              ),
-            ),
+            if (c.urlFirma != null) ...[
+              const Divider(height: 24),
+              const Text("FIRMA DRIVER",
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey)),
+              const SizedBox(height: 8),
+              Image.network(c.urlFirma!, height: 50, fit: BoxFit.contain),
+            ]
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -311,174 +283,124 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
       BuildContext context, Map dati, DateFormat df) {
     return Column(
       children: [
-        _buildSection("Dati Veicolo al Rientro", [
+        _buildInfoCard("Sintesi Rientro", [
           _row("KM Finali", "${dati['km_finali']}"),
-          _row("Livello Carburante", "${dati['livello_carburante']}/16"),
+          _row("Carburante", "${dati['livello_carburante']}/16"),
           _row(
-              "Data Restituzione",
+              "Data Riconsegna",
               dati['data_restituzione'] != null
                   ? df.format(
                       DateTime.parse(dati['data_restituzione']).toLocal())
                   : "N/D"),
         ]),
         if (dati['rifornimento_effettuato'] == true)
-          _buildSectionWithImage(
-            context,
-            "Spese Benzina",
-            [
-              _row("Costo", "${dati['importo_euro']} €"),
-              _row("Litri", "${dati['litri_carburante']} L"),
-            ],
-            dati['url_scontrino'],
-            color: Colors.blue[50]!,
-          ),
+          _buildDetailTile(
+              context,
+              "Spesa Carburante",
+              "${dati['importo_euro']} € | ${dati['litri_carburante']} L",
+              dati['url_scontrino'],
+              Colors.blue[50]!),
         if (dati['ha_pedaggi'] == true)
-          _buildSectionWithImage(
-            context,
-            "Pedaggi e Parcheggi",
-            [
-              _row("Importo", "${dati['importo_pedaggi']} €"),
-            ],
-            dati['url_foto_pedaggio'],
-            color: Colors.orange[
-                50]!, // Un colore diverso (arancio) per distinguerlo dal blu della benzina
-          ),
+          _buildDetailTile(
+              context,
+              "Pedaggi / Parcheggi",
+              "${dati['importo_pedaggi']} €",
+              dati['url_foto_pedaggio'],
+              Colors.orange[50]!),
         if (dati['danni_presenti'] == true)
-          _buildSectionWithImage(
-            context,
-            "Danni Segnalati",
-            [
-              Text(dati['descrizione_danni'] ?? "Nessuna descrizione.",
-                  style: const TextStyle(
-                      fontStyle: FontStyle.italic, fontSize: 13)),
-            ],
-            dati['url_foto_danni'],
-            color: Colors.red[50]!,
-          ),
+          _buildDetailTile(
+              context,
+              "Danni Segnalati",
+              dati['descrizione_danni'] ?? "Vedi foto",
+              dati['url_foto_danni'],
+              Colors.red[50]!),
       ],
     );
   }
 
-  Widget _buildSectionWithImage(
-      BuildContext context, String title, List<Widget> children, String? url,
-      {Color color = Colors.white}) {
-    return Card(
-      color: color,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-            const Divider(),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: children,
-                  ),
-                ),
-                if (url != null) ...[
-                  const SizedBox(width: 16),
-                  GestureDetector(
-                    onTap: () => _mostraImmagine(context, url),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        url,
-                        height: 70,
-                        width: 70,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                            height: 70,
-                            width: 70,
-                            color: Colors.grey[200],
-                            child: const Center(
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2)),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // --- UTILITY WIDGETS ---
 
-  Widget _buildBottoneDriver(BuildContext context, Map? dati) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: ElevatedButton.icon(
-        onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) =>
-                    RestituzioneVeicoloScreen(prenotazione: prenotazione))),
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              dati == null ? Colors.orange[800] : Colors.blueGrey[700],
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 54),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: Icon(dati == null ? Icons.add_a_photo : Icons.edit_note),
-        label: Text(dati == null
-            ? "INSERISCI DATI RESTITUZIONE"
-            : "MODIFICA DATI INSERITI"),
-      ),
-    );
-  }
-
-  Widget _buildNoDataWarning() {
+  Widget _buildDetailTile(BuildContext context, String title, String subtitle,
+      String? url, Color bg) {
     return Card(
-      color: Colors.orange[50],
+      color: bg,
       elevation: 0,
-      child: const Padding(
-        padding: EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Icon(Icons.directions_car, color: Colors.orange, size: 48),
-            SizedBox(height: 8),
-            Text("Veicolo in Uso",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.orange)),
-            Text("In attesa che il driver carichi i dati di riconsegna.",
-                textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-          ],
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 13)),
+        trailing: url != null
+            ? GestureDetector(
+                onTap: () => _mostraImmagine(context, url),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(url,
+                        width: 50, height: 50, fit: BoxFit.cover)),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _imgThumb(BuildContext context, String? url) {
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: GestureDetector(
+        onTap: () => _mostraImmagine(context, url),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover),
         ),
       ),
     );
   }
 
-  Widget _buildSection(String title, List<Widget> children,
-      {Color color = Colors.white}) {
-    return Card(
-      color: color,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-          const Divider(),
-          ...children
-        ]),
-      ),
+  Widget _statusIconLabel(bool value, IconData icon, String label) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.blueGrey[300], size: 20),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Icon(value ? Icons.check_circle : Icons.cancel,
+                color: value ? Colors.green : Colors.red, size: 14),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 11)),
+          ],
+        ),
+      ],
     );
+  }
+
+  Widget _statusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color)),
+      child: Text(text,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Color _getColoreStato(StatoPrenotazione stato) {
+    switch (stato) {
+      case StatoPrenotazione.richiesta:
+        return Colors.orange;
+      case StatoPrenotazione.attiva:
+        return Colors.green;
+      case StatoPrenotazione.annullata:
+        return Colors.red;
+      case StatoPrenotazione.completata:
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _row(String label, String val, {Color? colorVal}) => Padding(
@@ -486,65 +408,93 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: TextStyle(color: Colors.grey[600])),
+            Text(label,
+                style: TextStyle(color: Colors.grey[600], fontSize: 13)),
             Text(val,
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: colorVal ?? Colors.black87)),
+                    color: colorVal ?? Colors.black87,
+                    fontSize: 13)),
           ],
         ),
       );
 
-  // FUNZIONE MOSTRA IMMAGINE OTTIMIZZATA PER RIEMPIRE IL DIALOG
-  void _mostraImmagine(BuildContext context, String url) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        insetPadding:
-            const EdgeInsets.all(10), // Riduce i bordi esterni del dialogo
-        backgroundColor:
-            Colors.transparent, // Rende lo sfondo del dialogo invisibile
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Immagine che riempie lo spazio
-            GestureDetector(
-              onTap: () =>
-                  Navigator.pop(context), // Chiude se si tocca l'immagine
-              child: InteractiveViewer(
-                // Permette lo zoom a pizzico
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    url,
-                    fit: BoxFit
-                        .contain, // Mantiene le proporzioni riempiendo il possibile
-                    width: double.infinity,
-                    height: MediaQuery.of(context).size.height * 0.8,
-                  ),
-                ),
-              ),
+  Widget _buildInfoCard(String title, List<Widget> children) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey,
+                  fontSize: 14)),
+          const Divider(),
+          ...children
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(String text, Color color) {
+    return Card(
+      color: color.withOpacity(0.05),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: color.withOpacity(0.2))),
+      child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+              child: Text(text,
+                  style:
+                      TextStyle(color: color, fontWeight: FontWeight.bold)))),
+    );
+  }
+
+  // --- AZIONI MANAGER ---
+
+  Widget _buildManagerActions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () =>
+                  _aggiornaStato(context, StatoPrenotazione.attiva),
+              icon: const Icon(Icons.check),
+              label: const Text("APPROVA"),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10))),
             ),
-            // Bottone di chiusura in alto a destra
-            Positioned(
-              top: 10,
-              right: 10,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(context),
-              ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () =>
+                  _aggiornaStato(context, StatoPrenotazione.annullata),
+              icon: const Icon(Icons.close),
+              label: const Text("RIFIUTA"),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10))),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildConflictWarning(BuildContext context, List<Prenotazione> tutte) {
     final df = DateFormat('dd/MM HH:mm');
-    final provider = Provider.of<FleetProvider>(context, listen: false);
-
-    // Cerchiamo le prenotazioni in conflitto (stessa targa, sovrapposte, stato richiesta)
     final conflitti = tutte
         .where((p) =>
             p.idPrenotazione != prenotazione.idPrenotazione &&
@@ -557,86 +507,104 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     if (conflitti.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.amber[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber[300]!, width: 1.5),
-      ),
+          color: Colors.amber[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.amber[200]!)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: Colors.amber[900], size: 24),
-              const SizedBox(width: 8),
-              Text(
-                "ATTENZIONE: SOVRAPPOSIZIONE",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber[900],
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "Approvando questa richiesta, verranno ANNULLATE automaticamente le seguenti richieste:",
-            style: TextStyle(
-                color: Colors.amber[900],
-                fontSize: 12,
-                fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          // Elenco dettagliato dei conflitti
-          ...conflitti.map((c) {
-            // Recuperiamo il nome del driver per questa specifica prenotazione in conflitto
-            final driverConflitto = provider.getDriverDallaPrenotazione(c);
-
-            return Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.person, size: 14, color: Colors.amber[900]),
-                        const SizedBox(width: 6),
-                        Text(
-                          "${driverConflitto.nome} ${driverConflitto.cognome}",
-                          style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.amber[900],
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 20, top: 2),
-                      child: Text(
-                        "Periodo: ${df.format(c.dataInizio.toLocal())} - ${df.format(c.dataFine.toLocal())}",
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.amber[800],
-                            fontStyle: FontStyle.italic),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+          const Row(children: [
+            Icon(Icons.warning, color: Colors.amber, size: 18),
+            SizedBox(width: 8),
+            Text("CONFLITTO RILEVATO",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))
+          ]),
+          const SizedBox(height: 4),
+          const Text(
+              "Approvando questa, le seguenti richieste saranno annullate:",
+              style: TextStyle(fontSize: 11)),
+          ...conflitti.map((c) => Text(
+              "• ${c.idUtente} (${df.format(c.dataInizio.toLocal())})",
+              style:
+                  const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
         ],
       ),
     );
   }
+
+  // --- GESTIONE IMMAGINI ---
+
+  void _mostraImmagine(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+                child: Center(child: Image.network(url, fit: BoxFit.contain))),
+            Positioned(
+                top: 40,
+                right: 20,
+                child: IconButton(
+                    icon:
+                        const Icon(Icons.close, color: Colors.white, size: 30),
+                    onPressed: () => Navigator.pop(context))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoDataWarning() {
+    return Card(
+      color: Colors.orange[50],
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(children: [
+          Icon(Icons.access_time, color: Colors.orange, size: 32),
+          SizedBox(height: 10),
+          Text("In attesa di Riconsegna",
+              style:
+                  TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+          Text("Il driver non ha ancora caricato i dati finali.",
+              textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildBottoneDriver(BuildContext context, Map? dati) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) =>
+                    RestituzioneVeicoloScreen(prenotazione: prenotazione))),
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              dati == null ? Colors.orange[800] : Colors.blueGrey[700],
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 50),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Icon(dati == null ? Icons.add_a_photo : Icons.edit_note),
+        label: Text(
+            dati == null ? "INSERISCI DATI RESTITUZIONE" : "MODIFICA DATI"),
+      ),
+    );
+  }
+
+  // Widget di fallback per l'anteprima foto
+  Widget _imgPreview(BuildContext context, String? url) =>
+      _imgThumb(context, url);
 }
