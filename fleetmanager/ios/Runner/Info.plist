@@ -73,5 +73,12 @@
     <string>Questa app ha bisogno di accedere alla galleria per selezionare le foto dei rifornimenti caricate precedentemente.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>L'accesso al microfono è richiesto per la compatibilità con le librerie di sistema durante l'uso della fotocamera.</string>
+
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Abbiamo bisogno della tua posizione per localizzare il veicolo in caso di emergenza o guasto.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>La posizione è necessaria per soccorrerti rapidamente in caso di segnalazione SOS, anche se l'app passa in background.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>La posizione viene utilizzata solo per assisterti durante l'invio della segnalazione di emergenza.</string>
 </dict>
 </plist>
