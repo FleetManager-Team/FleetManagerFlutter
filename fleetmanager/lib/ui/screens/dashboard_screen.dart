@@ -55,10 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
           .any((r) => r.idPrenotazione == p.idPrenotazione);
     }).toList();
 
-    // 2. Identifichiamo tutto lo storico SOS per la sezione in fondo (se serve in questa pagina)
-    final storicoSos =
-        provider.restituzioni.where((r) => r.isEmergenza == true).toList();
-
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: _buildAppBar(context, utente),
@@ -117,13 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                       _buildSectionTitle("Le Mie Prenotazioni"),
                       _buildDriverPrenotazioni(provider),
-                    ],
-
-                    // --- SEZIONE STORICO (Opzionale, se vuoi mostrarlo qui in fondo) ---
-                    if (isManager && storicoSos.isNotEmpty) ...[
-                      const SizedBox(height: 30),
-                      _buildSectionTitle("Storico Segnalazioni SOS"),
-                      // Qui puoi mappare lo storicoSos se vuoi vederlo nella Home
                     ],
                   ],
                 ),

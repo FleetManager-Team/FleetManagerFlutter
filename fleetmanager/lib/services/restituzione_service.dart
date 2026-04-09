@@ -39,7 +39,8 @@ class RestituzioneService {
 
       final oraAttuale = DateTime.now().toUtc().toIso8601String();
 
-      // 2. Aggiornamento Tabella Restituzioni (con UPSERT per evitare errori di chiave duplicata)
+      // 2. Aggiornamento Tabella Restituzioni (con UPSERT)
+      // Qui salviamo kmFinali (che sarà 0 in caso di emergenza) per lo storico
       await _supabase.from('restituzioni').upsert({
         'id_prenotazione': idPrenotazione,
         'km_finali': kmFinali,
@@ -60,25 +61,31 @@ class RestituzioneService {
         'posizione_emergenza': posizioneEmergenza,
       }, onConflict: 'id_prenotazione');
 
-      // 3. Aggiornamento Stato Veicolo
+      // 3. Aggiornamento Stato Veicolo (LOGICA CONDIZIONALE)
       // Se c'è un'emergenza o danni gravi, lo stato va in manutenzione
       final nuovoStatoVeicolo =
           (isEmergenza || haDanni) ? 'fuoriServizio' : 'disponibile';
 
-      await _supabase.from('veicoli').update({
-        'km': kmFinali,
+      final Map<String, dynamic> updateVeicolo = {
         'stato': nuovoStatoVeicolo,
-      }).eq('targa', targa);
+      };
+
+      // CRITICO: Aggiorniamo i km del veicolo solo se NON è un'emergenza.
+      // Se è un'emergenza, il veicolo mantiene i suoi chilometri attuali nel DB.
+      if (!isEmergenza) {
+        updateVeicolo['km'] = kmFinali;
+      }
+
+      await _supabase.from('veicoli').update(updateVeicolo).eq('targa', targa);
 
       // 4. Chiusura Prenotazione
-      // IMPORTANTE: Uso 'stato' perché è quello che legge il Job SQL
       await _supabase.from('prenotazioni').update({
         'stato': 'completata',
         'data_fine': oraAttuale,
       }).eq('id_prenotazione', idPrenotazione);
     } catch (e) {
       print("Errore durante completaRestituzione: $e");
-      rethrow; // Rilancia l'errore per gestirlo nella UI (_submitForm)
+      rethrow;
     }
   }
 
@@ -88,7 +95,6 @@ class RestituzioneService {
     if (file == null) return null;
 
     try {
-      // Nome file univoco basato su ID prenotazione e timestamp per evitare cache
       final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final String fileName = 'res_${idPrenotazione}_$timestamp.jpg';
       final String path = '$folder/$fileName';
@@ -104,7 +110,7 @@ class RestituzioneService {
       return _supabase.storage.from('restituzioni').getPublicUrl(path);
     } catch (e) {
       print("Errore caricamento immagine in $folder: $e");
-      return null; // Ritorna null ma non blocca l'intero processo
+      return null;
     }
   }
 }
