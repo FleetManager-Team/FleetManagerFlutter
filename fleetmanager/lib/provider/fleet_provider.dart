@@ -30,12 +30,32 @@ class SpesaDriver {
 }
 
 class FleetProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final VeicoloService _veicoloService = VeicoloService();
-  final PrenotazioneService _prenotazioneService = PrenotazioneService();
-  final ManutenzioneService _manutenzioneService = ManutenzioneService();
-  final NotificaService _notificaService = NotificaService();
+  late final AuthService _authService;
+  late final VeicoloService _veicoloService;
+  late final PrenotazioneService _prenotazioneService;
+  late final ManutenzioneService _manutenzioneService;
+  late final NotificaService _notificaService;
 
+  // Questa variabile permette di iniettare un client finto nei test
+  final SupabaseClient? _supabaseClient;
+
+  FleetProvider({
+    AuthService? authService,
+    VeicoloService? veicoloService,
+    PrenotazioneService? prenotazioneService,
+    ManutenzioneService? manutenzioneService,
+    NotificaService? notificaService,
+    SupabaseClient? supabaseClient, 
+  }) : _supabaseClient = supabaseClient {
+    _authService = authService ?? AuthService();
+    _veicoloService = veicoloService ?? VeicoloService();
+    _prenotazioneService = prenotazioneService ?? PrenotazioneService();
+    _manutenzioneService = manutenzioneService ?? ManutenzioneService();
+    _notificaService = notificaService ?? NotificaService();
+  }
+
+  // Il getter usa il client passato (test) o quello reale (app)
+  SupabaseClient get supabase => _supabaseClient ?? Supabase.instance.client;
   List<Veicolo> _veicoli = [];
   List<Prenotazione> _prenotazioni = [];
   List<Manutenzione> _manutenzioni = [];
@@ -68,7 +88,6 @@ class FleetProvider with ChangeNotifier {
         return r.isEmergenza == true;
       }).toList();
 
-  final supabase = Supabase.instance.client;
 
   /// Calcola il totale speso in carburante da tutte le restituzioni
   double get totaleSpesaCarburante {
