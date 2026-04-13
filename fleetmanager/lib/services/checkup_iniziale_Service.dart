@@ -4,7 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
 class CheckupService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+
+  CheckupService({SupabaseClient? supabaseClient})
+      : _supabase = supabaseClient ?? Supabase.instance.client;
 
   Future<void> inviaCheckupCompleto({
     required int idPrenotazione,
@@ -104,8 +107,7 @@ class CheckupService {
 
   Future<List<Map<String, dynamic>>> getStoricoCheckup({String? targa}) async {
     try {
-      var query = Supabase.instance.client.from('checkups').select(
-          '*, prenotazioni(targa)'); 
+      var query = _supabase.from('checkups').select('*, prenotazioni(targa)');
 
       if (targa != null && targa.isNotEmpty) {
         query = query.eq('targa', targa);

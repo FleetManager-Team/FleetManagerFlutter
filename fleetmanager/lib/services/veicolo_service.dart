@@ -3,7 +3,10 @@ import '../models/veicolo.dart';
 import '../models/enums/stato_veicolo.dart';
 
 class VeicoloService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+
+  VeicoloService({SupabaseClient? supabaseClient})
+      : _supabase = supabaseClient ?? Supabase.instance.client;
 
   Future<List<Veicolo>> fetchAllVeicoli() async {
     final response = await _supabase.from('veicoli').select();

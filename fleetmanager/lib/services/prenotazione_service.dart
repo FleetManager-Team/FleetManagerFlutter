@@ -3,7 +3,10 @@ import '../models/prenotazione.dart';
 import '../models/enums/stato_prenotazione.dart';
 
 class PrenotazioneService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+
+  PrenotazioneService({SupabaseClient? supabaseClient})
+      : _supabase = supabaseClient ?? Supabase.instance.client;
 
   /// Recupera TUTTE le prenotazioni dal DB.
   /// Rimosso il filtro idUtente obbligatorio per garantire che il Provider

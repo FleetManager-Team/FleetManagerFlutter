@@ -3,7 +3,10 @@ import '../models/notifica.dart';
 import '../models/enums/tipo_notifica.dart';
 
 class NotificaService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+
+  NotificaService({SupabaseClient? supabaseClient})
+      : _supabase = supabaseClient ?? Supabase.instance.client;
 
   Future<List<Notifica>> fetchMieNotifiche(int idUtente) async {
     final response = await _supabase

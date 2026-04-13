@@ -284,7 +284,7 @@ class FleetProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      await Supabase.instance.client.auth.updateUser(
+      await supabase.auth.updateUser(
         UserAttributes(password: nuovaPassword),
       );
       return true;
@@ -323,7 +323,7 @@ class FleetProvider with ChangeNotifier {
   Future<void> segnaTutteNotificheComeLette() async {
     if (_utenteLoggato == null) return;
     try {
-      await Supabase.instance.client
+      await supabase
           .from('notifiche')
           .update({'letta': true})
           .eq('id_utente', _utenteLoggato!.idUtente)
@@ -525,10 +525,10 @@ class FleetProvider with ChangeNotifier {
       required String ruolo,
       String? patente}) async {
     try {
-      final authRes = await Supabase.instance.client.auth
+      final authRes = await supabase.auth
           .signUp(email: email.trim(), password: passwordScelta);
       if (authRes.user != null) {
-        await Supabase.instance.client.from('utenti').insert({
+        await supabase.from('utenti').insert({
           'email': email.trim().toLowerCase(),
           'nome': nome.trim(),
           'cognome': cognome.trim(),
@@ -550,7 +550,7 @@ class FleetProvider with ChangeNotifier {
       required String anno,
       String? kmAttuali}) async {
     try {
-      await Supabase.instance.client.from('veicoli').insert({
+      await supabase.from('veicoli').insert({
         'targa': targa.trim().toUpperCase(),
         'marca': marca.trim(),
         'modello': modello.trim(),
@@ -571,7 +571,7 @@ class FleetProvider with ChangeNotifier {
   }
 
   Future<void> eliminaVeicolo(String targa) async {
-    await Supabase.instance.client.from('veicoli').delete().eq('targa', targa);
+    await supabase.from('veicoli').delete().eq('targa', targa);
     await inizializzaDati();
   }
 
@@ -589,7 +589,7 @@ class FleetProvider with ChangeNotifier {
           idDaEscludere: idPrenotazione)) {
         throw Exception('Sovrapposizione.');
       }
-      await Supabase.instance.client.from('prenotazioni').update({
+      await supabase.from('prenotazioni').update({
         'data_inizio': nuovoInizio.toIso8601String(),
         'data_fine': nuovaFine.toIso8601String(),
         'stato': 'richiesta'

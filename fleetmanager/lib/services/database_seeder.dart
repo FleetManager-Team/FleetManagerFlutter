@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 class DatabaseSeeder {
   static final _supabase = Supabase.instance.client;
 
-  static Future<void> eseguiSeedCompleto() async {
+  static Future<void> eseguiSeedCompleto({SupabaseClient? supabaseClient}) async {
+    final supabase = supabaseClient ?? _supabase;
     try {
       debugPrint("🚀 SEED: Controllo stato database...");
 
       // 1. CONTROLLO ESISTENZA (Logica 1)
       // Verifichiamo se esiste almeno un veicolo per capire se il seed è già stato fatto
-      final checkVeicoli = await _supabase.from('veicoli').select('targa').limit(1);
+      final checkVeicoli =
+          await supabase.from('veicoli').select('targa').limit(1);
 
       if (checkVeicoli.isNotEmpty) {
         debugPrint("⏩ SEED: Dati già presenti. Operazione annullata per evitare duplicati.");
@@ -51,7 +53,7 @@ class DatabaseSeeder {
         },
       ];
 
-      await _supabase.from('veicoli').insert(veicoli);
+      await supabase.from('veicoli').insert(veicoli);
       debugPrint("✅ SEED: Veicoli inseriti.");
 
       // --- 3. INSERIMENTO UTENTI (AUTH + TABELLA) ---
@@ -63,6 +65,7 @@ class DatabaseSeeder {
         cognome: 'Rossi',
         ruolo: 'manager',
         patente: 'PAT12345',
+        supabaseClient: supabase,
       );
 
       await _creaUtenteSeNonEsiste(
@@ -72,11 +75,12 @@ class DatabaseSeeder {
         cognome: 'Bianchi',
         ruolo: 'driver',
         patente: 'PAT67890',
+        supabaseClient: supabase,
       );
       debugPrint("✅ SEED: Utenti (Auth e Tabella) pronti.");
 
       // --- 4. INSERIMENTO MANUTENZIONI (Esempio per il veicolo in manutenzione) ---
-      await _supabase.from('manutenzioni').insert({
+      await supabase.from('manutenzioni').insert({
         'targa': 'EE789FF',
         'data': DateTime.now().toIso8601String(),
         'tipo': 'ordinaria',
@@ -84,7 +88,7 @@ class DatabaseSeeder {
       });
 
       // --- 5. INSERIMENTO SCADENZE ---
-      await _supabase.from('scadenze').insert([
+      await supabase.from('scadenze').insert([
         {
           'targa': 'AA123BB',
           'tipo': 'assicurazione',
@@ -114,14 +118,17 @@ class DatabaseSeeder {
     required String cognome,
     required String ruolo,
     required String patente,
+    SupabaseClient? supabaseClient,
   }) async {
+    final supabase = supabaseClient ?? _supabase;
     try {
       // 1. Registra in Supabase Auth
-      final authRes = await _supabase.auth.signUp(email: email, password: password);
+      final authRes =
+          await supabase.auth.signUp(email: email, password: password);
       
       if (authRes.user != null) {
         // 2. Inserisce nella tua tabella 'utenti'
-        await _supabase.from('utenti').insert({
+        await supabase.from('utenti').insert({
           'nome': nome,
           'cognome': cognome,
           'email': email,

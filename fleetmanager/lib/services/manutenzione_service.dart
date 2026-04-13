@@ -3,7 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/manutenzione.dart';
 
 class ManutenzioneService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+
+  ManutenzioneService({SupabaseClient? supabaseClient})
+      : _supabase = supabaseClient ?? Supabase.instance.client;
 
   Future<void> registraIntervento(Manutenzione m) async {
     final data = m.toJson();

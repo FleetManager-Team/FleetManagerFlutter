@@ -2,7 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
 class RestituzioneService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase;
+
+  RestituzioneService({SupabaseClient? supabaseClient})
+      : _supabase = supabaseClient ?? Supabase.instance.client;
 
   Future<void> completaRestituzione({
     required int idPrenotazione,
