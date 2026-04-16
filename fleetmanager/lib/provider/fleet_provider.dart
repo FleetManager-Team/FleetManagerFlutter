@@ -4,12 +4,14 @@ import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/veicolo.dart';
 import '../models/prenotazione.dart';
 import '../models/utente.dart';
 import '../models/notifica.dart';
 import '../models/restituzione.dart';
+import '../models/scadenza.dart';
 import '../models/enums/stato_veicolo.dart';
 import '../models/enums/stato_prenotazione.dart';
 import '../models/enums/tipo_manutenzione.dart';
@@ -18,6 +20,8 @@ import '../services/prenotazione_service.dart';
 import '../services/manutenzione_service.dart';
 import '../services/notifica_service.dart';
 import '../services/veicolo_service.dart';
+import '../services/restituzione_service.dart';
+import '../services/scadenza_service.dart';
 
 class SpesaDriver {
   int idUtente;
@@ -35,6 +39,7 @@ class FleetProvider with ChangeNotifier {
   late final PrenotazioneService _prenotazioneService;
   late final ManutenzioneService _manutenzioneService;
   late final NotificaService _notificaService;
+  late final ScadenzaService _scadenzaService;
 
   // Questa variabile permette di iniettare un client finto nei test
   final SupabaseClient? _supabaseClient;
@@ -45,6 +50,7 @@ class FleetProvider with ChangeNotifier {
     PrenotazioneService? prenotazioneService,
     ManutenzioneService? manutenzioneService,
     NotificaService? notificaService,
+    ScadenzaService? scadenzaService,
     SupabaseClient? supabaseClient, 
   }) : _supabaseClient = supabaseClient {
     _authService = authService ?? AuthService();
@@ -52,6 +58,7 @@ class FleetProvider with ChangeNotifier {
     _prenotazioneService = prenotazioneService ?? PrenotazioneService();
     _manutenzioneService = manutenzioneService ?? ManutenzioneService();
     _notificaService = notificaService ?? NotificaService();
+    _scadenzaService = scadenzaService ?? ScadenzaService();
   }
 
   // Il getter usa il client passato (test) o quello reale (app)
@@ -63,6 +70,7 @@ class FleetProvider with ChangeNotifier {
   List<Notifica> _notifiche = [];
   List<Restituzione> _restituzioni = [];
   List<CheckupVeicolo> _checkups = [];
+  List<Scadenza> _scadenze = [];
   Utente? _utenteLoggato;
   bool _isLoading = false;
 
@@ -75,6 +83,7 @@ class FleetProvider with ChangeNotifier {
   Utente? get utenteLoggato => _utenteLoggato;
   List<Utente> get utenti => _utenti;
   List<CheckupVeicolo> get checkups => _checkups;
+  List<Scadenza> get scadenze => _scadenze;
   bool get isLoading => _isLoading;
 
   /// EMERGENZE ATTIVE: segnalate ma con km non ancora inseriti (ancora a 0 o uguali ai km di partenza)
@@ -205,6 +214,8 @@ class FleetProvider with ChangeNotifier {
         supabase.from('restituzioni').select(),
         // Carichiamo i checkup tecnici
         supabase.from('checkups').select(),
+        // Carichiamo le scadenze
+        supabase.from('scadenze').select(),
         _utenteLoggato != null
             ? _notificaService.fetchMieNotifiche(_utenteLoggato!.idUtente)
             : Future.value(<Notifica>[]),
@@ -225,8 +236,16 @@ class FleetProvider with ChangeNotifier {
       _checkups =
           datiCheckups.map((json) => CheckupVeicolo.fromJson(json)).toList();
 
-      // Gestione Notifiche (indice 6)
-      final datiNotifiche = risultati[6] as List<dynamic>;
+      // Gestione Scadenze (indice 6)
+      final datiScadenze = risultati[6] as List<dynamic>;
+      _scadenze =
+          datiScadenze.map((json) => Scadenza.fromJson(json)).toList();
+
+      // Controlla scadenze imminenti e invia notifiche
+      await _controllaScadenzeImminenti();
+
+      // Gestione Notifiche (indice 7)
+      final datiNotifiche = risultati[7] as List<dynamic>;
       _notifiche = datiNotifiche
           .map((json) => json is Notifica ? json : Notifica.fromJson(json))
           .toList();
@@ -395,11 +414,9 @@ class FleetProvider with ChangeNotifier {
 
   Future<void> confermaPrenotazione(int id) async {
     try {
-      // 1. Troviamo i dati della prenotazione che stiamo per approvare
       final pApprovata =
           _prenotazioni.firstWhere((element) => element.idPrenotazione == id);
 
-      // 2. Identifichiamo le altre richieste in "sovrapposizione"
       // Devono avere: stessa targa, stato 'richiesta' e orari sovrapposti
       final conflitti = _prenotazioni
           .where((p) =>
@@ -410,25 +427,26 @@ class FleetProvider with ChangeNotifier {
               pApprovata.dataFine.isAfter(p.dataInizio))
           .toList();
 
-      // 3. Eseguiamo l'approvazione principale tramite il tuo service
       await _prenotazioneService.confermaPrenotazione(id);
 
-      // 4. Se ci sono conflitti, li annulliamo nel database
       if (conflitti.isNotEmpty) {
         for (var conf in conflitti) {
           // Usiamo il tuo metodo esistente per annullare le altre
           await _prenotazioneService.annullaPrenotazione(conf.idPrenotazione);
 
-          // Opzionale: invia una notifica di "rifiuto per sovrapposizione" a questi driver
-          // await _notificaService.notificaRifiutoPrenotazione(conf.idUtente, conf.targa);
+          // Invia notifica di "rifiuto per sovrapposizione" ai driver scavalcati
+          await _notificaService.notificaRifiutoPrenotazione(conf.idUtente, conf.targa, conf.dataInizio, conf.dataFine);
         }
       }
 
-      // 5. Inviamo la notifica di conferma al driver "vincitore"
       await _notificaService.notificaConfermaPrenotazione(pApprovata.idUtente,
           pApprovata.targa, pApprovata.dataInizio, pApprovata.dataFine);
 
-      // 6. Refresh globale dei dati
+      final checkupEsistente = _checkups.any((c) => c.idPrenotazione == id);
+      if (!checkupEsistente) {
+        await _notificaService.notificaCheckupRichiesto(pApprovata.idUtente, pApprovata.targa);
+      }
+
       await inizializzaDati();
     } catch (e) {
       debugPrint("Errore in confermaPrenotazione: ${e.toString()}");
@@ -489,6 +507,12 @@ class FleetProvider with ChangeNotifier {
       int kmFinali = nuoviKm ?? _veicoli.firstWhere((v) => v.targa == targa).km;
       await _manutenzioneService.chiudiIntervento(
           idManutenzione, kmFinali, targa);
+
+      // Notifica ai manager che la manutenzione è completata
+      for (var idMan in _tuttiManagerIds) {
+        await _notificaService.notificaManutenzioneCompletata(idMan, targa);
+      }
+
       await inizializzaDati();
     } catch (e) {
       rethrow;
@@ -610,15 +634,64 @@ class FleetProvider with ChangeNotifier {
   }
 
   /// --- LOGICA ATTIVAZIONE (CHECK-UP) ---
-  Future<void> attivaPrenotazioneDopoCheckup(int idPrenotazione) async {
+  Future<void> completaRestituzioneConNotifiche({
+    required int idPrenotazione,
+    required String targa,
+    required int kmFinali,
+    required double livelloCarburante,
+    required bool rifornimento,
+    required bool haDanni,
+    required bool haPedaggi,
+    bool isEmergenza = false,
+    String? noteEmergenza,
+    String? posizioneEmergenza,
+    double? litri,
+    double? euro,
+    double? euroPedaggi,
+    String? descDanni,
+    XFile? fotoScontrino,
+    XFile? fotoDanni,
+    XFile? fotoPedaggio,
+  }) async {
     try {
-      await supabase
-          .from('prenotazioni')
-          .update({'stato': 'attiva'}).eq('id_prenotazione', idPrenotazione);
+      // Completa la restituzione tramite il service
+      await RestituzioneService().completaRestituzione(
+        idPrenotazione: idPrenotazione,
+        targa: targa,
+        kmFinali: kmFinali,
+        livelloCarburante: livelloCarburante,
+        rifornimento: rifornimento,
+        haDanni: haDanni,
+        haPedaggi: haPedaggi,
+        isEmergenza: isEmergenza,
+        noteEmergenza: noteEmergenza,
+        posizioneEmergenza: posizioneEmergenza,
+        litri: litri,
+        euro: euro,
+        euroPedaggi: euroPedaggi,
+        descDanni: descDanni,
+        fotoScontrino: fotoScontrino,
+        fotoDanni: fotoDanni,
+        fotoPedaggio: fotoPedaggio,
+      );
 
-      await inizializzaDati(); // Questo ricarica tutto e aggiorna la UI
+      // Trova il driver della prenotazione
+      final prenotazione = _prenotazioni.firstWhere((p) => p.idPrenotazione == idPrenotazione);
+      final driver = _utenti.firstWhere((u) => u.idUtente == prenotazione.idUtente);
+
+      // Notifica al driver che la prenotazione è completata
+      await _notificaService.notificaPrenotazioneCompletata(
+          prenotazione.idUtente, targa, isEmergenza);
+
+      // Notifica ai manager che il veicolo è stato restituito
+      for (var idMan in _tuttiManagerIds) {
+        await _notificaService.notificaRestituzioneVeicolo(idMan, driver.nome, driver.cognome, targa, isEmergenza);
+      }
+
+      await inizializzaDati();
     } catch (e) {
-      debugPrint("Errore attivazione: $e");
+      debugPrint("Errore in completaRestituzioneConNotifiche: $e");
+      rethrow;
     }
   }
 
@@ -839,6 +912,23 @@ class FleetProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _controllaScadenzeImminenti() async {
+    final ora = DateTime.now();
+    final tra30Giorni = ora.add(const Duration(days: 30));
+
+    for (final scadenza in _scadenze) {
+      if (!scadenza.notificata && scadenza.data.isBefore(tra30Giorni) && scadenza.data.isAfter(ora)) {
+        // Invia notifica ai manager
+        for (var idMan in _tuttiManagerIds) {
+          await _notificaService.inviaNotificaScadenza(
+              idMan, scadenza.idScadenza, scadenza.targa, scadenza.tipoScadenza.name, scadenza.data);
+        }
+        // Marca come notificata
+        await _scadenzaService.segnaNotificata(scadenza.idScadenza);
+      }
     }
   }
 }

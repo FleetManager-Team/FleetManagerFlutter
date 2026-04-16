@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // Per kIsWeb
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/services/checkup_iniziale_Service.dart';
+import 'package:fleetmanager/services/notifica_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -322,7 +323,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
     try {
       final Uint8List? signature = await _sigController.toPngBytes();
 
-      // A. CARICA FOTO E DATI
+      // CARICA FOTO E DATI
       await CheckupService().inviaCheckupCompleto(
         idPrenotazione: widget.idPrenotazione,
         targa: widget.targa,
@@ -334,12 +335,23 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
         firmaBytes: signature,
       );
 
-      // B. CAMBIA LO STATO DELLA PRENOTAZIONE
+      // CAMBIA LO STATO DELLA PRENOTAZIONE
       // Nota: usiamo 'attiva' per far scattare il cambio UI nel provider
       await Supabase.instance.client.from('prenotazioni').update(
           {'stato': 'attiva'}).eq('id_prenotazione', widget.idPrenotazione);
 
-      // C. AGGIORNA IL PROVIDER
+      // INVIA NOTIFICA AL DRIVER CHE LA PRENOTAZIONE È ATTIVATA
+      if (mounted) {
+        final provider = context.read<FleetProvider>();
+        final prenotazione = provider.prenotazioni.firstWhere(
+            (p) => p.idPrenotazione == widget.idPrenotazione,
+            orElse: () => provider.prenotazioni.first);
+        final notificaService = NotificaService();
+        await notificaService.notificaPrenotazioneAttivata(
+            prenotazione.idUtente, widget.targa, prenotazione.dataInizio, prenotazione.dataFine);
+      }
+
+      // AGGIORNA IL PROVIDER
       if (mounted) {
         await context.read<FleetProvider>().inizializzaDati();
       }

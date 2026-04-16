@@ -8,7 +8,6 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/services/restituzione_service.dart';
 
 class RestituzioneVeicoloScreen extends StatefulWidget {
   final Prenotazione prenotazione;
@@ -478,7 +477,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       final int kmDaInviare =
           widget.isEmergenza ? 0 : (int.tryParse(_kmController.text) ?? 0);
 
-      await RestituzioneService().completaRestituzione(
+      await provider.completaRestituzioneConNotifiche(
         idPrenotazione: widget.prenotazione.idPrenotazione,
         targa: widget.prenotazione.targa,
         kmFinali: kmDaInviare,

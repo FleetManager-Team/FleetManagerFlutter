@@ -400,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
             p.statoPrenotazione == StatoPrenotazione.attiva ||
             p.statoPrenotazione == StatoPrenotazione.sospesa)
         .toList();
-    return _buildPrenotazioniList(list, true);
+    return _buildPrenotazioniList(list, true, provider);
   }
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
@@ -416,11 +416,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         .attiva // <--- NASCONDE L'ATTIVA DALL'ELENCO
             )
         .toList();
-    return _buildPrenotazioniList(mie, false);
+    return _buildPrenotazioniList(mie, false, provider);
   }
 
   Widget _buildPrenotazioniList(
-      List<Prenotazione> prenotazioni, bool isManager) {
+      List<Prenotazione> prenotazioni, bool isManager, FleetProvider provider) {
     if (prenotazioni.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
@@ -480,9 +480,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 : null,
             leading: CircleAvatar(
               backgroundColor:
-                  _getStatusColor(p.statoPrenotazione).withOpacity(0.1),
+                  _getStatusColor(p, provider).withOpacity(0.1),
               child: Icon(Icons.calendar_today,
-                  color: _getStatusColor(p.statoPrenotazione), size: 20),
+                  color: _getStatusColor(p, provider), size: 20),
             ),
             title: Wrap(
               // Usiamo Wrap per evitare che il badge tagli il testo su schermi piccoli
@@ -490,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
               spacing: 8, // Spazio tra il testo e il badge
               children: [
                 Text(
-                  "${p.targa} - ${p.statoPrenotazione.name.toUpperCase()}",
+                  "${p.targa} - ${_getStatusText(p, provider)}",
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 14),
                 ),
@@ -570,8 +570,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Color _getStatusColor(StatoPrenotazione stato) {
-    switch (stato) {
+  String _getStatusText(Prenotazione p, FleetProvider provider) {
+    if (p.statoPrenotazione == StatoPrenotazione.attiva) {
+      // Controlla se esiste una restituzione per questa prenotazione
+      final hasRestituzione = provider.restituzioni.any((r) => r.idPrenotazione == p.idPrenotazione);
+      // Mostra "IN ATTESA DI REPORT RIENTRO" solo se è scaduta AND non ha restituzione
+      final isScaduta = DateTime.now().isAfter(p.dataFine);
+      if (!hasRestituzione && isScaduta) {
+        return "IN ATTESA DI REPORT RIENTRO";
+      }
+    }
+    return p.statoPrenotazione.name.toUpperCase();
+  }
+
+  Color _getStatusColor(Prenotazione p, FleetProvider provider) {
+    if (p.statoPrenotazione == StatoPrenotazione.attiva) {
+      // Controlla se esiste una restituzione per questa prenotazione
+      final hasRestituzione = provider.restituzioni.any((r) => r.idPrenotazione == p.idPrenotazione);
+      // Mostra arancione solo se è scaduta AND non ha restituzione
+      final isScaduta = DateTime.now().isAfter(p.dataFine);
+      if (!hasRestituzione && isScaduta) {
+        return Colors.orange; // In attesa di report
+      }
+      // Altrimenti rimane verde per le prenotazioni ancora attive
+      return Colors.green;
+    }
+    switch (p.statoPrenotazione) {
       case StatoPrenotazione.richiesta:
         return Colors.orange;
       case StatoPrenotazione.confermata:

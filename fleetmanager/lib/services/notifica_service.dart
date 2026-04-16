@@ -72,6 +72,15 @@ class NotificaService {
     );
   }
 
+  Future<void> notificaPrenotazioneAttivata(int idDriver, String targa,
+      DateTime dataInizio, DateTime dataFine) async {
+    await _creaNotifica(
+      idUtente: idDriver,
+      messaggio: 'La tua prenotazione per $targa è ora attiva. Puoi ritirare il veicolo.',
+      tipo: TipoNotifica.info,
+    );
+  }
+
   Future<void> notificaRifiutoPrenotazione(int idDriver, String targa,
       DateTime dataInizio, DateTime dataFine) async {
     await _creaNotifica(
@@ -88,6 +97,40 @@ class NotificaService {
       messaggio:
           'Manutenzione programmata per $targa il ${data.day}/${data.month}.',
       tipo: TipoNotifica.manutenzione,
+    );
+  }
+
+  Future<void> notificaManutenzioneCompletata(int idManager, String targa) async {
+    await _creaNotifica(
+      idUtente: idManager,
+      messaggio: 'Manutenzione completata per il veicolo $targa.',
+      tipo: TipoNotifica.info,
+    );
+  }
+
+  Future<void> notificaPrenotazioneCompletata(int idDriver, String targa, bool isEmergenza) async {
+    final tipo = isEmergenza ? 'segnalazione SOS' : 'restituzione';
+    await _creaNotifica(
+      idUtente: idDriver,
+      messaggio: 'La $tipo per il veicolo $targa è stata completata con successo.',
+      tipo: TipoNotifica.info,
+    );
+  }
+
+  Future<void> notificaRestituzioneVeicolo(int idManager, String nomeDriver, String cognomeDriver, String targa, bool isEmergenza) async {
+    final tipo = isEmergenza ? 'segnalazione SOS' : 'restituzione';
+    await _creaNotifica(
+      idUtente: idManager,
+      messaggio: '$tipo ricevuta da $nomeDriver $cognomeDriver per il veicolo $targa.',
+      tipo: TipoNotifica.info,
+    );
+  }
+
+  Future<void> notificaCheckupRichiesto(int idDriver, String targa) async {
+    await _creaNotifica(
+      idUtente: idDriver,
+      messaggio: 'È richiesto un check-up iniziale per il veicolo $targa prima del ritiro.',
+      tipo: TipoNotifica.info,
     );
   }
 
