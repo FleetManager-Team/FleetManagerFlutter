@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -112,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen>
                 backgroundColor: Theme.of(context).colorScheme.error,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
               ),
             );
           }
@@ -123,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Errore di connessione: $e'),
-              backgroundColor: Colors.orange,
+              backgroundColor: AppColors.secondary,
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -179,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen>
                     content: Text(success
                         ? "Email di reset inviata! Controlla la tua posta."
                         : "Errore: verifica l'email inserita."),
-                    backgroundColor: success ? Colors.green : Colors.red,
+                    backgroundColor: success ? AppColors.success : AppColors.error,
                   ),
                 );
               }
@@ -219,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen>
                   child: Card(
                     elevation: 8,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
@@ -260,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 hintText: 'Inserisci la tua email',
                                 prefixIcon: const Icon(Icons.email),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                                 ),
                                 filled: true,
                                 fillColor: theme.colorScheme.surface,
@@ -290,7 +291,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 hintText: 'Inserisci la password',
                                 prefixIcon: const Icon(Icons.lock),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                                 ),
                                 filled: true,
                                 fillColor: theme.colorScheme.surface,
@@ -320,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 onPressed: isLoading ? null : _handleLogin,
                                 style: ElevatedButton.styleFrom(
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                                   ),
                                   elevation: 2,
                                 ),
@@ -332,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           strokeWidth: 2,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
+                                                  AppColors.white),
                                         ),
                                       )
                                     : const Text(
@@ -380,7 +381,7 @@ class _LoginScreenState extends State<LoginScreen>
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge)),
           title: Column(
             children: [
               Icon(Icons.security_rounded,
@@ -416,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen>
                             setState(() => _obscureText = !_obscureText),
                       ),
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty)
@@ -433,7 +434,7 @@ class _LoginScreenState extends State<LoginScreen>
                       labelText: "Conferma Password",
                       prefixIcon: const Icon(Icons.verified_user_outlined),
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
                     ),
                     validator: (value) {
                       if (value != _passController.text)
@@ -457,7 +458,7 @@ class _LoginScreenState extends State<LoginScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
               ),
               onPressed: () async {
                 if (_formKeyReset.currentState!.validate()) {
@@ -471,7 +472,7 @@ class _LoginScreenState extends State<LoginScreen>
                         const SnackBar(
                           content:
                               Text("✅ Password aggiornata! Ora puoi accedere."),
-                          backgroundColor: Colors.green,
+                          backgroundColor: AppColors.success,
                         ),
                       );
                     }
@@ -485,7 +486,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                           content: Text(erroreMessaggio),
-                          backgroundColor: Colors.red),
+                          backgroundColor: AppColors.error),
                     );
                   }
                 }

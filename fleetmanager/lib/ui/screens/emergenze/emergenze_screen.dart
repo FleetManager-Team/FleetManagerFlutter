@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/restituzione.dart';
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
@@ -27,12 +28,12 @@ class EmergenzeScreen extends StatelessWidget {
         provider.restituzioni.where((r) => r.isEmergenza == true).toList();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text("Centro Emergenze",
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.red[900],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.error,
+        foregroundColor: AppColors.white,
         elevation: 0,
       ),
       body: provider.isLoading
@@ -40,7 +41,7 @@ class EmergenzeScreen extends StatelessWidget {
           : RefreshIndicator(
               onRefresh: () => provider.inizializzaDati(),
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
                   // --- SEZIONE 1: VEICOLI FERMI ---
                   _buildSectionHeader(
@@ -72,12 +73,12 @@ class EmergenzeScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12, left: 4),
       child: Row(
         children: [
-          Icon(icon, color: Colors.red[900], size: 18),
+          Icon(icon, color: AppColors.error, size: 18),
           const SizedBox(width: 8),
           Text(
             title,
             style: TextStyle(
-              color: Colors.red[900],
+              color: AppColors.error,
               fontWeight: FontWeight.bold,
               fontSize: 12,
               letterSpacing: 1.1,
@@ -93,20 +94,20 @@ class EmergenzeScreen extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: Colors.red[50],
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.error.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           ),
           child: Icon(
             v.tipoVeicolo == TipoVeicolo.furgone
                 ? Icons.local_shipping
                 : Icons.directions_car,
-            color: Colors.red[900],
+            color: AppColors.error,
           ),
         ),
         title: Text(
@@ -117,7 +118,7 @@ class EmergenzeScreen extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             "Targa: ${v.targa} • ${v.km} km",
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            style: TextStyle(color: AppColors.grey600, fontSize: 13),
           ),
         ),
         trailing: _buildStatusChip(v.statoVeicolo),
@@ -135,7 +136,7 @@ class EmergenzeScreen extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => Navigator.push(
           context,
@@ -143,14 +144,14 @@ class EmergenzeScreen extends StatelessWidget {
               builder: (_) =>
                   DettaglioPrenotazioneManager(prenotazione: prenotazione)),
         ),
-        contentPadding: const EdgeInsets.all(12),
+        contentPadding: const EdgeInsets.all(AppSpacing.md),
         leading: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: Colors.orange[50],
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.secondaryLight,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           ),
-          child: const Icon(Icons.sos, color: Colors.orange),
+          child: const Icon(Icons.sos, color: AppColors.secondary),
         ),
         title: Text(
           "SOS ${prenotazione.targa}",
@@ -163,10 +164,10 @@ class EmergenzeScreen extends StatelessWidget {
             Text("Driver: ${driver.nome} ${driver.cognome}",
                 style: const TextStyle(fontSize: 13)),
             Text(df.format(r.dataRestituzione),
-                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                style: TextStyle(fontSize: 11, color: AppColors.grey500)),
           ],
         ),
-        trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
+        trailing: Icon(Icons.chevron_right, color: AppColors.grey400),
       ),
     );
   }
@@ -177,14 +178,14 @@ class EmergenzeScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: stato == StatoVeicolo.fuoriServizio
-            ? Colors.red[700]
-            : Colors.orange[700],
-        borderRadius: BorderRadius.circular(12),
+            ? AppColors.error
+            : AppColors.secondary,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
       ),
       child: Text(
         stato.name.toUpperCase(),
         style: const TextStyle(
-            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+            fontSize: 9, color: AppColors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -194,16 +195,16 @@ class EmergenzeScreen extends StatelessWidget {
       elevation: 0,
       color: Colors.white.withOpacity(0.5),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
         side: BorderSide(color: Colors.grey.withOpacity(0.2)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Center(
           child: Text(
             message,
             style: TextStyle(
-                color: Colors.grey[500],
+                color: AppColors.grey500,
                 fontSize: 13,
                 fontStyle: FontStyle.italic),
           ),

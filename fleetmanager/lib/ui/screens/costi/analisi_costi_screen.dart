@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 
 class AnalisiCostiScreen extends StatefulWidget {
   const AnalisiCostiScreen({super.key});
@@ -80,11 +81,11 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
   Widget _buildCardTotale(double totale) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-            colors: [Colors.blue.shade900, Colors.blue.shade700]),
-        borderRadius: BorderRadius.circular(20),
+            colors: [AppColors.primaryDark, AppColors.primaryDark]),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
       ),
       child: Column(
         children: [
@@ -108,7 +109,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
         child: Center(
           child: Text(
             "Nessun dato disponibile per questo periodo",
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: AppColors.grey500),
           ),
         ),
       );
@@ -150,20 +151,20 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
             touchTooltipData: BarTouchTooltipData(
               tooltipRoundedRadius: 8,
               // Se tooltipBgColor dà errore, cancellalo o usa tooltipColor
-              tooltipBgColor: Colors.blueGrey.shade800,
+              tooltipBgColor: AppColors.grey800,
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 final nome = dati.keys.elementAt(groupIndex);
                 final spesa = dati.values.elementAt(groupIndex);
 
                 Color coloreTesto;
                 if (_mostraCarburante && !_mostraPedaggi) {
-                  coloreTesto = Colors.orange.shade400;
+                  coloreTesto = AppColors.secondaryLight;
                 } else if (!_mostraCarburante && _mostraPedaggi) {
-                  coloreTesto = Colors.blue.shade400;
+                  coloreTesto = AppColors.primaryLight;
                 } else {
                   coloreTesto = spesa.carburante >= spesa.pedaggi
-                      ? Colors.orange.shade400
-                      : Colors.blue.shade400;
+                      ? AppColors.secondaryLight
+                      : AppColors.primaryLight;
                 }
 
                 return BarTooltipItem(
@@ -272,13 +273,13 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     return PopupMenuButton<String>(
       onSelected: _impostaPeriodoPreset,
       offset: const Offset(0, 45), // Sposta la tendina leggermente in basso
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.grey.shade300),
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+          border: Border.all(color: AppColors.grey300),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -291,18 +292,18 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.calendar_today_outlined,
-                size: 16, color: Colors.blue.shade900),
+                size: 16, color: AppColors.primaryDark),
             const SizedBox(width: 10),
             Text(
               "${DateFormat('dd/MM/yy').format(_rangeSelezionato.start)} - ${DateFormat('dd/MM/yy').format(_rangeSelezionato.end)}",
               style: TextStyle(
-                color: Colors.blue.shade900,
+                color: AppColors.primaryDark,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+            const Icon(Icons.keyboard_arrow_down, color: AppColors.grey500),
           ],
         ),
       ),

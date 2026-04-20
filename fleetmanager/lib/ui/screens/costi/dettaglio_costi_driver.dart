@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart'; // Ti serve per formattare le date sotto il grafico
+import 'package:fleetmanager/core/theme/index.dart';
 
 class DettaglioCostiDriver extends StatefulWidget {
   final int idDriver;
@@ -53,8 +54,8 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Dettaglio: ${widget.nomeDriver}"),
-        backgroundColor: Colors.blue.shade800,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primaryDark,
+        foregroundColor: AppColors.white,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -67,13 +68,13 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
               children: [_buildPickerPeriodo()],
             ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Card(
                 elevation: 4,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
                     children: [
                       const SizedBox(height: 10),
@@ -82,7 +83,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
                         style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue),
+                            color: AppColors.primary),
                       ),
                       const SizedBox(height: 20),
                       _buildGraficoTemporale(datiTemporali),
@@ -119,7 +120,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
         height: 300,
         child: Center(
           child: Text("Nessun dato disponibile con i filtri selezionati",
-              style: TextStyle(color: Colors.grey)),
+              style: TextStyle(color: AppColors.grey500)),
         ),
       );
     }
@@ -134,14 +135,14 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
               tooltipRoundedRadius: 8,
-              tooltipBgColor: Colors.blueGrey.shade800,
+              tooltipBgColor: AppColors.grey800,
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 final data = dateOrdinate[groupIndex];
                 final dataStr = DateFormat('dd/MM/yyyy').format(data);
                 return BarTooltipItem(
                   '$dataStr\n€ ${rod.toY.toStringAsFixed(2)}',
                   const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                      color: AppColors.white, fontWeight: FontWeight.bold),
                 );
               },
             ),
@@ -185,7 +186,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
                   if (value % 1 == 0 && value > 0) {
                     return Text("€${value.toInt()}",
                         style:
-                            const TextStyle(fontSize: 10, color: Colors.grey));
+                            const TextStyle(fontSize: 10, color: AppColors.grey500));
                   }
                   return const SizedBox.shrink();
                 },
@@ -216,12 +217,12 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
                   rodStackItems: [
                     if (_mostraCarburante)
                       BarChartRodStackItem(
-                          0, spesa.carburante, Colors.orange.shade700),
+                          0, spesa.carburante, AppColors.secondary),
                     if (_mostraPedaggi)
                       BarChartRodStackItem(
                         _mostraCarburante ? spesa.carburante : 0,
                         altezza,
-                        Colors.blue.shade700,
+                        AppColors.primaryDark,
                       ),
                   ],
                 ),
@@ -266,16 +267,16 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     return PopupMenuButton<String>(
       onSelected: _impostaPeriodoPreset,
       offset: const Offset(0, 45), // Sposta la tendina leggermente in basso
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.grey.shade300),
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+          border: Border.all(color: AppColors.grey300),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.grey900.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -285,18 +286,18 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.calendar_today_outlined,
-                size: 16, color: Colors.blue.shade900),
+                size: 16, color: AppColors.primary),
             const SizedBox(width: 10),
             Text(
               "${DateFormat('dd/MM/yy').format(_rangeSelezionato.start)} - ${DateFormat('dd/MM/yy').format(_rangeSelezionato.end)}",
               style: TextStyle(
-                color: Colors.blue.shade900,
+                color: AppColors.primary,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+            const Icon(Icons.keyboard_arrow_down, color: AppColors.grey500),
           ],
         ),
       ),
@@ -320,16 +321,16 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
           label: const Text("Carburante"),
           selected: _mostraCarburante,
           onSelected: (v) => setState(() => _mostraCarburante = v),
-          selectedColor: Colors.orange.withOpacity(0.2),
-          checkmarkColor: Colors.orange,
+          selectedColor: AppColors.secondary.withOpacity(0.2),
+          checkmarkColor: AppColors.secondary,
         ),
         const SizedBox(width: 10),
         FilterChip(
           label: const Text("Pedaggi"),
           selected: _mostraPedaggi,
           onSelected: (v) => setState(() => _mostraPedaggi = v),
-          selectedColor: Colors.blue.withOpacity(0.2),
-          checkmarkColor: Colors.blue,
+          selectedColor: AppColors.primary.withOpacity(0.2),
+          checkmarkColor: AppColors.primary,
         ),
       ],
     );

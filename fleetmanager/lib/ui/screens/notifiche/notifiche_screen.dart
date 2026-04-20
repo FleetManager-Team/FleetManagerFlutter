@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../provider/fleet_provider.dart';
 import '../../../models/enums/tipo_notifica.dart';
-
+import 'package:fleetmanager/core/theme/index.dart';
 class NotificheScreen extends StatelessWidget {
   const NotificheScreen({super.key});
 
@@ -14,11 +14,11 @@ class NotificheScreen extends StatelessWidget {
     final haNotificheNonLette = notifiche.any((n) => !n.letta);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text("Centro Notifiche"),
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primaryDark,
+        foregroundColor: AppColors.white,
         actions: [
           if (notifiche.isNotEmpty) ...[
             IconButton(
@@ -29,7 +29,7 @@ class NotificheScreen extends StatelessWidget {
             if (haNotificheNonLette)
               TextButton(
                 onPressed: () => provider.segnaTutteNotificheComeLette(),
-                child: const Text("Leggi tutte", style: TextStyle(color: Colors.white)),
+                child: const Text("Leggi tutte", style: TextStyle(color: AppColors.white)),
               ),
           ]
         ],
@@ -50,8 +50,8 @@ class NotificheScreen extends StatelessWidget {
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        color: Colors.red,
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        color: AppColors.error,
+                        child: const Icon(Icons.delete, color: AppColors.white),
                       ),
                       confirmDismiss: (direction) async {
                         return await showDialog(
@@ -61,7 +61,7 @@ class NotificheScreen extends StatelessWidget {
                             content: const Text("Questa azione rimuoverà la notifica definitivamente."),
                             actions: [
                               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("ANNULLA")),
-                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("ELIMINA", style: TextStyle(color: Colors.red))),
+                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("ELIMINA", style: TextStyle(color: AppColors.error))),
                             ],
                           ),
                         );
@@ -71,7 +71,7 @@ class NotificheScreen extends StatelessWidget {
                       },
                       child: Card(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        color: n.letta ? Colors.white : Colors.blue[50],
+                        color: n.letta ? Colors.white : AppColors.grey50,
                         elevation: n.letta ? 1 : 3,
                         child: ListTile(
                           // IL TOCCO SEGNA COME LETTO (NON ELIMINA)
@@ -81,16 +81,16 @@ class NotificheScreen extends StatelessWidget {
                             n.messaggio,
                             style: TextStyle(
                               fontWeight: n.letta ? FontWeight.normal : FontWeight.bold,
-                              color: n.letta ? Colors.grey[700] : Colors.black,
+                              color: n.letta ? AppColors.grey700 : Colors.black,
                             ),
                           ),
                           subtitle: Text(
                             DateFormat('dd/MM HH:mm').format(n.dataInvio),
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(fontSize: 12, color: AppColors.grey600),
                           ),
                           trailing: n.letta
-                              ? const Icon(Icons.done_all, color: Colors.green, size: 20)
-                              : const Icon(Icons.circle, color: Colors.blue, size: 10),
+                              ? const Icon(Icons.done_all, color: AppColors.success, size: 20)
+                              : const Icon(Icons.circle, color: AppColors.primary, size: 10),
                         ),
                       ),
                     );
@@ -104,9 +104,9 @@ class NotificheScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey[400]),
+          Icon(Icons.notifications_off_outlined, size: 80, color: AppColors.grey400),
           const SizedBox(height: 16),
-          Text("Nessuna notifica presente", style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+          Text("Nessuna notifica presente", style: TextStyle(fontSize: 18, color: AppColors.grey600)),
         ],
       ),
     );
@@ -114,10 +114,10 @@ class NotificheScreen extends StatelessWidget {
 
   Widget _getNotificaIcon(TipoNotifica tipo) {
     switch (tipo) {
-      case TipoNotifica.info: return const Icon(Icons.info, color: Colors.blue);
-      case TipoNotifica.alert: return const Icon(Icons.warning, color: Colors.red);
-      case TipoNotifica.manutenzione: return const Icon(Icons.build, color: Colors.orange);
-      case TipoNotifica.scadenza: return const Icon(Icons.timer, color: Colors.purple);
+      case TipoNotifica.info: return const Icon(Icons.info, color: AppColors.primary);
+      case TipoNotifica.alert: return const Icon(Icons.warning, color: AppColors.error);
+      case TipoNotifica.manutenzione: return const Icon(Icons.build, color: AppColors.secondary);
+      case TipoNotifica.scadenza: return const Icon(Icons.timer, color: AppColors.info);
     }
   }
 
@@ -130,9 +130,9 @@ class NotificheScreen extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ANNULLA")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () { provider.eliminaTutteLeNotifiche(); Navigator.pop(ctx); },
-            child: const Text("ELIMINA TUTTO", style: TextStyle(color: Colors.white)),
+            child: const Text("ELIMINA TUTTO", style: TextStyle(color: AppColors.white)),
           ),
         ],
       ),

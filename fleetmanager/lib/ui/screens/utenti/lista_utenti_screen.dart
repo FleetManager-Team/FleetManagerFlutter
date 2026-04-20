@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
-
+import 'package:fleetmanager/core/theme/index.dart';
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
 
@@ -48,12 +48,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text("Gestione Utenti",
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue[900],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
         elevation: 0,
         actions: [
           IconButton(
@@ -71,7 +71,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 : listaFiltrata.isEmpty
                     ? const Center(child: Text("Nessun utente trovato"))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: listaFiltrata.length,
                         itemBuilder: (context, index) =>
                             _buildUserCard(listaFiltrata[index]),
@@ -80,8 +80,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blue[900],
-        child: const Icon(Icons.person_add, color: Colors.white),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Icons.person_add, color: AppColors.white),
         onPressed: () => _showUserForm(context),
       ),
     );
@@ -90,7 +90,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Widget _buildFilterBar() {
     return Container(
       height: 60,
-      color: Colors.white,
+      color: AppColors.white,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -112,9 +112,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         labelStyle: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : Colors.blue[900]),
+            color: isSelected ? Colors.white : AppColors.primary),
         selected: isSelected,
-        selectedColor: Colors.blue[900],
+        selectedColor: AppColors.primary,
         onSelected: (val) => setState(() => filtroRuolo = val ? ruolo : null),
       ),
     );
@@ -124,13 +124,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final bool isManager = u.ruoloUtente == RuoloUtente.manager;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => _showUserDetails(u),
         leading: CircleAvatar(
-          backgroundColor: isManager ? Colors.orange[100] : Colors.blue[100],
+          backgroundColor: isManager ? AppColors.secondaryLight : AppColors.grey50,
           child: Icon(Icons.person,
-              color: isManager ? Colors.orange[800] : Colors.blue[800]),
+              color: isManager ? AppColors.secondary : AppColors.primaryDark),
         ),
         title: Text("${u.nome} ${u.cognome}"),
         subtitle: Text("${u.email} • ${u.ruoloUtente.name.toUpperCase()}"),
@@ -159,7 +159,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               Navigator.pop(context);
               _confirmDelete(u);
             },
-            child: const Text("ELIMINA", style: TextStyle(color: Colors.red)),
+            child: const Text("ELIMINA", style: TextStyle(color: AppColors.error)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -239,7 +239,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: Colors.blue[900]),
+                    backgroundColor: AppColors.primary),
                 onPressed: () async {
                   final provider = context.read<FleetProvider>();
 
@@ -301,7 +301,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   }
                 },
                 child:
-                    const Text("SALVA", style: TextStyle(color: Colors.white)),
+                    const Text("SALVA", style: TextStyle(color: AppColors.white)),
               ),
             ],
           ),
@@ -329,7 +329,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 // dovrebbe già gestire la rimozione dalla lista o chiamare notifyListeners()
               }
             },
-            child: const Text("ELIMINA", style: TextStyle(color: Colors.red)),
+            child: const Text("ELIMINA", style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -341,7 +341,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.blue[900]),
+          Icon(icon, size: 18, color: AppColors.primary),
           const SizedBox(width: 10),
           Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
           Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),

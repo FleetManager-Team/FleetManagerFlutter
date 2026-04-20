@@ -3,6 +3,7 @@ import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
 import 'package:fleetmanager/models/manutenzione.dart';
@@ -54,12 +55,12 @@ class _MaintenanceDashboardScreenState
         provider.manutenzioni.where((m) => m.oraFine == null).toList();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text("Gestione Manutenzioni",
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange[800],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.secondary,
+        foregroundColor: AppColors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -76,7 +77,7 @@ class _MaintenanceDashboardScreenState
                   child: manutenzioniAttive.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(AppSpacing.lg),
                           itemCount: manutenzioniAttive.length,
                           itemBuilder: (context, index) {
                             final m = manutenzioniAttive[index];
@@ -101,11 +102,11 @@ class _MaintenanceDashboardScreenState
           provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager
               ? FloatingActionButton.extended(
                   onPressed: () => _showMaintenanceForm(context),
-                  backgroundColor: Colors.orange[800],
-                  icon: const Icon(Icons.build, color: Colors.white),
+                  backgroundColor: AppColors.secondary,
+                  icon: const Icon(Icons.build, color: AppColors.white),
                   label: const Text("NUOVO INTERVENTO",
                       style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
+                          color: AppColors.white, fontWeight: FontWeight.bold)),
                 )
               : null,
     );
@@ -114,11 +115,11 @@ class _MaintenanceDashboardScreenState
   Widget _buildSummaryHeader(int count) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+          BoxShadow(color: AppColors.grey900.withOpacity(0.05), blurRadius: 10)
         ],
       ),
       child: Column(
@@ -129,7 +130,7 @@ class _MaintenanceDashboardScreenState
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           Text("Lista degli interventi attivi e programmati",
-              style: TextStyle(color: Colors.grey[600])),
+              style: TextStyle(color: AppColors.grey600)),
         ],
       ),
     );
@@ -143,23 +144,23 @@ class _MaintenanceDashboardScreenState
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: isFuture ? 1 : 4,
-      color: isFuture ? Colors.orange[50] : Colors.white,
+      color: isFuture ? Colors.orange[50] : AppColors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
         side: BorderSide(
-          color: isFuture ? Colors.orange[200]! : Colors.orange[800]!,
+          color: isFuture ? AppColors.secondaryLight! : AppColors.secondary!,
           width: isFuture ? 1 : 2,
         ),
       ),
       child: ListTile(
         onTap: () => _showMaintenanceDetails(v, provider),
         leading: CircleAvatar(
-          backgroundColor: isFuture ? Colors.orange[100] : Colors.orange[800],
+          backgroundColor: isFuture ? Colors.orange[100] : AppColors.secondary,
           child: Icon(
             v.tipoVeicolo == TipoVeicolo.furgone
                 ? Icons.local_shipping
                 : Icons.directions_car,
-            color: isFuture ? Colors.orange[800] : Colors.white,
+            color: isFuture ? AppColors.secondary : AppColors.white,
           ),
         ),
         title: Text("${v.marca} ${v.modello}",
@@ -175,7 +176,7 @@ class _MaintenanceDashboardScreenState
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: isFuture ? FontWeight.normal : FontWeight.bold,
-                    color: isFuture ? Colors.orange[900] : Colors.orange[800])),
+                    color: isFuture ? Colors.orange[900] : AppColors.secondary)),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -221,7 +222,7 @@ class _MaintenanceDashboardScreenState
               child: const Text("CHIUDI")),
           if (provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager)
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.orange),
+              icon: const Icon(Icons.edit, color: AppColors.secondary),
               onPressed: () {
                 Navigator.pop(context);
                 _showMaintenanceForm(context,
@@ -237,7 +238,7 @@ class _MaintenanceDashboardScreenState
               if (mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, foregroundColor: Colors.white),
+                backgroundColor: AppColors.success, foregroundColor: AppColors.white),
             child: const Text("RIENTRO VEICOLO"),
           ),
         ],
@@ -372,8 +373,8 @@ class _MaintenanceDashboardScreenState
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[800],
-                    foregroundColor: Colors.white),
+                    backgroundColor: AppColors.secondary,
+                    foregroundColor: AppColors.white),
                 child: Text(isEditing ? "SALVA MODIFICHE" : "PROGRAMMA"),
               ),
             ],

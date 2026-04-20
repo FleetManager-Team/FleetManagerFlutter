@@ -3,6 +3,7 @@ import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -69,13 +70,13 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               ? "Prenotazione approvata"
               : "Prenotazione rifiutata"),
           backgroundColor: nuovoStato == StatoPrenotazione.attiva
-              ? Colors.green
-              : Colors.red,
+              ? AppColors.success
+              : AppColors.error,
         ),
       );
     } catch (e) {
       messenger.showSnackBar(
-          SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red));
+          SnackBar(content: Text("Errore: $e"), backgroundColor: AppColors.error));
     }
   }
 
@@ -87,11 +88,11 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     final isManager = utente?.idUtente != prenotazione.idUtente;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: Text("Dettaglio ${prenotazione.targa}"),
-        backgroundColor: Colors.blueGrey[800],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.grey800,
+        foregroundColor: AppColors.white,
         elevation: 0,
       ),
       body: FutureBuilder<Map<String, dynamic>>(
@@ -107,7 +108,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           final kmVeicolo = dati?['km_veicolo'] ?? 'N/D';
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               // 1. HEADER: Info principali prenotazione e driver
               _buildHeader(context, df, kmVeicolo, provider),
@@ -123,7 +124,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
               // 3. STATO ANNULLATO: Messaggio chiaro se la pratica è chiusa negativamente
               if (prenotazione.statoPrenotazione == StatoPrenotazione.annullata)
-                _buildStatusCard("Prenotazione annullata", Colors.red),
+                _buildStatusCard("Prenotazione annullata", AppColors.error),
 
               // 4. REPORT TECNICO (CHECKUP): Foto carrozzeria e checklist (NOVITÀ)
               if (checkup != null) ...[
@@ -152,7 +153,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                   child: Center(
                     child: Text("Puoi modificare i dati in caso di errore",
                         style: TextStyle(
-                            color: Colors.grey,
+                            color: AppColors.grey500,
                             fontSize: 12,
                             fontStyle: FontStyle.italic)),
                   ),
@@ -185,17 +186,17 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           children: [
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: Colors.blueGrey[50],
+                  backgroundColor: AppColors.grey50,
                   radius: 25,
-                  child: Icon(Icons.person, color: Colors.blueGrey[800]),
+                  child: Icon(Icons.person, color: AppColors.grey800),
                 ),
                 const SizedBox(width: 15),
                 Expanded(
@@ -207,7 +208,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                               fontWeight: FontWeight.bold, fontSize: 22)),
                       Text("${driver.nome} ${driver.cognome}",
                           style:
-                              TextStyle(fontSize: 16, color: Colors.grey[700])),
+                              TextStyle(fontSize: 16, color: AppColors.grey700)),
                     ],
                   ),
                 ),
@@ -228,9 +229,9 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
   /// Nuova sezione per visualizzare il report tecnico (CheckupVeicolo)
   Widget _buildCheckupSection(BuildContext context, CheckupVeicolo c) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -248,7 +249,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey)),
+                    color: AppColors.grey500)),
             const SizedBox(height: 12),
             SizedBox(
               height: 80,
@@ -269,7 +270,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey)),
+                      color: AppColors.grey500)),
               const SizedBox(height: 8),
               Image.network(c.urlFirma!, height: 50, fit: BoxFit.contain),
             ]
@@ -299,21 +300,21 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               "Spesa Carburante",
               "${dati['importo_euro']} € | ${dati['litri_carburante']} L",
               dati['url_scontrino'],
-              Colors.blue[50]!),
+              AppColors.grey50!),
         if (dati['ha_pedaggi'] == true)
           _buildDetailTile(
               context,
               "Pedaggi / Parcheggi",
               "${dati['importo_pedaggi']} €",
               dati['url_foto_pedaggio'],
-              Colors.orange[50]!),
+              AppColors.secondaryLight),
         if (dati['danni_presenti'] == true)
           _buildDetailTile(
               context,
               "Danni Segnalati",
               dati['descrizione_danni'] ?? "Vedi foto",
               dati['url_foto_danni'],
-              Colors.red[50]!),
+              AppColors.error.withOpacity(0.1)),
       ],
     );
   }
@@ -326,7 +327,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
       color: bg,
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         title: Text(title,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -351,7 +352,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
       child: GestureDetector(
         onTap: () => _mostraImmagine(context, url),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover),
         ),
       ),
@@ -361,12 +362,12 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
   Widget _statusIconLabel(bool value, IconData icon, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.blueGrey[300], size: 20),
+        Icon(icon, color: AppColors.grey300, size: 20),
         const SizedBox(height: 4),
         Row(
           children: [
             Icon(value ? Icons.check_circle : Icons.cancel,
-                color: value ? Colors.green : Colors.red, size: 14),
+                color: value ? AppColors.success : AppColors.error, size: 14),
             const SizedBox(width: 4),
             Text(label, style: const TextStyle(fontSize: 11)),
           ],
@@ -380,7 +381,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
           border: Border.all(color: color)),
       child: Text(text,
           style: TextStyle(
@@ -409,7 +410,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label,
-                style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                style: TextStyle(color: AppColors.grey600, fontSize: 13)),
             Text(val,
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -421,10 +422,10 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
   Widget _buildInfoCard(String title, List<Widget> children) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
               style: const TextStyle(
@@ -443,10 +444,10 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
       color: color.withOpacity(0.05),
       elevation: 0,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           side: BorderSide(color: color.withOpacity(0.2))),
       child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Center(
               child: Text(text,
                   style:
@@ -468,10 +469,10 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               icon: const Icon(Icons.check),
               label: const Text("APPROVA"),
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.success,
+                  foregroundColor: AppColors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10))),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault))),
             ),
           ),
           const SizedBox(width: 12),
@@ -482,10 +483,10 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               icon: const Icon(Icons.close),
               label: const Text("RIFIUTA"),
               style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10))),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault))),
             ),
           ),
         ],
@@ -508,10 +509,10 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
           color: Colors.amber[50],
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           border: Border.all(color: Colors.amber[200]!)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,7 +553,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                 right: 20,
                 child: IconButton(
                     icon:
-                        const Icon(Icons.close, color: Colors.white, size: 30),
+                        const Icon(Icons.close, color: AppColors.white, size: 30),
                     onPressed: () => Navigator.pop(context))),
           ],
         ),
@@ -562,17 +563,17 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
   Widget _buildNoDataWarning() {
     return Card(
-      color: Colors.orange[50],
+      color: AppColors.secondaryLight,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: const Padding(
-        padding: EdgeInsets.all(20),
+        padding: EdgeInsets.all(AppSpacing.xl),
         child: Column(children: [
-          Icon(Icons.access_time, color: Colors.orange, size: 32),
+          Icon(Icons.access_time, color: AppColors.secondary, size: 32),
           SizedBox(height: 10),
           Text("In attesa di Riconsegna",
               style:
-                  TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                  TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary)),
           Text("Il driver non ha ancora caricato i dati finali.",
               textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
         ]),
@@ -591,11 +592,11 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                     RestituzioneVeicoloScreen(prenotazione: prenotazione))),
         style: ElevatedButton.styleFrom(
           backgroundColor:
-              dati == null ? Colors.orange[800] : Colors.blueGrey[700],
-          foregroundColor: Colors.white,
+              dati == null ? AppColors.secondary : AppColors.grey700,
+          foregroundColor: AppColors.white,
           minimumSize: const Size(double.infinity, 50),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
         ),
         icon: Icon(dati == null ? Icons.add_a_photo : Icons.edit_note),
         label: Text(

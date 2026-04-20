@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
@@ -149,7 +150,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text("Imprevisto GPS: $e"),
-            backgroundColor: Colors.orange),
+            backgroundColor: AppColors.secondary),
       );
     }
   }
@@ -168,22 +169,22 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   @override
   Widget build(BuildContext context) {
     final Color themeColor =
-        widget.isEmergenza ? Colors.red[700]! : const Color(0xFF388E3C);
+        widget.isEmergenza ? AppColors.error! : const Color(0xFF388E3C);
     final String title =
         widget.isEmergenza ? "Segnalazione Emergenza" : "Restituzione Veicolo";
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       appBar: AppBar(
         title: Text(title),
         backgroundColor: themeColor,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.white,
         elevation: 0,
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: themeColor))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -206,7 +207,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     return [
       const Text("Localizzazione e Guasto",
           style: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+              fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.error)),
       const SizedBox(height: 15),
       _buildPosizioneField(),
       const SizedBox(height: 15),
@@ -222,7 +223,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   List<Widget> _buildStandardReturnFields() {
     return [
       const Text("Dati di rientro",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          style: AppTextStyles.headlineMedium),
       const SizedBox(height: 15),
       _buildKmField(),
       const SizedBox(height: 25),
@@ -258,7 +259,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       ],
       const Divider(height: 40),
       _buildSwitch("Sono presenti nuovi danni?", _danniPresenti,
-          (v) => setState(() => _danniPresenti = v), Colors.red),
+          (v) => setState(() => _danniPresenti = v), AppColors.error),
       if (_danniPresenti) ...[
         _buildTextField(
             _descrizioneDanniController, "Descrizione danni", Icons.edit_note,
@@ -270,11 +271,11 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
 
   Widget _buildVehicleHeader(Color color) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey[300]!)),
+          color: AppColors.grey100,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+          border: Border.all(color: AppColors.grey300!)),
       child: Row(
         children: [
           Icon(Icons.directions_car, color: color, size: 40),
@@ -306,7 +307,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       decoration: InputDecoration(
         labelText: "Chilometri attuali",
         prefixIcon: const Icon(Icons.speed),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       ),
       validator: (v) {
         if (v == null || v.isEmpty) return "Inserisci i KM";
@@ -328,10 +329,10 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         prefixIcon: const Icon(Icons.location_on),
         suffixIcon: _isLocating
             ? const Padding(
-                padding: EdgeInsets.all(12),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: CircularProgressIndicator(strokeWidth: 2))
             : IconButton(
-                icon: const Icon(Icons.gps_fixed, color: Colors.blue),
+                icon: const Icon(Icons.gps_fixed, color: AppColors.primary),
                 onPressed: _prendiPosizioneGps),
         border: const OutlineInputBorder(),
       ),
@@ -364,7 +365,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                 (i) => Text(i == 0 ? "V" : (i == 8 ? "P" : "$i/8"),
                     style: const TextStyle(
                         fontSize: 11,
-                        color: Colors.grey,
+                        color: AppColors.grey500,
                         fontWeight: FontWeight.bold))),
           ),
         ),
@@ -459,7 +460,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         _urlFotoScontrinoEsistente == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Inserisci la foto dello scontrino."),
-          backgroundColor: Colors.orange));
+          backgroundColor: AppColors.secondary));
       return;
     }
 
@@ -503,13 +504,13 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         scaffoldMessenger.showSnackBar(SnackBar(
             content: Text(
                 widget.isEmergenza ? "SOS Inviato" : "Restituzione Completata"),
-            backgroundColor: Colors.green));
+            backgroundColor: AppColors.success));
         navigator.pop();
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
       scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red));
+          SnackBar(content: Text("Errore: $e"), backgroundColor: AppColors.error));
     }
   }
 
@@ -521,9 +522,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         onPressed: _submitForm,
         style: ElevatedButton.styleFrom(
             backgroundColor: color,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.white,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMedium))),
         child: Text(
             widget.isEmergenza
                 ? "INVIA SEGNALAZIONE SOS"

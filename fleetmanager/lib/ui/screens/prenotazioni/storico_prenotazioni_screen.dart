@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
@@ -49,12 +50,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     storico.sort((a, b) => b.dataFine.compareTo(a.dataFine));
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text("Storico Prenotazioni",
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blueGrey[800],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.grey800,
+        foregroundColor: AppColors.white,
         elevation: 0,
       ),
       body: Column(
@@ -84,8 +85,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     return Container(
       height: 60,
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        color: AppColors.white,
+        boxShadow: [BoxShadow(color: AppColors.grey900.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
@@ -107,8 +108,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
         selected: isSelected,
         onSelected: (val) => setState(() => filtroStato = val ? stato : null),
-        selectedColor: Colors.blueGrey[800],
-        labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.blueGrey[800]),
+        selectedColor: AppColors.grey800,
+        labelStyle: TextStyle(color: isSelected ? Colors.white : AppColors.grey800),
       ),
     );
   }
@@ -136,22 +137,22 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
         side: BorderSide(color: Colors.grey.withOpacity(0.2)),
       ),
       child: InkWell( // Rende tutta la card cliccabile
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => DettaglioPrenotazioneManager(prenotazione: p)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
               // Icona di stato a sinistra
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.1),
                   shape: BoxShape.circle,
@@ -172,7 +173,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     const SizedBox(height: 2),
                     Text(
                       "${driver.nome} ${driver.cognome}",
-                      style: TextStyle(color: Colors.blueGrey[600], fontSize: 13),
+                      style: TextStyle(color: AppColors.grey600, fontSize: 13),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -181,7 +182,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                         const SizedBox(width: 4),
                         Text(
                           df.format(p.dataFine.toLocal()),
-                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          style: const TextStyle(color: AppColors.grey500, fontSize: 12),
                         ),
                       ],
                     ),
@@ -190,7 +191,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               ),
               
               // Frecciolina a destra
-              Icon(Icons.chevron_right, color: Colors.grey[400]),
+              Icon(Icons.chevron_right, color: AppColors.grey400),
             ],
           ),
         ),
@@ -205,7 +206,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
         children: [
           Icon(Icons.history_toggle_off, size: 60, color: Colors.grey),
           SizedBox(height: 16),
-          Text("Nessun record trovato nello storico.", style: TextStyle(color: Colors.grey)),
+          Text("Nessun record trovato nello storico.", style: TextStyle(color: AppColors.grey500)),
         ],
       ),
     );

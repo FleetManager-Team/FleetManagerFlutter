@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 
 class DetailsPopUp extends StatelessWidget {
   final String title;
@@ -22,10 +23,10 @@ class DetailsPopUp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge)),
       title: Row(
         children: [
-          Icon(titleIcon, color: Colors.blue[900]),
+          Icon(titleIcon, color: AppColors.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -51,7 +52,7 @@ class DetailsPopUp extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
-                  color: Colors.blue[900],
+                  color: AppColors.primary,
                   letterSpacing: 1.1,
                 ),
               ),
@@ -59,12 +60,12 @@ class DetailsPopUp extends StatelessWidget {
               // Ecco il riquadro che racchiude l'informazione
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50], // Sfondo leggero
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.grey50, // Sfondo leggero
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                   border:
-                      Border.all(color: Colors.blue[100]!), // Bordino sottile
+                      Border.all(color: AppColors.primaryLight), // Bordino sottile
                 ),
                 child: extraContent!,
               ),

@@ -3,6 +3,7 @@ import 'package:fleetmanager/models/restituzione.dart';
 import 'package:fleetmanager/ui/screens/checkup_iniziale/checkup_screen.dart';
 import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
 import 'package:fleetmanager/ui/screens/emergenze/emergenze_screen.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
@@ -56,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: _buildAppBar(context, utente),
       drawer: _buildDrawer(context, utente),
       body: provider.isLoading
@@ -65,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onRefresh: () => provider.inizializzaDati(),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -128,8 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return AppBar(
       elevation: 0,
-      backgroundColor: Colors.blue[800],
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.primaryDark,
+      foregroundColor: AppColors.white,
       title: const Text(
         "FleetManager Pro",
         style: TextStyle(fontWeight: FontWeight.bold),
@@ -159,15 +160,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.error,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                   ),
                   constraints:
                       const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text(
                     '$notificheNonLette',
                     style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
@@ -186,10 +187,10 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text("Bentornato,",
-            style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+            style: TextStyle(fontSize: 16, color: AppColors.grey600)),
         Text(
           "${utente?.nome ?? ''} ${utente?.cognome ?? ''}",
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          style: AppTextStyles.displayMedium,
         ),
       ],
     );
@@ -213,11 +214,11 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.only(top: 15),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           gradient:
-              LinearGradient(colors: [Colors.green[700]!, Colors.green[500]!]),
-          borderRadius: BorderRadius.circular(15),
+              LinearGradient(colors: [AppColors.success!, AppColors.success!]),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
               color: Colors.green.withOpacity(0.2),
@@ -232,10 +233,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   "VEICOLO IN USO",
                   style: TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.white.withOpacity(0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1),
@@ -243,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   attiva.targa,
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                      color: AppColors.white, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -251,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               "Stai terminando il viaggio?",
               style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
             ),
@@ -275,8 +276,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.green[700]),
+                      backgroundColor: AppColors.white,
+                      foregroundColor: AppColors.success),
                   child: const Text("RESTITUISCI VEICOLO"),
                 ),
 
@@ -296,8 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red, // Sfondo rosso
-                    foregroundColor: Colors.white, // Icona bianca
+                    backgroundColor: AppColors.error, // Sfondo rosso
+                    foregroundColor: AppColors.white, // Icona bianca
                     shape:
                         const CircleBorder(), // Forma perfettamente circolare
                     padding: const EdgeInsets.all(
@@ -327,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
             "Auto",
             provider.veicoli.length.toString(),
             Icons.directions_car,
-            Colors.blue,
+            AppColors.primary,
             () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const VehicleListScreen()))),
         _statCard(
@@ -340,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
               .length
               .toString(),
           Icons.assignment,
-          Colors.purple,
+          AppColors.info,
           () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const BookingListScreen()),
@@ -350,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
             "Officina",
             inManutenzione.toString(),
             Icons.build,
-            Colors.orange,
+            AppColors.secondary,
             () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -362,18 +363,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDriverActionCard(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         gradient:
-            LinearGradient(colors: [Colors.blue[700]!, Colors.blue[500]!]),
-        borderRadius: BorderRadius.circular(15),
+            LinearGradient(colors: [AppColors.primaryDark!, Colors.blue[500]!]),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Hai bisogno di un'auto?",
               style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
@@ -383,8 +384,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(
                     builder: (_) => const NuovaPrenotazioneScreen())),
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue[700]),
+                backgroundColor: AppColors.white,
+                foregroundColor: AppColors.primaryDark),
             child: const Text("NUOVA PRENOTAZIONE"),
           ),
         ],
@@ -425,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Text("Nessuna attività recente.",
-            style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+            style: TextStyle(color: AppColors.grey500, fontStyle: FontStyle.italic)),
       );
     }
 
@@ -467,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 10),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
           child: ListTile(
             onTap: isManager
                 ? () => Navigator.push(
@@ -501,15 +502,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
+                      color: AppColors.secondary,
                       border:
-                          Border.all(color: Colors.orange.shade700, width: 1),
-                      borderRadius: BorderRadius.circular(12),
+                          Border.all(color: AppColors.secondary, width: 1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                     ),
                     child: Text(
                       "SOVRAPPOSIZIONE",
                       style: TextStyle(
-                        color: Colors.orange.shade900,
+                        color: AppColors.secondary,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
@@ -552,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           IconButton(
                               icon: const Icon(Icons.edit_calendar,
-                                  color: Colors.blue, size: 22),
+                                  color: AppColors.primary, size: 22),
                               onPressed: () =>
                                   _mostraDialogModifica(context, p)),
                           IconButton(
@@ -612,10 +613,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: Card(
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(children: [
@@ -638,7 +639,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Text(title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)));
+            style: AppTextStyles.headlineMedium));
   }
 
   Widget _buildDrawer(BuildContext context, Utente? utente) {
@@ -646,20 +647,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return Drawer(
       child: Column(children: [
         UserAccountsDrawerHeader(
-          decoration: BoxDecoration(color: Colors.blue[800]),
+          decoration: BoxDecoration(color: AppColors.primaryDark),
           accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
           accountEmail: Text(utente?.email ?? ''),
           currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.white,
               child: Icon(Icons.person, size: 40)),
         ),
         ListTile(
-            leading: const Icon(Icons.home, color: Colors.blue),
+            leading: const Icon(Icons.home, color: AppColors.primary),
             title: const Text("Dashboard"),
             onTap: () => Navigator.pop(context)),
         if (isManager)
           ListTile(
-              leading: const Icon(Icons.people, color: Colors.green),
+              leading: const Icon(Icons.people, color: AppColors.success),
               title: const Text("Gestione Utenti"),
               onTap: () {
                 Navigator.pop(context);
@@ -680,7 +681,7 @@ class _HomeScreenState extends State<HomeScreen> {
             }),
         if (isManager)
           ListTile(
-            leading: const Icon(Icons.bar_chart_rounded, color: Colors.orange),
+            leading: const Icon(Icons.bar_chart_rounded, color: AppColors.secondary),
             title: const Text("Analisi Costi"),
             onTap: () {
               Navigator.push(
@@ -691,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         if (isManager)
           ListTile(
-            leading: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            leading: const Icon(Icons.warning_amber_rounded, color: AppColors.error),
             title: const Text("Emergenze"),
             onTap: () {
               Navigator.pop(context);
@@ -705,7 +706,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const Spacer(),
         const Divider(),
         ListTile(
-            leading: const Icon(Icons.exit_to_app, color: Colors.red),
+            leading: const Icon(Icons.exit_to_app, color: AppColors.error),
             title: const Text("Logout"),
             onTap: () {
               context.read<FleetProvider>().logout();
@@ -728,7 +729,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isScrollControlled: true,
         builder: (ctx) => StatefulBuilder(
             builder: (context, setModalState) => Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(AppSpacing.xl),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     const Text("Modifica Orari",
                         style: TextStyle(
@@ -837,14 +838,14 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.only(top: 15),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-              colors: [Colors.orange[700]!, Colors.orange[400]!]),
-          borderRadius: BorderRadius.circular(15),
+              colors: [AppColors.secondary!, AppColors.secondaryLight!]),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
-              color: Colors.orange.withOpacity(0.2),
+              color: AppColors.secondary.withOpacity(0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -856,10 +857,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   "PRENOTAZIONE PRONTA",
                   style: TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.white.withOpacity(0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1),
@@ -867,7 +868,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   daRitirare.targa,
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                      color: AppColors.white, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -875,13 +876,13 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               "Ritira il veicolo adesso",
               style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
             ),
-            const Text(
+            Text(
               "Esegui il controllo perimetrale per partire",
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: AppColors.white.withOpacity(0.7), fontSize: 13),
             ),
             const SizedBox(height: 15),
             ElevatedButton.icon(
@@ -898,8 +899,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: const Icon(Icons.camera_enhance),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.orange[800],
+                backgroundColor: AppColors.white,
+                foregroundColor: AppColors.secondary,
               ),
               label: const Text("INIZIA ISPEZIONE E PARTI"),
             ),
@@ -940,7 +941,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         // BOX POSIZIONE
         ListTile(
-          leading: const Icon(Icons.location_on, color: Colors.red),
+          leading: const Icon(Icons.location_on, color: AppColors.error),
           title: const Text("Posizione segnalata"),
           subtitle: Text(datiSos['posizione_emergenza'] ?? "N/D"),
           trailing: IconButton(
@@ -950,11 +951,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         // BOX DANNO
         Container(
-          padding: const EdgeInsets.all(12),
-          color: Colors.white,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          color: AppColors.white,
           child: Row(
             children: [
-              const Icon(Icons.build_circle, color: Colors.orange),
+              const Icon(Icons.build_circle, color: AppColors.secondary),
               const SizedBox(width: 10),
               Expanded(
                   child: Text("Problema: ${datiSos['descrizione_danni']}")),
@@ -973,14 +974,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.red[700]!, Colors.orange[800]!],
+          colors: [AppColors.error!, AppColors.secondary!],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
         boxShadow: [
           BoxShadow(
             color: Colors.red.withOpacity(0.3),
@@ -995,7 +996,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             children: [
               const Icon(Icons.warning_amber_rounded,
-                  color: Colors.white, size: 28),
+                  color: AppColors.white, size: 28),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1003,7 +1004,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? "EMERGENZA: ${prenotazione.targa}"
                       : "SEGNALAZIONE SOS ATTIVA",
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold),
                 ),
@@ -1015,18 +1016,18 @@ class _HomeScreenState extends State<HomeScreen> {
             isManager
                 ? "Un driver ha segnalato un guasto o incidente. Verifica subito la posizione."
                 : "Hai segnalato un'emergenza per il veicolo ${prenotazione.targa}. Completa i dati appena possibile.",
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(color: AppColors.white.withOpacity(0.7), fontSize: 14),
           ),
           const SizedBox(height: 15),
           ElevatedButton(
             onPressed: onTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.red[700],
+              backgroundColor: AppColors.white,
+              foregroundColor: AppColors.error,
               // CORREZIONE QUI:
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
             ),
             child: Text(
                 isManager ? "VEDI DETTAGLI E MAPPA" : "COMPLETA PROCEDURA"),
@@ -1057,14 +1058,14 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
               "Dettaglio Emergenza",
               style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                  fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.error),
             ),
             const Divider(height: 30),
 

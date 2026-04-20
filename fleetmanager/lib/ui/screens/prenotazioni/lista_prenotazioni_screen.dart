@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
@@ -62,7 +63,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     });
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: _buildAppBar(provider),
       body: Column(
         children: [
@@ -75,7 +76,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
                     : RefreshIndicator(
                         onRefresh: () => provider.inizializzaDati(),
                         child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(AppSpacing.md),
                           itemCount: lista.length,
                           itemBuilder: (context, index) => _buildBookingCard(
                               lista[index], provider, isManager),
@@ -91,8 +92,8 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return AppBar(
       title: const Text("Registro Prenotazioni",
           style: TextStyle(fontWeight: FontWeight.bold)),
-      backgroundColor: Colors.blue[900],
-      foregroundColor: Colors.white,
+      backgroundColor: AppColors.primary,
+      foregroundColor: AppColors.white,
       actions: [
         IconButton(
           icon:
@@ -109,8 +110,8 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
   Widget _buildSearchAndFilters() {
     return Container(
-      padding: const EdgeInsets.all(12),
-      color: Colors.white,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      color: AppColors.white,
       child: Row(
         children: [
           Expanded(
@@ -120,10 +121,10 @@ class _BookingListScreenState extends State<BookingListScreen> {
                 hintText: "Cerca targa...",
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: AppColors.grey100,
                 contentPadding: EdgeInsets.zero,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -160,7 +161,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => _showBookingDetails(p, provider, isManager, driver),
         leading: CircleAvatar(
@@ -175,7 +176,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
             Text("Inizio: ${DateFormat('dd/MM HH:mm').format(p.dataInizio)}"),
             if (isManager && driver != null)
               Text("Driver: ${driver.nome} ${driver.cognome}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  style: const TextStyle(fontSize: 12, color: AppColors.grey500)),
           ],
         ),
         trailing: _buildStatusTag(p.statoPrenotazione, statusColor),
@@ -193,7 +194,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
         title: const Text("Dettaglio Prenotazione"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -209,7 +210,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
               child: Text(p.statoPrenotazione.name.toUpperCase(),
                   style: TextStyle(
                       color: statusColor, fontWeight: FontWeight.bold)),
@@ -222,11 +223,11 @@ class _BookingListScreenState extends State<BookingListScreen> {
               child: const Text("CHIUDI")),
           if (isManager &&
               p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
-            _actionButton("RIFIUTA", Colors.red[400]!, () async {
+            _actionButton("RIFIUTA", AppColors.error, () async {
               await provider.annullaPrenotazione(p.idPrenotazione);
               if (mounted) Navigator.pop(context);
             }),
-            _actionButton("APPROVA", Colors.green[600]!, () async {
+            _actionButton("APPROVA", AppColors.success, () async {
               await provider.confermaPrenotazione(p.idPrenotazione);
               if (mounted) Navigator.pop(context);
             }),
@@ -240,7 +241,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(backgroundColor: color),
       onPressed: onPressed,
-      child: Text(label, style: const TextStyle(color: Colors.white)),
+      child: Text(label, style: const TextStyle(color: AppColors.white)),
     );
   }
 
@@ -249,13 +250,13 @@ class _BookingListScreenState extends State<BookingListScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.blue[900]),
+          Icon(icon, size: 20, color: AppColors.primary),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
               Text(value,
                   style: const TextStyle(
                       fontWeight: FontWeight.w500, fontSize: 14)),
@@ -270,11 +271,11 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge)),
       child: Text(
         stato.name.toUpperCase(),
         style: const TextStyle(
-            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+            fontSize: 9, color: AppColors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -284,10 +285,10 @@ class _BookingListScreenState extends State<BookingListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.event_busy, size: 60, color: Colors.grey[400]),
+          Icon(Icons.event_busy, size: 60, color: AppColors.grey400),
           const SizedBox(height: 10),
           Text("Nessuna prenotazione attiva",
-              style: TextStyle(color: Colors.grey[600])),
+              style: TextStyle(color: AppColors.grey600)),
         ],
       ),
     );
@@ -296,19 +297,19 @@ class _BookingListScreenState extends State<BookingListScreen> {
   Color _getBookingStatusColor(StatoPrenotazione stato) {
     switch (stato) {
       case StatoPrenotazione.richiesta:
-        return Colors.orange[800]!;
+        return AppColors.secondary!;
       case StatoPrenotazione.attiva:
-        return Colors.green[700]!;
+        return AppColors.success!;
       case StatoPrenotazione.completata:
-        return Colors.blueGrey[600]!;
+        return AppColors.grey600!;
       case StatoPrenotazione.annullata:
-        return Colors.red[700]!;
+        return AppColors.error!;
       case StatoPrenotazione.confermata:
-        return Colors.blue[700]!;
+        return AppColors.primaryDark!;
       case StatoPrenotazione.sospesa:
         return Colors.grey;
       case StatoPrenotazione.attesaCheckup:
-        return Colors.blue[700]!;
+        return AppColors.primaryDark!;
     }
   }
 }

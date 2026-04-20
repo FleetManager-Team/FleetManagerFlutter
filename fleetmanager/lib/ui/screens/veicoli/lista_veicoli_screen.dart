@@ -3,6 +3,7 @@ import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
 import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -35,12 +36,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             .toList();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text("Parco Veicoli",
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primaryDark,
+        foregroundColor: AppColors.white,
         elevation: 0,
       ),
       body: Column(
@@ -52,7 +53,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 : veicoliFiltrati.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(AppSpacing.md),
                         itemCount: veicoliFiltrati.length,
                         itemBuilder: (context, index) =>
                             _buildVehicleCard(veicoliFiltrati[index]),
@@ -64,8 +65,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager
               ? FloatingActionButton(
                   onPressed: () => _showAddVehicleForm(context),
-                  backgroundColor: Colors.blue[900],
-                  child: const Icon(Icons.add, color: Colors.white),
+                  backgroundColor: AppColors.primary,
+                  child: const Icon(Icons.add, color: AppColors.white),
                 )
               : null,
     );
@@ -75,7 +76,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     return Container(
       height: 60,
       width: double.infinity,
-      color: Colors.white,
+      color: AppColors.white,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -99,10 +100,10 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         labelStyle: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : Colors.blue[800]),
+            color: isSelected ? Colors.white : AppColors.primaryDark),
         selected: isSelected,
-        selectedColor: Colors.blue[800],
-        backgroundColor: Colors.blue[50],
+        selectedColor: AppColors.primaryDark,
+        backgroundColor: AppColors.grey50,
         onSelected: (val) =>
             setState(() => filtroSelezionato = val ? stato : null),
       ),
@@ -125,14 +126,14 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => _showVehicleDetails(v),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
             color: _getStatusColor(v.statoVeicolo).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           ),
           child: Icon(
             v.tipoVeicolo == TipoVeicolo.furgone
@@ -157,12 +158,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 child: Row(
                   children: [
                     const Icon(Icons.event_busy,
-                        color: Colors.orange, size: 14),
+                        color: AppColors.secondary, size: 14),
                     const SizedBox(width: 4),
                     Text(
                       "Manutenzione: ${manutenzioneProgrammata.data.day}/${manutenzioneProgrammata.data.month} ore ${manutenzioneProgrammata.data.hour}:${manutenzioneProgrammata.data.minute.toString().padLeft(2, '0')}",
                       style: const TextStyle(
-                          color: Colors.orange,
+                          color: AppColors.secondary,
                           fontSize: 11,
                           fontWeight: FontWeight.bold),
                     ),
@@ -229,7 +230,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                     "Nessuna prenotazione futura.",
                     style: TextStyle(
                         fontSize: 13,
-                        color: Colors.green,
+                        color: AppColors.success,
                         fontStyle: FontStyle.italic),
                   )),
         actions: [
@@ -241,7 +242,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           if (!isManager && v.statoVeicolo == StatoVeicolo.disponibile)
             ElevatedButton(
               style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.primaryDark),
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -251,7 +252,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 );
               },
               child: const Text("PRENOTA ORA",
-                  style: TextStyle(color: Colors.white)),
+                  style: TextStyle(color: AppColors.white)),
             ),
         ],
       ),
@@ -273,15 +274,15 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            icon: const Icon(Icons.build_circle_outlined, color: Colors.white),
+            icon: const Icon(Icons.build_circle_outlined, color: AppColors.white),
             label: const Text("METTI IN MANUTENZIONE",
                 style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+                    color: AppColors.white, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[800],
+              backgroundColor: AppColors.secondary,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
             ),
             onPressed: () {
               Navigator.pop(context); // Chiude il popup dei dettagli
@@ -300,15 +301,15 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
               ? ElevatedButton.icon(
                   // STATO: RIPRISTINA (Verde)
                   icon: const Icon(Icons.check_circle_outline,
-                      color: Colors.white),
+                      color: AppColors.white),
                   label: const Text("RIPRISTINA DISPONIBILITÀ",
                       style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
+                          color: AppColors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[700],
+                    backgroundColor: AppColors.success,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
                   ),
                   onPressed: () async {
                     await provider.aggiornaStatoVeicolo(
@@ -318,15 +319,15 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 )
               : OutlinedButton.icon(
                   // STATO: SEGNALA FUORI SERVIZIO (Bordo Rosso)
-                  icon: const Icon(Icons.error_outline, color: Colors.red),
+                  icon: const Icon(Icons.error_outline, color: AppColors.error),
                   label: const Text("SEGNALA FUORI SERVIZIO",
                       style: TextStyle(
-                          color: Colors.red, fontWeight: FontWeight.bold)),
+                          color: AppColors.error, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: Colors.red, width: 1.5),
+                    side: const BorderSide(color: AppColors.error, width: 1.5),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
                   ),
                   onPressed: () async {
                     await provider.aggiornaStatoVeicolo(
@@ -344,10 +345,10 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+          Icon(Icons.search_off, size: 60, color: AppColors.grey400),
           const SizedBox(height: 16),
           Text("Nessun veicolo corrisponde al filtro",
-              style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+              style: TextStyle(color: AppColors.grey600, fontSize: 16)),
         ],
       ),
     );
@@ -358,7 +359,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.blueGrey[400]),
+          Icon(icon, size: 16, color: AppColors.grey400),
           const SizedBox(width: 10),
           Text("$label: ",
               style:
@@ -374,12 +375,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: _getStatusColor(stato),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
       ),
       child: Text(
         stato.name.toUpperCase(),
         style: const TextStyle(
-            fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+            fontSize: 9, color: AppColors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -387,13 +388,13 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   Color _getStatusColor(StatoVeicolo stato) {
     switch (stato) {
       case StatoVeicolo.disponibile:
-        return Colors.green[600]!;
+        return AppColors.success;
       case StatoVeicolo.prenotato:
-        return Colors.blue[600]!;
+        return AppColors.primaryDark;
       case StatoVeicolo.inManutenzione:
-        return Colors.orange[700]!;
+        return AppColors.secondary!;
       case StatoVeicolo.fuoriServizio:
-        return Colors.red[700]!;
+        return AppColors.error!;
     }
   }
 
@@ -459,7 +460,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: AppColors.primary,
                 ),
                 onPressed: () async {
                   final provider = context.read<FleetProvider>();
@@ -490,7 +491,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   }
                 },
                 child: const Text("SALVA VEICOLO",
-                    style: TextStyle(color: Colors.white)),
+                    style: TextStyle(color: AppColors.white)),
               ),
               const SizedBox(height: 20),
             ],
@@ -580,8 +581,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[800],
-                    foregroundColor: Colors.white),
+                    backgroundColor: AppColors.secondary,
+                    foregroundColor: AppColors.white),
                 onPressed: () async {
                   final dataCompleta = DateTime(
                       dataSelezionata.year,

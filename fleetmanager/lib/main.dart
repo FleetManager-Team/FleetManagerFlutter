@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:fleetmanager/ui/screens/login_screen.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 
 void main() async {
   // Necessario per inizializzazioni asincrone prima di runApp
@@ -35,10 +36,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Fleet Manager',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue[900]!),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
       locale: const Locale('it', 'IT'),
       supportedLocales: const [
         Locale('it', 'IT'),

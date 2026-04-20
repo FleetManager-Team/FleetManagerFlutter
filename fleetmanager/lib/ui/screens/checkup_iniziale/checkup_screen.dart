@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // Per kIsWeb
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/services/checkup_iniziale_Service.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/services/notifica_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -37,8 +38,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
   // Controller Firma
   final SignatureController _sigController = SignatureController(
     penStrokeWidth: 3,
-    penColor: Colors.black,
-    exportBackgroundColor: Colors.white,
+    penColor: AppColors.grey900,
+    exportBackgroundColor: AppColors.white,
   );
 
   @override
@@ -92,7 +93,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
   }
 
   Widget _buildPreview(XFile? file) {
-    if (file == null) return const Icon(Icons.camera_alt, color: Colors.grey);
+    if (file == null) return const Icon(Icons.camera_alt, color: AppColors.grey500);
 
     // Anteprima differenziata per Web/Mobile per evitare errori di path
     if (kIsWeb) {
@@ -105,16 +106,16 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: Text("Check-up ${widget.targa}"),
-        backgroundColor: Colors.blueGrey[800],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.grey800,
+        foregroundColor: AppColors.white,
       ),
       body: _isSending
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -156,7 +157,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
     return Card(
       elevation: 2,
       child: ListTile(
-        leading: const Icon(Icons.info_outline, color: Colors.blue),
+        leading: const Icon(Icons.info_outline, color: AppColors.primary),
         title: Text("Prenotazione #${widget.idPrenotazione}"),
         subtitle: Text("Veicolo targa: ${widget.targa}"),
       ),
@@ -186,10 +187,10 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
         clipBehavior:
             Clip.antiAlias, // Assicura che l'immagine segua i bordi arrotondati
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           border: Border.all(
-              color: file != null ? Colors.green : Colors.grey[300]!),
+              color: file != null ? Colors.green : AppColors.grey300!),
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -203,7 +204,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
                     const SizedBox(height: 40), // Spazio per l'icona
                     Text(label,
                         style:
-                            const TextStyle(fontSize: 11, color: Colors.grey)),
+                            const TextStyle(fontSize: 11, color: AppColors.grey500)),
                   ],
                 ),
               ),
@@ -214,8 +215,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: const BoxDecoration(
-                      color: Colors.green, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, size: 14, color: Colors.white),
+                      color: AppColors.success, shape: BoxShape.circle),
+                  child: const Icon(Icons.check, size: 14, color: AppColors.white),
                 ),
               ),
           ],
@@ -232,19 +233,19 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
             title: const Text("Luci e Frecce OK"),
             value: _luci,
             onChanged: (v) => setState(() => _luci = v!),
-            activeColor: Colors.green,
+            activeColor: AppColors.success,
           ),
           CheckboxListTile(
             title: const Text("Pneumatici a norma"),
             value: _gomme,
             onChanged: (v) => setState(() => _gomme = v!),
-            activeColor: Colors.green,
+            activeColor: AppColors.success,
           ),
           CheckboxListTile(
             title: const Text("Pulizia interna OK"),
             value: _pulizia,
             onChanged: (v) => setState(() => _pulizia = v!),
-            activeColor: Colors.green,
+            activeColor: AppColors.success,
           ),
         ],
       ),
@@ -257,9 +258,9 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
       maxLines: 3,
       decoration: InputDecoration(
         hintText: "Descrivi eventuali danni preesistenti...",
-        fillColor: Colors.white,
+        fillColor: AppColors.white,
         filled: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       ),
     );
   }
@@ -267,9 +268,9 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
   Widget _buildSignatureArea() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+        border: Border.all(color: AppColors.grey300!),
       ),
       child: Column(
         children: [
@@ -278,7 +279,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
             height: 150,
             backgroundColor: Colors.transparent,
           ),
-          Divider(height: 1, color: Colors.grey[300]),
+          Divider(height: 1, color: AppColors.grey300),
           TextButton.icon(
             onPressed: () => _sigController.clear(),
             icon: const Icon(Icons.delete_outline, size: 18),
@@ -295,14 +296,14 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
       height: 55,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueGrey[800],
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.grey800,
+          foregroundColor: AppColors.white,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
         ),
         onPressed: _submitForm,
         child: const Text("INVIA ISPEZIONE",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: AppTextStyles.headlineSmall),
       ),
     );
   }
@@ -361,14 +362,14 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text("Check-up completato! Buon viaggio."),
-              backgroundColor: Colors.green),
+              backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
       setState(() => _isSending = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Errore: $e"), backgroundColor: Colors.red),
+          SnackBar(content: Text("Errore: $e"), backgroundColor: AppColors.error),
         );
       }
     }

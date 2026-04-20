@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
-
+import 'package:fleetmanager/core/theme/index.dart';
 class NuovaPrenotazioneScreen extends StatefulWidget {
   const NuovaPrenotazioneScreen({super.key});
 
@@ -74,15 +74,15 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Prenota Veicolo"),
-        backgroundColor: Colors.blue[900],
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
       ),
       body: provider.isLoading
           ? const Center(
               child:
                   CircularProgressIndicator()) // Mostra caricamento se il provider sta lavorando
           : Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -116,7 +116,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                   // Data Inizio
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.login, color: Colors.green),
+                      leading: const Icon(Icons.login, color: AppColors.success),
                       title: const Text("Inizio"),
                       subtitle:
                           Text(DateFormat('dd/MM/yyyy HH:mm').format(_inizio)),
@@ -127,7 +127,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                   // Data Fine
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.logout, color: Colors.red),
+                      leading: const Icon(Icons.logout, color: AppColors.error),
                       title: const Text("Fine"),
                       subtitle:
                           Text(DateFormat('dd/MM/yyyy HH:mm').format(_fine)),
@@ -140,11 +140,11 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                   // Pulsante Conferma
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[900],
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium)),
                     ),
                     onPressed: (_targaSelezionata == null ||
                             _fine.isBefore(_inizio))
@@ -207,7 +207,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                       content: Text("Errore: ${e.toString()}"),
-                                      backgroundColor: Colors.red),
+                                      backgroundColor: AppColors.error),
                                 );
                               }
                             }
