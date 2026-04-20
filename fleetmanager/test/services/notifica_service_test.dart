@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fleetmanager/services/notifica_service.dart';
-import 'package:fleetmanager/models/enums/tipo_notifica.dart';
+import 'package:FleetManager/services/notifica_service.dart';
+import 'package:FleetManager/models/enums/tipo_notifica.dart';
 
 import '_service_test_helpers.dart';
 

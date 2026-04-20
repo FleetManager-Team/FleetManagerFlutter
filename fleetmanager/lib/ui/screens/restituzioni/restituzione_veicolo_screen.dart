@@ -3,12 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:fleetmanager/core/theme/index.dart';
+import 'package:FleetManager/core/theme/index.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
-import 'package:fleetmanager/models/prenotazione.dart';
-import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:FleetManager/models/prenotazione.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
 
 class RestituzioneVeicoloScreen extends StatefulWidget {
   final Prenotazione prenotazione;

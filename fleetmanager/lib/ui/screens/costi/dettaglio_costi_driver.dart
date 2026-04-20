@@ -1,9 +1,9 @@
-import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart'; // Ti serve per formattare le date sotto il grafico
-import 'package:fleetmanager/core/theme/index.dart';
+import 'package:FleetManager/core/theme/index.dart';
 
 class DettaglioCostiDriver extends StatefulWidget {
   final int idDriver;

@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart'; // Per kIsWeb
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/services/checkup_iniziale_service.dart';
-import 'package:fleetmanager/core/theme/index.dart';
-import 'package:fleetmanager/services/notifica_service.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/services/checkup_iniziale_service.dart';
+import 'package:FleetManager/core/theme/index.dart';
+import 'package:FleetManager/services/notifica_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';

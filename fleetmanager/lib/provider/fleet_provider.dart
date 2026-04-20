@@ -1,7 +1,8 @@
-import 'package:fleetmanager/models/checkup.dart';
-import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
-import 'package:fleetmanager/models/manutenzione.dart';
-import 'package:fleetmanager/models/enums/ruolo_utente.dart';
+import 'package:FleetManager/models/checkup.dart';
+import 'package:FleetManager/models/enums/tipo_prenotazione.dart';
+import 'package:FleetManager/models/enums/tipo_scadenza.dart';
+import 'package:FleetManager/models/manutenzione.dart';
+import 'package:FleetManager/models/enums/ruolo_utente.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:image_picker/image_picker.dart';
@@ -508,6 +509,9 @@ class FleetProvider with ChangeNotifier {
       await _manutenzioneService.chiudiIntervento(
           idManutenzione, kmFinali, targa);
 
+      // Aggiungi scadenza tagliando (es. ogni 6 mesi)
+      await _scadenzaService.aggiungiScadenzaTagliando(targa, null, 6, DateTime.now());
+
       // Notifica ai manager che la manutenzione è completata
       for (var idMan in _tuttiManagerIds) {
         await _notificaService.notificaManutenzioneCompletata(idMan, targa);
@@ -631,6 +635,11 @@ class FleetProvider with ChangeNotifier {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<void> segnaScadenzaNotificata(int idScadenza) async {
+    await _scadenzaService.segnaNotificata(idScadenza);
+    await inizializzaDati();
   }
 
   /// --- LOGICA ATTIVAZIONE (CHECK-UP) ---
@@ -929,6 +938,133 @@ class FleetProvider with ChangeNotifier {
         // Marca come notificata
         await _scadenzaService.segnaNotificata(scadenza.idScadenza);
       }
+    }
+  }
+
+  /// --- LOGICA SCADENZE ---
+  Future<void> creaScadenza({
+    required String targa,
+    required TipoScadenza tipoScadenza,
+    required DateTime data,
+    int? kmScadenza,
+    int? mesiScadenza,
+    String? descrizione,
+  }) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      final scadenza = Scadenza(
+        idScadenza: 0, // ID temporaneo, il DB genererà quello reale
+        tipoScadenza: tipoScadenza,
+        data: data,
+        notificata: false,
+        targa: targa,
+        kmScadenza: kmScadenza,
+        mesiScadenza: mesiScadenza,
+        descrizione: descrizione,
+      );
+      
+      // Crea la scadenza nel DB
+      await _scadenzaService.creaScadenza(scadenza);
+      
+      // Refresh dei dati per ottenere l'ID corretto dal DB
+      await inizializzaDati();
+      
+      // Trova la scadenza appena creata per ottenere l'ID corretto
+      final scadenzaCreata = _scadenze.firstWhere(
+        (s) => s.targa == targa && 
+               s.tipoScadenza == tipoScadenza && 
+               s.data == data &&
+               !s.notificata,
+        orElse: () => scadenza,
+      );
+      
+      // Notifica ai manager della nuova scadenza con l'ID corretto
+      for (var idMan in _tuttiManagerIds) {
+        await _notificaService.inviaNotificaScadenza(
+            idMan, scadenzaCreata.idScadenza, targa, tipoScadenza.name, data);
+      }
+      
+    } catch (e) {
+      debugPrint("Errore nella creazione della scadenza: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<void> modificaScadenza({
+    required int idScadenza,
+    required String targa,
+    required TipoScadenza tipoScadenza,
+    required DateTime data,
+    int? kmScadenza,
+    int? mesiScadenza,
+    String? descrizione,
+  }) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      final scadenza = Scadenza(
+        idScadenza: idScadenza,
+        tipoScadenza: tipoScadenza,
+        data: data,
+        notificata: false,
+        targa: targa,
+        kmScadenza: kmScadenza,
+        mesiScadenza: mesiScadenza,
+        descrizione: descrizione,
+      );
+      await _scadenzaService.modificaScadenza(idScadenza, scadenza);
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("Errore nella modifica della scadenza: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<void> eliminaScadenza(int idScadenza) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      await _scadenzaService.eliminaScadenza(idScadenza);
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("Errore nell'eliminazione della scadenza: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
+    }
+  }
+
+  Future<void> chiudiScadenza({
+    required int idScadenza,
+    required double costo,
+    required String dettagli,
+  }) async {
+    _isLoading = true;
+    _safeNotify();
+    try {
+      await _scadenzaService.chiudiScadenza(idScadenza, costo, dettagli);
+      
+      // Notifica ai manager che l'intervento è stato completato
+      final scadenza = _scadenze.firstWhere((s) => s.idScadenza == idScadenza);
+      for (var idMan in _tuttiManagerIds) {
+        await _notificaService.notificaManutenzioneCompletata(idMan, scadenza.targa);
+      }
+      
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("Errore nella chiusura della scadenza: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      _safeNotify();
     }
   }
 }

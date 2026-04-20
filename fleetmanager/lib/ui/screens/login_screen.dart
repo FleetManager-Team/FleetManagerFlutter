@@ -1,9 +1,9 @@
-import 'package:fleetmanager/ui/screens/dashboard_screen.dart';
+import 'package:FleetManager/ui/screens/dashboard_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/core/theme/index.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/core/theme/index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {

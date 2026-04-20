@@ -1,27 +1,28 @@
-import 'package:fleetmanager/models/enums/stato_veicolo.dart';
-import 'package:fleetmanager/models/restituzione.dart';
-import 'package:fleetmanager/ui/screens/checkup_iniziale/checkup_screen.dart';
-import 'package:fleetmanager/ui/screens/costi/analisi_costi_screen.dart';
-import 'package:fleetmanager/ui/screens/emergenze/emergenze_screen.dart';
-import 'package:fleetmanager/core/theme/index.dart';
-import 'package:fleetmanager/ui/screens/notifiche/notifiche_screen.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
-import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/storico_prenotazioni_screen.dart';
-import 'package:fleetmanager/ui/screens/utenti/lista_utenti_screen.dart';
-import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
-import 'package:fleetmanager/ui/screens/veicoli/lista_veicoli_screen.dart';
+import 'package:FleetManager/models/enums/stato_veicolo.dart';
+import 'package:FleetManager/models/restituzione.dart';
+import 'package:FleetManager/ui/screens/checkup_iniziale/checkup_screen.dart';
+import 'package:FleetManager/ui/screens/costi/analisi_costi_screen.dart';
+import 'package:FleetManager/ui/screens/emergenze/emergenze_screen.dart';
+import 'package:FleetManager/core/theme/index.dart';
+import 'package:FleetManager/ui/screens/notifiche/notifiche_screen.dart';
+import 'package:FleetManager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
+import 'package:FleetManager/ui/screens/prenotazioni/lista_prenotazioni_screen.dart';
+import 'package:FleetManager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
+import 'package:FleetManager/ui/screens/prenotazioni/storico_prenotazioni_screen.dart';
+import 'package:FleetManager/ui/screens/utenti/lista_utenti_screen.dart';
+import 'package:FleetManager/ui/screens/veicoli/lista_manutenione_screen.dart';
+import 'package:FleetManager/ui/screens/veicoli/lista_veicoli_screen.dart';
+import 'package:FleetManager/ui/screens/scadenze/lista_scadenze_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/models/enums/ruolo_utente.dart';
-import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
-import 'package:fleetmanager/models/prenotazione.dart';
-import 'package:fleetmanager/models/utente.dart';
-import 'package:fleetmanager/ui/screens/login_screen.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/models/enums/ruolo_utente.dart';
+import 'package:FleetManager/models/enums/stato_prenotazione.dart';
+import 'package:FleetManager/models/prenotazione.dart';
+import 'package:FleetManager/models/utente.dart';
+import 'package:FleetManager/ui/screens/login_screen.dart';
+import 'package:FleetManager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -132,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.primaryDark,
       foregroundColor: AppColors.white,
       title: const Text(
-        "FleetManager Pro",
+        "FleetManager",
         style: TextStyle(fontWeight: FontWeight.bold),
       ),
       actions: [
@@ -703,6 +704,18 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+        if (isManager)
+        ListTile(
+            leading: const Icon(Icons.calendar_month_outlined, color: AppColors.warning),
+            title: const Text("Scadenze"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const ListaScadenzeScreen()),
+              );
+            }),
         const Spacer(),
         const Divider(),
         ListTile(

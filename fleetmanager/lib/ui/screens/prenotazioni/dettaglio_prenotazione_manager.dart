@@ -1,9 +1,9 @@
-import 'package:fleetmanager/models/checkup.dart';
-import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
+import 'package:FleetManager/models/checkup.dart';
+import 'package:FleetManager/models/enums/stato_prenotazione.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:fleetmanager/core/theme/index.dart';
+import 'package:FleetManager/core/theme/index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';

@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gotrue/gotrue.dart';
 import 'package:postgrest/postgrest.dart';
 
-import 'package:fleetmanager/models/utente.dart';
-import 'package:fleetmanager/services/auth_service.dart';
-import 'package:fleetmanager/models/enums/ruolo_utente.dart';
+import 'package:FleetManager/models/utente.dart';
+import 'package:FleetManager/services/auth_service.dart';
+import 'package:FleetManager/models/enums/ruolo_utente.dart';
 
 import '_service_test_helpers.dart';
 

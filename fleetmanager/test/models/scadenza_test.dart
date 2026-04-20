@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fleetmanager/models/scadenza.dart';
-import 'package:fleetmanager/models/enums/tipo_scadenza.dart';
+import 'package:FleetManager/models/scadenza.dart';
+import 'package:FleetManager/models/enums/tipo_scadenza.dart';
 
 void main() {
   group('Scadenza model', () {

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../provider/fleet_provider.dart';
 import '../../../models/enums/tipo_notifica.dart';
-import 'package:fleetmanager/core/theme/index.dart';
+import 'package:FleetManager/core/theme/index.dart';
 class NotificheScreen extends StatelessWidget {
   const NotificheScreen({super.key});
 
@@ -27,9 +27,16 @@ class NotificheScreen extends StatelessWidget {
               onPressed: () => _confermaSvuota(context, provider),
             ),
             if (haNotificheNonLette)
-              TextButton(
-                onPressed: () => provider.segnaTutteNotificheComeLette(),
-                child: const Text("Leggi tutte", style: TextStyle(color: AppColors.white)),
+              SizedBox(
+                width: 120,
+                child: TextButton(
+                  onPressed: () => provider.segnaTutteNotificheComeLette(),
+                  child: const Text(
+                    "Leggi tutte",
+                    style: TextStyle(color: AppColors.white, fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
           ]
         ],

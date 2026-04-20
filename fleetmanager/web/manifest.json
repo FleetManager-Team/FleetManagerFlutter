@@ -1,6 +1,6 @@
 {
-    "name": "fleetmanager",
-    "short_name": "fleetmanager",
+    "name": "FleetManager",
+    "short_name": "FleetManager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/models/prenotazione.dart';
-import 'package:fleetmanager/core/theme/index.dart';
-import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
-import 'package:fleetmanager/models/enums/ruolo_utente.dart';
-import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/models/prenotazione.dart';
+import 'package:FleetManager/core/theme/index.dart';
+import 'package:FleetManager/models/enums/stato_prenotazione.dart';
+import 'package:FleetManager/models/enums/ruolo_utente.dart';
+import 'package:FleetManager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});

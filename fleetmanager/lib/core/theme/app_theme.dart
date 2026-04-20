@@ -5,7 +5,7 @@ import 'app_spacing.dart';
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
-      useMaterial3: true,
+      useMaterial3: false,
       brightness: Brightness.light,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
@@ -32,13 +32,13 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.textOnPrimary,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: AppColors.textOnPrimary,
         ),
         toolbarHeight: AppSpacing.appBarHeight,
         shape: Border(
@@ -50,22 +50,20 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.surface,
         selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.grey400,
+        unselectedItemColor: AppColors.grey500,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
 
       // Card Theme
-      cardTheme: CardTheme(
-        color: AppColors.surface,
-        elevation: 1,
-        shadowColor: AppColors.shadowColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardBorderRadius),
-          side: const BorderSide(color: AppColors.border, width: 1),
-        ),
-        margin: EdgeInsets.zero,
-      ),
+      // cardTheme: CardTheme(
+      //   elevation: 1,
+      //   shape: RoundedRectangleBorder(
+      //     borderRadius: BorderRadius.circular(AppSpacing.cardBorderRadius),
+      //     side: const BorderSide(color: AppColors.border, width: 1),
+      //   ),
+      //   margin: EdgeInsets.zero,
+      // ),
 
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
@@ -176,7 +174,7 @@ class AppTheme {
 
       // Divider Theme
       dividerTheme: const DividerThemeData(
-        color: AppColors.divider,
+        color: AppColors.grey300,
         thickness: AppSpacing.dividerThickness,
         space: AppSpacing.lg,
       ),
@@ -213,18 +211,17 @@ class AppTheme {
       ),
 
       // Dialog Theme
-      dialogTheme: DialogTheme(
-        backgroundColor: AppColors.surface,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        ),
-        contentTextStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textPrimary,
-        ),
-      ),
+      // dialogTheme: DialogTheme(
+      //   elevation: 4,
+      //   shape: RoundedRectangleBorder(
+      //     borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+      //   ),
+      //   contentTextStyle: const TextStyle(
+      //     fontSize: 14,
+      //     fontWeight: FontWeight.w400,
+      //     color: AppColors.textPrimary,
+      //   ),
+      // ),
 
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(

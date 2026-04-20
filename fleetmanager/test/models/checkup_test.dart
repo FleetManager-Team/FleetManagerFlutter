@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fleetmanager/models/checkup.dart';
+import 'package:FleetManager/models/checkup.dart';
 
 void main() {
   group('CheckupVeicolo model', () {

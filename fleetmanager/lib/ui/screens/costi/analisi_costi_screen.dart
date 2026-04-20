@@ -1,10 +1,10 @@
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/ui/screens/costi/dettaglio_costi_driver.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/ui/screens/costi/dettaglio_costi_driver.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:fleetmanager/core/theme/index.dart';
+import 'package:FleetManager/core/theme/index.dart';
 
 class AnalisiCostiScreen extends StatefulWidget {
   const AnalisiCostiScreen({super.key});

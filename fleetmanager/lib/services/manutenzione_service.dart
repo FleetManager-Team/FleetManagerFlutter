@@ -1,4 +1,4 @@
-import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
+import 'package:FleetManager/models/enums/tipo_manutenzione.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/manutenzione.dart';
 

@@ -37,10 +37,10 @@ class AppColors {
   static const Color surfaceVariant = grey100;
 
   // Text Colors
-  static const Color textPrimary = grey900;
-  static const Color textSecondary = grey600;
-  static const Color textTertiary = grey500;
-  static const Color textHint = grey400;
+  static const Color textPrimary = black;
+  static const Color textSecondary = grey700;
+  static const Color textTertiary = grey600;
+  static const Color textHint = grey500;
   static const Color textOnPrimary = white;
   static const Color textOnSecondary = white;
 

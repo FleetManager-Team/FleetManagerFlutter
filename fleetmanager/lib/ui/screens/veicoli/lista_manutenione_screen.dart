@@ -1,15 +1,15 @@
-import 'package:fleetmanager/models/enums/ruolo_utente.dart';
-import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
+import 'package:FleetManager/models/enums/ruolo_utente.dart';
+import 'package:FleetManager/models/enums/tipo_manutenzione.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:fleetmanager/core/theme/index.dart';
-import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/models/veicolo.dart';
-import 'package:fleetmanager/models/manutenzione.dart';
-import 'package:fleetmanager/models/enums/stato_veicolo.dart';
-import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
-import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
+import 'package:FleetManager/core/theme/index.dart';
+import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:FleetManager/models/veicolo.dart';
+import 'package:FleetManager/models/manutenzione.dart';
+import 'package:FleetManager/models/enums/stato_veicolo.dart';
+import 'package:FleetManager/models/enums/tipo_veicolo.dart';
+import 'package:FleetManager/ui/widgets/details_pop_up.dart';
 
 class MaintenanceDashboardScreen extends StatefulWidget {
   const MaintenanceDashboardScreen({super.key});

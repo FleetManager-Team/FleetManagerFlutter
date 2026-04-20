@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gotrue/gotrue.dart';
 
-import 'package:fleetmanager/services/database_seeder.dart';
+import 'package:FleetManager/services/database_seeder.dart';
 
 import '_service_test_helpers.dart';
 

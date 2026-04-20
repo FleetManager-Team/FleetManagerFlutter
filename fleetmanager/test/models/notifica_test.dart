@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fleetmanager/models/notifica.dart';
-import 'package:fleetmanager/models/enums/tipo_notifica.dart';
+import 'package:FleetManager/models/notifica.dart';
+import 'package:FleetManager/models/enums/tipo_notifica.dart';
 
 void main() {
   group('Notifica model', () {
