@@ -1,8 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // Per kIsWeb
 import 'package:fleetmanager/provider/fleet_provider.dart';
-import 'package:fleetmanager/services/checkup_iniziale_Service.dart';
+import 'package:fleetmanager/services/checkup_iniziale_service.dart';
 import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/services/notifica_service.dart';
 import 'package:flutter/material.dart';
@@ -93,7 +92,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
   }
 
   Widget _buildPreview(XFile? file) {
-    if (file == null) return const Icon(Icons.camera_alt, color: AppColors.grey500);
+    if (file == null)
+      return const Icon(Icons.camera_alt, color: AppColors.grey500);
 
     // Anteprima differenziata per Web/Mobile per evitare errori di path
     if (kIsWeb) {
@@ -190,7 +190,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
           color: AppColors.white,
           borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           border: Border.all(
-              color: file != null ? Colors.green : AppColors.grey300!),
+              color: file != null ? Colors.green : AppColors.grey300),
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -203,8 +203,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
                   children: [
                     const SizedBox(height: 40), // Spazio per l'icona
                     Text(label,
-                        style:
-                            const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.grey500)),
                   ],
                 ),
               ),
@@ -216,7 +216,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
                   padding: const EdgeInsets.all(2),
                   decoration: const BoxDecoration(
                       color: AppColors.success, shape: BoxShape.circle),
-                  child: const Icon(Icons.check, size: 14, color: AppColors.white),
+                  child:
+                      const Icon(Icons.check, size: 14, color: AppColors.white),
                 ),
               ),
           ],
@@ -260,7 +261,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
         hintText: "Descrivi eventuali danni preesistenti...",
         fillColor: AppColors.white,
         filled: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       ),
     );
   }
@@ -270,7 +272,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-        border: Border.all(color: AppColors.grey300!),
+        border: Border.all(color: AppColors.grey300),
       ),
       child: Column(
         children: [
@@ -279,11 +281,11 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
             height: 150,
             backgroundColor: Colors.transparent,
           ),
-          Divider(height: 1, color: AppColors.grey300),
+          const Divider(height: 1, color: AppColors.grey300),
           TextButton.icon(
             onPressed: () => _sigController.clear(),
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text("Cancella firma"),
+            icon: Icon(Icons.delete_outline, size: 18),
+            label: Text("Cancella firma"),
           )
         ],
       ),
@@ -298,12 +300,12 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.grey800,
           foregroundColor: AppColors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
         ),
         onPressed: _submitForm,
-        child: const Text("INVIA ISPEZIONE",
-            style: AppTextStyles.headlineSmall),
+        child:
+            const Text("INVIA ISPEZIONE", style: AppTextStyles.headlineSmall),
       ),
     );
   }
@@ -349,7 +351,10 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
             orElse: () => provider.prenotazioni.first);
         final notificaService = NotificaService();
         await notificaService.notificaPrenotazioneAttivata(
-            prenotazione.idUtente, widget.targa, prenotazione.dataInizio, prenotazione.dataFine);
+            prenotazione.idUtente,
+            widget.targa,
+            prenotazione.dataInizio,
+            prenotazione.dataFine);
       }
 
       // AGGIORNA IL PROVIDER
@@ -369,7 +374,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
       setState(() => _isSending = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Errore: $e"), backgroundColor: AppColors.error),
+          SnackBar(
+              content: Text("Errore: $e"), backgroundColor: AppColors.error),
         );
       }
     }

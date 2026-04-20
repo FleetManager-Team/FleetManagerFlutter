@@ -49,7 +49,7 @@ class DetailsPopUp extends StatelessWidget {
               const Divider(height: 30),
               Text(
                 extraSectionTitle!.toUpperCase(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                   color: AppColors.primary,

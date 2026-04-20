@@ -193,7 +193,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: AppColors.grey50,
                   radius: 25,
                   child: Icon(Icons.person, color: AppColors.grey800),
@@ -208,7 +208,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
                               fontWeight: FontWeight.bold, fontSize: 22)),
                       Text("${driver.nome} ${driver.cognome}",
                           style:
-                              TextStyle(fontSize: 16, color: AppColors.grey700)),
+                              const TextStyle(fontSize: 16, color: AppColors.grey700)),
                     ],
                   ),
                 ),
@@ -300,7 +300,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               "Spesa Carburante",
               "${dati['importo_euro']} € | ${dati['litri_carburante']} L",
               dati['url_scontrino'],
-              AppColors.grey50!),
+              AppColors.grey50),
         if (dati['ha_pedaggi'] == true)
           _buildDetailTile(
               context,
@@ -410,7 +410,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label,
-                style: TextStyle(color: AppColors.grey600, fontSize: 13)),
+                style: const TextStyle(color: AppColors.grey600, fontSize: 13)),
             Text(val,
                 style: TextStyle(
                     fontWeight: FontWeight.bold,

@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _mostraDialogRecupero(BuildContext context) {
-    final TextEditingController _recoveryEmailController =
+    final TextEditingController recoveryEmailController =
         TextEditingController();
 
     showDialog(
@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen>
             const Text("Inserisci la tua email per ricevere il link di reset."),
             const SizedBox(height: 15),
             TextField(
-              controller: _recoveryEmailController,
+              controller: recoveryEmailController,
               decoration: const InputDecoration(
                 labelText: "Email",
                 border: OutlineInputBorder(),
@@ -162,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen>
               child: const Text("Annulla")),
           ElevatedButton(
             onPressed: () async {
-              final email = _recoveryEmailController.text.trim();
+              final email = recoveryEmailController.text.trim();
               if (email.isNotEmpty) {
                 // NUOVO CODICE
                 final success =
@@ -370,10 +370,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _mostraDialogNuovaPassword() {
-    final _formKeyReset = GlobalKey<FormState>();
-    final _passController = TextEditingController();
-    final _confirmPassController = TextEditingController();
-    bool _obscureText = true;
+    final formKeyReset = GlobalKey<FormState>();
+    final passController = TextEditingController();
+    final confirmPassController = TextEditingController();
+    bool obscureText = true;
 
     showDialog(
       context: context,
@@ -392,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen>
             ],
           ),
           content: Form(
-            key: _formKeyReset,
+            key: formKeyReset,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -404,32 +404,33 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
-                    controller: _passController,
-                    obscureText: _obscureText,
+                    controller: passController,
+                    obscureText: obscureText,
                     decoration: InputDecoration(
                       labelText: "Nuova Password",
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscureText
+                        icon: Icon(obscureText
                             ? Icons.visibility
                             : Icons.visibility_off),
                         onPressed: () =>
-                            setState(() => _obscureText = !_obscureText),
+                            setState(() => obscureText = !obscureText),
                       ),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return "Inserisci la password";
+                      }
                       if (value.length < 6) return "Minimo 6 caratteri";
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: _confirmPassController,
-                    obscureText: _obscureText,
+                    controller: confirmPassController,
+                    obscureText: obscureText,
                     decoration: InputDecoration(
                       labelText: "Conferma Password",
                       prefixIcon: const Icon(Icons.verified_user_outlined),
@@ -437,8 +438,9 @@ class _LoginScreenState extends State<LoginScreen>
                           borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
                     ),
                     validator: (value) {
-                      if (value != _passController.text)
+                      if (value != passController.text) {
                         return "Le password non coincidono";
+                      }
                       return null;
                     },
                   ),
@@ -461,11 +463,11 @@ class _LoginScreenState extends State<LoginScreen>
                     borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
               ),
               onPressed: () async {
-                if (_formKeyReset.currentState!.validate()) {
+                if (formKeyReset.currentState!.validate()) {
                   try {
                     final success = await context
                         .read<FleetProvider>()
-                        .aggiornaPassword(_passController.text);
+                        .aggiornaPassword(passController.text);
                     if (success && mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(

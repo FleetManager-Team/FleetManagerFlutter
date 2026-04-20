@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,8 +20,9 @@ class CheckupService {
   }) async {
     // 1. Verifica autenticazione
     final user = _supabase.auth.currentUser;
-    if (user == null)
+    if (user == null) {
       throw Exception("Utente non autenticato. Effettua il login.");
+    }
 
     try {
       // 2. Caricamento Immagini Perimetrali (in parallelo come nel RestituzioneService)
@@ -74,7 +74,6 @@ class CheckupService {
         'url_firma': urlFirma,
       }, onConflict: 'id_prenotazione');
     } catch (e) {
-      print("Errore durante inviaCheckupCompleto: $e");
       rethrow;
     }
   }
@@ -100,7 +99,6 @@ class CheckupService {
 
       return _supabase.storage.from('veicoli_checkups').getPublicUrl(path);
     } catch (e) {
-      print("Errore caricamento immagine in $folder: $e");
       return null;
     }
   }

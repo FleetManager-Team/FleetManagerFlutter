@@ -297,19 +297,19 @@ class _BookingListScreenState extends State<BookingListScreen> {
   Color _getBookingStatusColor(StatoPrenotazione stato) {
     switch (stato) {
       case StatoPrenotazione.richiesta:
-        return AppColors.secondary!;
+        return AppColors.secondary;
       case StatoPrenotazione.attiva:
-        return AppColors.success!;
+        return AppColors.success;
       case StatoPrenotazione.completata:
-        return AppColors.grey600!;
+        return AppColors.grey600;
       case StatoPrenotazione.annullata:
-        return AppColors.error!;
+        return AppColors.error;
       case StatoPrenotazione.confermata:
-        return AppColors.primaryDark!;
+        return AppColors.primaryDark;
       case StatoPrenotazione.sospesa:
         return Colors.grey;
       case StatoPrenotazione.attesaCheckup:
-        return AppColors.primaryDark!;
+        return AppColors.primaryDark;
     }
   }
 }

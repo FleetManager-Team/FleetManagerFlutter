@@ -86,7 +86,7 @@ class NotificheScreen extends StatelessWidget {
                           ),
                           subtitle: Text(
                             DateFormat('dd/MM HH:mm').format(n.dataInvio),
-                            style: TextStyle(fontSize: 12, color: AppColors.grey600),
+                            style: const TextStyle(fontSize: 12, color: AppColors.grey600),
                           ),
                           trailing: n.letta
                               ? const Icon(Icons.done_all, color: AppColors.success, size: 20)
@@ -100,12 +100,12 @@ class NotificheScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.notifications_off_outlined, size: 80, color: AppColors.grey400),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text("Nessuna notifica presente", style: TextStyle(fontSize: 18, color: AppColors.grey600)),
         ],
       ),

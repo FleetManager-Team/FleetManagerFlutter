@@ -129,7 +129,7 @@ class _MaintenanceDashboardScreenState
             "$count Interventi in Agenda",
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          Text("Lista degli interventi attivi e programmati",
+          const Text("Lista degli interventi attivi e programmati",
               style: TextStyle(color: AppColors.grey600)),
         ],
       ),
@@ -148,7 +148,7 @@ class _MaintenanceDashboardScreenState
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
         side: BorderSide(
-          color: isFuture ? AppColors.secondaryLight! : AppColors.secondary!,
+          color: isFuture ? AppColors.secondaryLight : AppColors.secondary,
           width: isFuture ? 1 : 2,
         ),
       ),

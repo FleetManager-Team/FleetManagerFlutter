@@ -3,8 +3,6 @@ import 'dart:typed_data';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:postgrest/postgrest.dart';
-import 'package:storage_client/storage_client.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 export 'package:mocktail/mocktail.dart';

@@ -81,9 +81,9 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
   Widget _buildCardTotale(double totale) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
             colors: [AppColors.primaryDark, AppColors.primaryDark]),
         borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
       ),
@@ -275,7 +275,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
       offset: const Offset(0, 45), // Sposta la tendina leggermente in basso
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
@@ -291,12 +291,12 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.calendar_today_outlined,
+            const Icon(Icons.calendar_today_outlined,
                 size: 16, color: AppColors.primaryDark),
             const SizedBox(width: 10),
             Text(
               "${DateFormat('dd/MM/yy').format(_rangeSelezionato.start)} - ${DateFormat('dd/MM/yy').format(_rangeSelezionato.end)}",
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.primaryDark,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,

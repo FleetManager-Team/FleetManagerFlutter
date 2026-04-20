@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/utente.dart';
 
@@ -80,9 +79,7 @@ class AuthService {
       await _supabase.from('utenti').insert(data);
 
       return true;
-    } on PostgrestException catch (e) {
-      rethrow;
-    } catch (e) {
+    } on PostgrestException {
       rethrow;
     }
   }

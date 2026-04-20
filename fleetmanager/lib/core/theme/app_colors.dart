@@ -9,7 +9,7 @@ class AppColors {
   // Secondary Colors
   static const Color secondary = Color(0xFFF59E0B); // Amber/Orange
   static const Color secondaryLight = Color(0xFFFBBF24); // Light Amber
-  static const Color secondaryDark = Color(0xF8A604); // Dark Amber
+  static const Color secondaryDark = Color(0xFFF8A604); // Dark Amber
 
   // Status Colors
   static const Color success = Color(0xFF10B981); // Green

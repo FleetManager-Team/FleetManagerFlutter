@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Bentornato,",
+        const Text("Bentornato,",
             style: TextStyle(fontSize: 16, color: AppColors.grey600)),
         Text(
           "${utente?.nome ?? ''} ${utente?.cognome ?? ''}",
@@ -217,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           gradient:
-              LinearGradient(colors: [AppColors.success!, AppColors.success!]),
+              const LinearGradient(colors: [AppColors.success, AppColors.success]),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
         gradient:
-            LinearGradient(colors: [AppColors.primaryDark!, Colors.blue[500]!]),
+            LinearGradient(colors: [AppColors.primaryDark, Colors.blue[500]!]),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
       ),
       child: Column(
@@ -507,7 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Border.all(color: AppColors.secondary, width: 1),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
                     ),
-                    child: Text(
+                    child: const Text(
                       "SOVRAPPOSIZIONE",
                       style: TextStyle(
                         color: AppColors.secondary,
@@ -647,7 +647,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Drawer(
       child: Column(children: [
         UserAccountsDrawerHeader(
-          decoration: BoxDecoration(color: AppColors.primaryDark),
+          decoration: const BoxDecoration(color: AppColors.primaryDark),
           accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
           accountEmail: Text(utente?.email ?? ''),
           currentAccountPicture: const CircleAvatar(
@@ -840,8 +840,8 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-              colors: [AppColors.secondary!, AppColors.secondaryLight!]),
+          gradient: const LinearGradient(
+              colors: [AppColors.secondary, AppColors.secondaryLight]),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
@@ -976,8 +976,8 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.error!, AppColors.secondary!],
+        gradient: const LinearGradient(
+          colors: [AppColors.error, AppColors.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

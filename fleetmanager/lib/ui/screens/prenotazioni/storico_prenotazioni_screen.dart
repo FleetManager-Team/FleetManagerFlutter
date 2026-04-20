@@ -173,7 +173,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
                     const SizedBox(height: 2),
                     Text(
                       "${driver.nome} ${driver.cognome}",
-                      style: TextStyle(color: AppColors.grey600, fontSize: 13),
+                      style: const TextStyle(color: AppColors.grey600, fontSize: 13),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -191,7 +191,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               ),
               
               // Frecciolina a destra
-              Icon(Icons.chevron_right, color: AppColors.grey400),
+              const Icon(Icons.chevron_right, color: AppColors.grey400),
             ],
           ),
         ),

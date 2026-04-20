@@ -341,12 +341,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.search_off, size: 60, color: AppColors.grey400),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text("Nessun veicolo corrisponde al filtro",
               style: TextStyle(color: AppColors.grey600, fontSize: 16)),
         ],
@@ -392,9 +392,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       case StatoVeicolo.prenotato:
         return AppColors.primaryDark;
       case StatoVeicolo.inManutenzione:
-        return AppColors.secondary!;
+        return AppColors.secondary;
       case StatoVeicolo.fuoriServizio:
-        return AppColors.error!;
+        return AppColors.error;
     }
   }
 
@@ -545,8 +545,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                             initialDate: dataSelezionata,
                             firstDate: DateTime.now(),
                             lastDate: DateTime(2100));
-                        if (picked != null)
+                        if (picked != null) {
                           setModalState(() => dataSelezionata = picked);
+                        }
                       },
                     ),
                   ),
@@ -558,8 +559,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                       onPressed: () async {
                         final picked = await showTimePicker(
                             context: context, initialTime: oraSelezionata);
-                        if (picked != null)
+                        if (picked != null) {
                           setModalState(() => oraSelezionata = picked);
+                        }
                       },
                     ),
                   ),

@@ -150,7 +150,7 @@ void main() {
 
   test('createUtente rilancia PostgrestException su errore database', () async {
     when(() => mockQueryBuilder.insert(any()))
-        .thenThrow(PostgrestException(message: 'err'));
+        .thenThrow(const PostgrestException(message: 'err'));
 
     final service = build();
 

@@ -169,7 +169,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   @override
   Widget build(BuildContext context) {
     final Color themeColor =
-        widget.isEmergenza ? AppColors.error! : const Color(0xFF388E3C);
+        widget.isEmergenza ? AppColors.error : const Color(0xFF388E3C);
     final String title =
         widget.isEmergenza ? "Segnalazione Emergenza" : "Restituzione Veicolo";
 
@@ -275,7 +275,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       decoration: BoxDecoration(
           color: AppColors.grey100,
           borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-          border: Border.all(color: AppColors.grey300!)),
+          border: Border.all(color: AppColors.grey300)),
       child: Row(
         children: [
           Icon(Icons.directions_car, color: color, size: 40),
@@ -313,8 +313,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         if (v == null || v.isEmpty) return "Inserisci i KM";
         final n = int.tryParse(v);
         if (n == null) return "Numero non valido";
-        if (_veicolo != null && n < _veicolo!.km)
+        if (_veicolo != null && n < _veicolo!.km) {
           return "KM inferiori ai precedenti (${_veicolo!.km})";
+        }
         return null;
       },
     );
@@ -440,9 +441,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     final image = await ImagePicker().pickImage(source: ImageSource.camera);
     if (image != null) {
       setState(() {
-        if (tipo == "danni")
+        if (tipo == "danni") {
           _fotoDanni = image;
-        else if (tipo == "pedaggi")
+        } else if (tipo == "pedaggi")
           _fotoPedaggio = image;
         else
           _fotoScontrino = image;

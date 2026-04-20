@@ -77,7 +77,7 @@ class EmergenzeScreen extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.error,
               fontWeight: FontWeight.bold,
               fontSize: 12,
@@ -118,7 +118,7 @@ class EmergenzeScreen extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             "Targa: ${v.targa} • ${v.km} km",
-            style: TextStyle(color: AppColors.grey600, fontSize: 13),
+            style: const TextStyle(color: AppColors.grey600, fontSize: 13),
           ),
         ),
         trailing: _buildStatusChip(v.statoVeicolo),
@@ -164,10 +164,10 @@ class EmergenzeScreen extends StatelessWidget {
             Text("Driver: ${driver.nome} ${driver.cognome}",
                 style: const TextStyle(fontSize: 13)),
             Text(df.format(r.dataRestituzione),
-                style: TextStyle(fontSize: 11, color: AppColors.grey500)),
+                style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
           ],
         ),
-        trailing: Icon(Icons.chevron_right, color: AppColors.grey400),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.grey400),
       ),
     );
   }
@@ -203,7 +203,7 @@ class EmergenzeScreen extends StatelessWidget {
         child: Center(
           child: Text(
             message,
-            style: TextStyle(
+            style: const TextStyle(
                 color: AppColors.grey500,
                 fontSize: 13,
                 fontStyle: FontStyle.italic),
