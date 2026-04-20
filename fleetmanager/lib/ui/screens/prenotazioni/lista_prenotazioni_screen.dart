@@ -281,12 +281,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.event_busy, size: 60, color: AppColors.grey400),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text("Nessuna prenotazione attiva",
               style: TextStyle(color: AppColors.grey600)),
         ],
