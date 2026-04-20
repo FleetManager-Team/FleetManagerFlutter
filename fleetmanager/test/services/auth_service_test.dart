@@ -62,14 +62,13 @@ void main() {
     expect(user, isNull);
   });
 
-  test('login ritorna null su eccezione', () async {
+  test('login rilancia eccezione su errore', () async {
     when(() => mockAuth.signInWithPassword(email: any(named: 'email'), password: any(named: 'password')))
         .thenThrow(Exception('fail'));
 
     final service = build();
-    final user = await service.login('x@y.it', 'pwd');
 
-    expect(user, isNull);
+    expect(() => service.login('x@y.it', 'pwd'), throwsException);
   });
 
   test('getTuttiUtenti ritorna lista', () async {
@@ -118,20 +117,19 @@ void main() {
     expect(ok, true);
   });
 
-  test('updateProfilo ritorna false su errore', () async {
+  test('updateProfilo rilancia eccezione su errore', () async {
     when(() => mockQueryBuilder.update(any()))
         .thenThrow(Exception('fail'));
 
     final service = build();
-    final ok = await service.updateProfilo(Utente(
+
+    expect(() => service.updateProfilo(Utente(
       idUtente: 1,
       nome: 'A',
       cognome: 'B',
       email: 'a@b.it',
       ruoloUtente: RuoloUtente.driver,
-    ));
-
-    expect(ok, false);
+    )), throwsException);
   });
 
   test('createUtente ritorna true su successo', () async {
@@ -150,20 +148,19 @@ void main() {
     expect(ok, true);
   });
 
-  test('createUtente ritorna false su PostgrestException', () async {
+  test('createUtente rilancia PostgrestException su errore database', () async {
     when(() => mockQueryBuilder.insert(any()))
         .thenThrow(PostgrestException(message: 'err'));
 
     final service = build();
-    final ok = await service.createUtente(Utente(
+
+    expect(() => service.createUtente(Utente(
       idUtente: 1,
       nome: 'A',
       cognome: 'B',
       email: 'a@b.it',
       ruoloUtente: RuoloUtente.driver,
-    ));
-
-    expect(ok, false);
+    )), throwsException);
   });
 
   test('eliminaUtente ritorna true su successo', () async {
@@ -176,13 +173,12 @@ void main() {
     expect(ok, true);
   });
 
-  test('eliminaUtente ritorna false su errore', () async {
+  test('eliminaUtente rilancia eccezione su errore', () async {
     when(() => mockQueryBuilder.delete())
         .thenThrow(Exception('fail'));
 
     final service = build();
-    final ok = await service.eliminaUtente(1);
 
-    expect(ok, false);
+    expect(() => service.eliminaUtente(1), throwsException);
   });
 }

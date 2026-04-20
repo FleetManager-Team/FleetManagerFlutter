@@ -58,7 +58,7 @@ class FleetProvider with ChangeNotifier {
     _prenotazioneService = prenotazioneService ?? PrenotazioneService();
     _manutenzioneService = manutenzioneService ?? ManutenzioneService();
     _notificaService = notificaService ?? NotificaService();
-    _scadenzaService = scadenzaService ?? ScadenzaService();
+    _scadenzaService = scadenzaService ?? ScadenzaService(supabaseClient: supabaseClient);
   }
 
   // Il getter usa il client passato (test) o quello reale (app)

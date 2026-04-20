@@ -101,13 +101,12 @@ void main() {
     expect(res, isNull);
   });
 
-  test('getVeicoloByTarga ritorna null su eccezione', () async {
+  test('getVeicoloByTarga rilancia eccezione su errore', () async {
     when(() => mockQueryBuilder.select())
         .thenThrow(Exception('fail'));
 
     final service = build();
-    final res = await service.getVeicoloByTarga('xx');
 
-    expect(res, isNull);
+    expect(() => service.getVeicoloByTarga('xx'), throwsException);
   });
 }

@@ -30,8 +30,7 @@ class AuthService {
       return null;
     } catch (e) {
       // Se la password è sbagliata o l'utente non esiste in Auth, finirà qui
-      print("Errore login Supabase: $e");
-      return null;
+      rethrow;
     }
   }
 
@@ -70,8 +69,7 @@ class AuthService {
           .eq('id_utente', u.idUtente);
       return true;
     } catch (e) {
-      print("Errore update: $e");
-      return false;
+      rethrow;
     }
   }
 
@@ -79,18 +77,13 @@ class AuthService {
     try {
       final data = nuovoUtente.toJson();
 
-      debugPrint("Tentativo di inserimento dati: $data");
-
       await _supabase.from('utenti').insert(data);
 
       return true;
     } on PostgrestException catch (e) {
-      print("Errore Database (Codice ${e.code}): ${e.message}");
-      print("Dettagli: ${e.details}");
-      return false;
+      rethrow;
     } catch (e) {
-      print("Errore generico creazione: $e");
-      return false;
+      rethrow;
     }
   }
 
@@ -100,8 +93,7 @@ class AuthService {
       await _supabase.from('utenti').delete().eq('id_utente', idUtente);
       return true;
     } catch (e) {
-      print("Errore eliminazione: $e");
-      return false;
+      rethrow;
     }
   }
 }

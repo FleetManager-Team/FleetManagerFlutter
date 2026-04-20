@@ -34,8 +34,7 @@ class VeicoloService {
       if (response == null) return null;
       return Veicolo.fromJson(response);
     } catch (e) {
-      print("Errore VeicoloService: $e");
-      return null;
+      rethrow;
     }
   }
 }

@@ -14,6 +14,7 @@ import 'package:fleetmanager/services/veicolo_service.dart';
 import 'package:fleetmanager/services/prenotazione_service.dart';
 import 'package:fleetmanager/services/manutenzione_service.dart';
 import 'package:fleetmanager/services/notifica_service.dart';
+import 'package:fleetmanager/services/scadenza_service.dart';
 
 // Import Modelli ed Enums
 import 'package:fleetmanager/models/utente.dart';
@@ -40,6 +41,8 @@ class MockPrenotazioneService extends Mock implements PrenotazioneService {}
 class MockManutenzioneService extends Mock implements ManutenzioneService {}
 
 class MockNotificaService extends Mock implements NotificaService {}
+
+class MockScadenzaService extends Mock implements ScadenzaService {}
 
 class MockSupabaseClient extends Mock implements SupabaseClient {}
 class MockSupabaseQueryBuilder extends Mock implements SupabaseQueryBuilder {}
@@ -84,11 +87,13 @@ void main() {
   late MockPrenotazioneService mockPrenotazioni;
   late MockManutenzioneService mockManutenzioni;
   late MockNotificaService mockNotifiche;
+  late MockScadenzaService mockScadenze;
   late MockSupabaseClient mockSupabase;
   late MockSupabaseQueryBuilder mockQueryBuilder;
   late MockSupabaseQueryBuilder mockRestituzioniQueryBuilder;
   late MockSupabaseQueryBuilder mockCheckupsQueryBuilder;
   late MockSupabaseQueryBuilder mockNotificheQueryBuilder;
+  late MockSupabaseQueryBuilder mockScadenzeQueryBuilder;
   late MockGoTrueClient mockGoTrue;
 
   setUpAll(() {
@@ -106,11 +111,13 @@ void main() {
     mockPrenotazioni = MockPrenotazioneService();
     mockManutenzioni = MockManutenzioneService();
     mockNotifiche = MockNotificaService();
+    mockScadenze = MockScadenzaService();
     mockSupabase = MockSupabaseClient();
     mockQueryBuilder = MockSupabaseQueryBuilder();
     mockRestituzioniQueryBuilder = MockSupabaseQueryBuilder();
     mockCheckupsQueryBuilder = MockSupabaseQueryBuilder();
     mockNotificheQueryBuilder = MockSupabaseQueryBuilder();
+    mockScadenzeQueryBuilder = MockSupabaseQueryBuilder();
     mockGoTrue = MockGoTrueClient();
 
     when(() => mockSupabase.auth).thenReturn(mockGoTrue);
@@ -123,6 +130,8 @@ void main() {
         .thenAnswer((_) => mockCheckupsQueryBuilder);
     when(() => mockSupabase.from('notifiche'))
         .thenAnswer((_) => mockNotificheQueryBuilder);
+    when(() => mockSupabase.from('scadenze'))
+        .thenAnswer((_) => mockScadenzeQueryBuilder);
 
     when(() => mockQueryBuilder.select())
         .thenAnswer((_) => futureBuilder<List<dynamic>>(<dynamic>[]));
@@ -139,6 +148,11 @@ void main() {
     when(() => mockCheckupsQueryBuilder.select<List<dynamic>>())
         .thenAnswer((_) => futureBuilder<List<dynamic>>(<dynamic>[]));
 
+    when(() => mockScadenzeQueryBuilder.select())
+        .thenAnswer((_) => futureBuilder<List<dynamic>>(<dynamic>[]));
+    when(() => mockScadenzeQueryBuilder.select<List<dynamic>>())
+        .thenAnswer((_) => futureBuilder<List<dynamic>>(<dynamic>[]));
+
     when(() => mockNotificheQueryBuilder.update(any()))
         .thenAnswer((_) => futureBuilder<void>(null));
     when(() => mockNotificheQueryBuilder.update(any(),
@@ -151,8 +165,11 @@ void main() {
       prenotazioneService: mockPrenotazioni,
       manutenzioneService: mockManutenzioni,
       notificaService: mockNotifiche,
+      scadenzaService: mockScadenze,
       supabaseClient: mockSupabase,
     );
+
+    when(() => mockScadenze.segnaNotificata(any())).thenAnswer((_) async {});
   });
 
   group('FleetProvider - Test Autenticazione', () {

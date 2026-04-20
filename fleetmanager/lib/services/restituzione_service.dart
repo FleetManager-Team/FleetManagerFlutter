@@ -87,7 +87,6 @@ class RestituzioneService {
         'data_fine': oraAttuale,
       }).eq('id_prenotazione', idPrenotazione);
     } catch (e) {
-      print("Errore durante completaRestituzione: $e");
       rethrow;
     }
   }
@@ -112,7 +111,6 @@ class RestituzioneService {
 
       return _supabase.storage.from('restituzioni').getPublicUrl(path);
     } catch (e) {
-      print("Errore caricamento immagine in $folder: $e");
       return null;
     }
   }
