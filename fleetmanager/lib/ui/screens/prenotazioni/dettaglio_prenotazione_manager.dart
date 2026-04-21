@@ -17,7 +17,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
   Future<Map<String, dynamic>> _getDatiCompleti() async {
     final client = Supabase.instance.client;
 
-    // Recupero dati di chiusura pratica 
+    // Recupero dati di chiusura 
     final resRestituzione = await client
         .from('restituzioni')
         .select()
