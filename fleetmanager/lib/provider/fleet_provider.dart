@@ -979,7 +979,7 @@ class FleetProvider with ChangeNotifier {
         orElse: () => scadenza,
       );
       
-      // Notifica ai manager della nuova scadenza con l'ID corretto
+      // Notifica ai manager della nuova scadenza con l'ID giusto
       for (var idMan in _tuttiManagerIds) {
         await _notificaService.inviaNotificaScadenza(
             idMan, scadenzaCreata.idScadenza, targa, tipoScadenza.name, data);
