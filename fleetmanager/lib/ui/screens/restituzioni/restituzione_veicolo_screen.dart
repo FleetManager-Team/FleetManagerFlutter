@@ -405,7 +405,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     return SwitchListTile(
         title: Text(title),
         value: value,
-        activeColor: activeColor,
+        activeThumbColor: activeColor,
         onChanged: onChanged);
   }
 

@@ -92,8 +92,9 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
   }
 
   Widget _buildPreview(XFile? file) {
-    if (file == null)
+    if (file == null) {
       return const Icon(Icons.camera_alt, color: AppColors.grey500);
+    }
 
     // Anteprima differenziata per Web/Mobile per evitare errori di path
     if (kIsWeb) {
@@ -284,8 +285,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
           const Divider(height: 1, color: AppColors.grey300),
           TextButton.icon(
             onPressed: () => _sigController.clear(),
-            icon: Icon(Icons.delete_outline, size: 18),
-            label: Text("Cancella firma"),
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text("Cancella firma"),
           )
         ],
       ),

@@ -20,8 +20,6 @@ class AppTheme {
         onTertiary: AppColors.white,
         error: AppColors.error,
         onError: AppColors.white,
-        background: AppColors.background,
-        onBackground: AppColors.textPrimary,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         outline: AppColors.border,
@@ -245,14 +243,14 @@ class AppTheme {
 
       // Switch Theme
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return AppColors.primary;
           }
           return AppColors.grey300;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return AppColors.primary.withOpacity(0.5);
           }
           return AppColors.grey300;

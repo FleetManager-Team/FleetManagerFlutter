@@ -97,7 +97,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                       prefixIcon: Icon(Icons.directions_car),
                     ),
                     hint: const Text("Seleziona Veicolo"),
-                    value: _targaSelezionata,
+                    initialValue: _targaSelezionata,
                     onChanged: (val) => setState(() => _targaSelezionata = val),
                     items: veicoliDisponibili
                         .map((v) => DropdownMenuItem(
