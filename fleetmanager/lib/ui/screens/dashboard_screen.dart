@@ -50,8 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final utente = provider.utenteLoggato;
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
 
-    // 1. Identifichiamo solo le emergenze ATTIVE (quelle senza km finali)
-    // Usiamo il nuovo getter 'emergenzeAttive' che abbiamo creato nel provider
     final emergenzeInCorso = provider.prenotazioni.where((p) {
       return provider.emergenzeAttive
           .any((r) => r.idPrenotazione == p.idPrenotazione);
@@ -61,71 +59,69 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.grey100,
       appBar: _buildAppBar(context, utente),
       drawer: _buildDrawer(context, utente),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => provider.inizializzaDati(),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header (Benvenuto...)
-                    _buildHeader(utente),
-
-                    // --- SEZIONE EMERGENZE ATTIVE ---
-                    // Appare solo se ci sono SOS non ancora chiusi
-                    if (emergenzeInCorso.isNotEmpty) ...[
-                      const SizedBox(height: 20),
-                      ...emergenzeInCorso.map((p) {
-                        // Troviamo il record specifico della restituzione/SOS
-                        final sos = provider.restituzioni.firstWhere(
-                            (r) => r.idPrenotazione == p.idPrenotazione);
-
-                        return _buildEmergencyCard(
-                          prenotazione: p,
-                          isManager: isManager,
-                          onTap: () {
-                            if (isManager) {
-                              _mostraDettaglioSosManager(context, p, sos);
-                            } else {
-                              _vaiACompletamentoDriver(context, p);
-                            }
-                          },
-                        );
-                      }),
-                    ],
-
-                    const SizedBox(height: 25),
-
-                    // CONTENUTO SPECIFICO (Manager o Driver)
-                    if (isManager) ...[
-                      _buildAdminStats(provider),
-                      const SizedBox(height: 25),
-                      _buildSectionTitle("Prenotazioni in Sede / Attive"),
-                      _buildManagerPrenotazioni(provider, utente),
-                    ] else ...[
-                      // Se il Driver ha un SOS attivo, nascondiamo le azioni standard
-                      if (emergenzeInCorso.isEmpty) ...[
-                        _buildDriverActionCard(context),
-                        _buildCheckinActionCard(context, provider),
-                        _buildReturnActionCard(context, provider),
-                        const SizedBox(height: 25),
-                      ],
-                      _buildSectionTitle("Le Mie Prenotazioni"),
-                      _buildDriverPrenotazioni(provider),
-                    ],
+      body: Builder(
+        builder: (context) {
+          final provider = context.watch<FleetProvider>();
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return RefreshIndicator(
+            onRefresh: () => provider.inizializzaDati(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(utente),
+                  if (emergenzeInCorso.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    ...emergenzeInCorso.map((p) {
+                      final sos = provider.restituzioni.firstWhere(
+                          (r) => r.idPrenotazione == p.idPrenotazione);
+                      return _buildEmergencyCard(
+                        prenotazione: p,
+                        isManager: isManager,
+                        onTap: () {
+                          if (isManager) {
+                            _mostraDettaglioSosManager(context, p, sos);
+                          } else {
+                            _vaiACompletamentoDriver(context, p);
+                          }
+                        },
+                      );
+                    }),
                   ],
-                ),
+                  const SizedBox(height: 25),
+                  if (isManager) ...[
+                    _buildAdminStats(provider),
+                    const SizedBox(height: 25),
+                    _buildSectionTitle("Prenotazioni in Sede / Attive"),
+                    _buildManagerPrenotazioni(provider, utente),
+                  ] else ...[
+                    if (emergenzeInCorso.isEmpty) ...[
+                      _buildDriverActionCard(context),
+                      _buildCheckinActionCard(context, provider),
+                      _buildReturnActionCard(context, provider),
+                      const SizedBox(height: 25),
+                    ],
+                    _buildSectionTitle("Le Mie Prenotazioni"),
+                    _buildDriverPrenotazioni(provider),
+                  ],
+                ],
               ),
             ),
+          );
+        },
+      ),
     );
   }
+
   // --- COMPONENTI DELLA UI ---
 
   AppBar _buildAppBar(BuildContext context, Utente? utente) {
-    final provider = context.watch<FleetProvider>();
+    // FIX: context.read invece di context.watch per evitare loop di rebuild
+    final provider = context.read<FleetProvider>();
     final notificheNonLette = provider.notifiche.where((n) => !n.letta).length;
 
     return AppBar(
@@ -162,7 +158,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     color: AppColors.error,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusDefault),
                   ),
                   constraints:
                       const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -217,8 +214,8 @@ class _HomeScreenState extends State<HomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
-          gradient:
-              const LinearGradient(colors: [AppColors.success, AppColors.success]),
+          gradient: const LinearGradient(
+              colors: [AppColors.success, AppColors.success]),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
@@ -258,59 +255,58 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-
-            // Riga con i bottoni ai lati opposti
+            // FIX: Expanded sul bottone principale per vincolare la larghezza
             Row(
-              mainAxisAlignment: MainAxisAlignment
-                  .spaceBetween, // Uno a sinistra, uno a destra
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Bottone RESTITUISCI (Largo quanto il testo)
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RestituzioneVeicoloScreen(
-                          prenotazione: attiva!,
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RestituzioneVeicoloScreen(
+                            prenotazione: attiva!,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.white,
-                      foregroundColor: AppColors.success),
-                  child: const Text("RESTITUISCI VEICOLO"),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.white,
+                        foregroundColor: AppColors.success),
+                    child: const Text("RESTITUISCI VEICOLO"),
+                  ),
                 ),
-
-                // Bottone SEGNALAZIONE (Largo quanto il testo)
-                ElevatedButton(
-                  onPressed: () {
-                    // Navighiamo alla stessa schermata, ma attiviamo la modalità emergenza
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RestituzioneVeicoloScreen(
-                          prenotazione: attiva!,
-                          isEmergenza:
-                              true, // <--- FONDAMENTALE: attiva la modalità SOS
+                const SizedBox(width: 12),
+                // Bottone circolare SOS — dimensione fissa, non ha bisogno di Expanded
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RestituzioneVeicoloScreen(
+                            prenotazione: attiva!,
+                            isEmergenza: true,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error, // Sfondo rosso
-                    foregroundColor: AppColors.white, // Icona bianca
-                    shape:
-                        const CircleBorder(), // Forma perfettamente circolare
-                    padding: const EdgeInsets.all(
-                        16), // Padding uniforme per centrare l'icona
-                    elevation: 2, // Leggera ombra per l'effetto "elevated"
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.error,
+                      foregroundColor: AppColors.white,
+                      shape: const CircleBorder(),
+                      padding: EdgeInsets.zero,
+                      elevation: 2,
+                    ),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 28,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.warning_amber_rounded, // L'icona di pericolo
-                    size: 28, // Dimensione dell'icona
-                  ),
-                )
+                ),
               ],
             ),
           ],
@@ -334,7 +330,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => const VehicleListScreen()))),
         _statCard(
           "Prenotazioni",
-          // Filtriamo per escludere le completate dal conteggio
           provider.prenotazioni
               .where((p) =>
                   p.statoPrenotazione != StatoPrenotazione.completata &&
@@ -379,15 +374,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const NuovaPrenotazioneScreen())),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.white,
-                foregroundColor: AppColors.primaryDark),
-            child: const Text("NUOVA PRENOTAZIONE"),
+          // FIX: larghezza fissa invece di lasciarlo libero in una Column
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NuovaPrenotazioneScreen())),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.white,
+                  foregroundColor: AppColors.primaryDark),
+              child: const Text("NUOVA PRENOTAZIONE"),
+            ),
           ),
         ],
       ),
@@ -407,16 +406,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDriverPrenotazioni(FleetProvider provider) {
     final utente = provider.utenteLoggato;
-    // LOGICA DI FILTRAGGIO: Escludiamo le attive perché sono già nel widget verde in alto
     final mie = provider.prenotazioni
         .where((p) =>
-                p.idUtente == utente?.idUtente &&
-                p.statoPrenotazione != StatoPrenotazione.completata &&
-                p.statoPrenotazione != StatoPrenotazione.annullata &&
-                p.statoPrenotazione !=
-                    StatoPrenotazione
-                        .attiva // <--- NASCONDE L'ATTIVA DALL'ELENCO
-            )
+            p.idUtente == utente?.idUtente &&
+            p.statoPrenotazione != StatoPrenotazione.completata &&
+            p.statoPrenotazione != StatoPrenotazione.annullata &&
+            p.statoPrenotazione != StatoPrenotazione.attiva)
         .toList();
     return _buildPrenotazioniList(mie, false, provider);
   }
@@ -427,12 +422,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Text("Nessuna attività recente.",
-            style: TextStyle(color: AppColors.grey500, fontStyle: FontStyle.italic)),
+            style: TextStyle(
+                color: AppColors.grey500, fontStyle: FontStyle.italic)),
       );
     }
 
     final df = DateFormat('dd/MM HH:mm');
-    final provider = Provider.of<FleetProvider>(context, listen: false);
+    // FIX: rimossa la riga "final provider = Provider.of<FleetProvider>..."
+    // che ridichiarava il parametro causando conflitti
 
     return ListView.builder(
       shrinkWrap: true,
@@ -441,8 +438,6 @@ class _HomeScreenState extends State<HomeScreen> {
       itemBuilder: (context, index) {
         final p = prenotazioni[index];
 
-        // --- LOGICA DI SOVRAPPOSIZIONE ---
-        // Cerchiamo se esistono ALTRE prenotazioni (non la stessa) con la stessa targa che si sovrappongono
         final bool haConflitto = prenotazioni.any((altra) =>
             altra.idPrenotazione != p.idPrenotazione &&
             altra.targa == p.targa &&
@@ -468,8 +463,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return Card(
           elevation: 2,
           margin: const EdgeInsets.only(bottom: 10),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
           child: ListTile(
             onTap: isManager
                 ? () => Navigator.push(
@@ -481,32 +476,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                 : null,
             leading: CircleAvatar(
-              backgroundColor:
-                  _getStatusColor(p, provider).withOpacity(0.1),
+              backgroundColor: _getStatusColor(p, provider).withOpacity(0.1),
               child: Icon(Icons.calendar_today,
                   color: _getStatusColor(p, provider), size: 20),
             ),
-            title: Wrap(
-              // Usiamo Wrap per evitare che il badge tagli il testo su schermi piccoli
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8, // Spazio tra il testo e il badge
+            // FIX: Row con Flexible invece di Wrap per evitare crash su Flutter Web
+            title: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  "${p.targa} - ${_getStatusText(p, provider)}",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
+                Flexible(
+                  child: Text(
+                    "${p.targa} - ${_getStatusText(p, provider)}",
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                // BADGE DI SOVRAPPOSIZIONE
                 if (haConflitto &&
-                    p.statoPrenotazione == StatoPrenotazione.richiesta)
+                    p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.secondary,
-                      border:
-                          Border.all(color: AppColors.secondary, width: 1),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+                      // FIX: colore con opacità per rendere il testo leggibile
+                      color: AppColors.secondary.withOpacity(0.15),
+                      border: Border.all(color: AppColors.secondary, width: 1),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusDefault),
                     ),
                     child: const Text(
                       "SOVRAPPOSIZIONE",
@@ -518,6 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                ],
               ],
             ),
             subtitle: Column(
@@ -544,7 +542,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            // TRAILING: Pulsanti per driver O freccia per Manager
             trailing: isManager
                 ? const Icon(Icons.arrow_forward_ios,
                     size: 16, color: Colors.grey)
@@ -574,9 +571,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getStatusText(Prenotazione p, FleetProvider provider) {
     if (p.statoPrenotazione == StatoPrenotazione.attiva) {
-      // Controlla se esiste una restituzione per questa prenotazione
-      final hasRestituzione = provider.restituzioni.any((r) => r.idPrenotazione == p.idPrenotazione);
-      // Mostra "IN ATTESA DI REPORT RIENTRO" solo se è scaduta AND non ha restituzione
+      final hasRestituzione = provider.restituzioni
+          .any((r) => r.idPrenotazione == p.idPrenotazione);
       final isScaduta = DateTime.now().isAfter(p.dataFine);
       if (!hasRestituzione && isScaduta) {
         return "IN ATTESA DI REPORT RIENTRO";
@@ -587,14 +583,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Color _getStatusColor(Prenotazione p, FleetProvider provider) {
     if (p.statoPrenotazione == StatoPrenotazione.attiva) {
-      // Controlla se esiste una restituzione per questa prenotazione
-      final hasRestituzione = provider.restituzioni.any((r) => r.idPrenotazione == p.idPrenotazione);
-      // Mostra arancione solo se è scaduta AND non ha restituzione
+      final hasRestituzione = provider.restituzioni
+          .any((r) => r.idPrenotazione == p.idPrenotazione);
       final isScaduta = DateTime.now().isAfter(p.dataFine);
       if (!hasRestituzione && isScaduta) {
-        return Colors.orange; // In attesa di report
+        return Colors.orange;
       }
-      // Altrimenti rimane verde per le prenotazioni ancora attive
       return Colors.green;
     }
     switch (p.statoPrenotazione) {
@@ -614,7 +608,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: Card(
         elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
@@ -639,8 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Text(title,
-            style: AppTextStyles.headlineMedium));
+        child: Text(title, style: AppTextStyles.headlineMedium));
   }
 
   Widget _buildDrawer(BuildContext context, Utente? utente) {
@@ -682,7 +676,8 @@ class _HomeScreenState extends State<HomeScreen> {
             }),
         if (isManager)
           ListTile(
-            leading: const Icon(Icons.bar_chart_rounded, color: AppColors.secondary),
+            leading:
+                const Icon(Icons.bar_chart_rounded, color: AppColors.secondary),
             title: const Text("Analisi Costi"),
             onTap: () {
               Navigator.push(
@@ -693,7 +688,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         if (isManager)
           ListTile(
-            leading: const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            leading:
+                const Icon(Icons.warning_amber_rounded, color: AppColors.error),
             title: const Text("Emergenze"),
             onTap: () {
               Navigator.pop(context);
@@ -705,17 +701,18 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         if (isManager)
-        ListTile(
-            leading: const Icon(Icons.calendar_month_outlined, color: AppColors.warning),
-            title: const Text("Scadenze"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const ListaScadenzeScreen()),
-              );
-            }),
+          ListTile(
+              leading: const Icon(Icons.calendar_month_outlined,
+                  color: AppColors.warning),
+              title: const Text("Scadenze"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ListaScadenzeScreen()),
+                );
+              }),
         const Spacer(),
         const Divider(),
         ListTile(
@@ -761,16 +758,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           final p = await _selezionaDataEOra(context, fine);
                           if (p != null) setModalState(() => fine = p);
                         }),
-                    ElevatedButton(
-                        onPressed: () async {
-                          if (fine.isBefore(inizio)) return;
-                          Navigator.pop(ctx);
-                          await context
-                              .read<FleetProvider>()
-                              .modificaPrenotazione(
-                                  p.idPrenotazione, inizio, fine);
-                        },
-                        child: const Text("SALVA")),
+                    // FIX: SizedBox per vincolare larghezza del bottone nel modal
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                          onPressed: () async {
+                            if (fine.isBefore(inizio)) return;
+                            Navigator.pop(ctx);
+                            await context
+                                .read<FleetProvider>()
+                                .modificaPrenotazione(
+                                    p.idPrenotazione, inizio, fine);
+                          },
+                          child: const Text("SALVA")),
+                    ),
                   ]),
                 )));
   }
@@ -827,7 +828,6 @@ class _HomeScreenState extends State<HomeScreen> {
     Prenotazione? daRitirare;
 
     try {
-      // Cerchiamo la prenotazione attesa checkup
       daRitirare = provider.prenotazioni.firstWhere((p) =>
           p.idUtente == utente?.idUtente &&
           p.statoPrenotazione == StatoPrenotazione.attesaCheckup);
@@ -837,16 +837,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (daRitirare == null) return const SizedBox.shrink();
 
-    // --- LOGICA DI CONFRONTO TEMPORALE CORRETTA ---
-    // Trasformiamo tutto in UTC per evitare problemi di fuso orario tra telefono e database
     final DateTime oraInizioUtc = daRitirare.dataInizio.toUtc();
     final DateTime oraAttualeUtc = DateTime.now().toUtc();
-
-    // Calcoliamo la differenza: se mancano più di 30 minuti, non mostriamo nulla
     final minutiAllaPartenza = oraInizioUtc.difference(oraAttualeUtc).inMinutes;
     if (minutiAllaPartenza > 30) {
       return const SizedBox.shrink();
     }
+
     return Padding(
       padding: const EdgeInsets.only(top: 15),
       child: Container(
@@ -895,27 +892,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Text(
               "Esegui il controllo perimetrale per partire",
-              style: TextStyle(color: AppColors.white.withOpacity(0.7), fontSize: 13),
+              style: TextStyle(
+                  color: AppColors.white.withOpacity(0.7), fontSize: 13),
             ),
             const SizedBox(height: 15),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CheckingVeicoloScreen(
-                      idPrenotazione: daRitirare!.idPrenotazione,
-                      targa: daRitirare.targa,
+            // FIX: SizedBox per vincolare la larghezza del bottone
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CheckingVeicoloScreen(
+                        idPrenotazione: daRitirare!.idPrenotazione,
+                        targa: daRitirare.targa,
+                      ),
                     ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.camera_enhance),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.white,
-                foregroundColor: AppColors.secondary,
+                  );
+                },
+                icon: const Icon(Icons.camera_enhance),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.white,
+                  foregroundColor: AppColors.secondary,
+                ),
+                label: const Text("INIZIA ISPEZIONE E PARTI"),
               ),
-              label: const Text("INIZIA ISPEZIONE E PARTI"),
             ),
           ],
         ),
@@ -926,20 +928,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _apriMappaEsterna(String? posizione) async {
     if (posizione == null || posizione.isEmpty) return;
 
-    // Puliamo la stringa se contiene spazi o caratteri strani
     final query = Uri.encodeComponent(posizione);
     final googleMapsUrl =
         "https://www.google.com/maps/search/?api=1&query=$query";
     final appleMapsUrl = "https://maps.apple.com/?q=$query";
 
     try {
-      // Prova ad aprire Google Maps (funziona su Android e iOS se installata)
       if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
         await launchUrl(Uri.parse(googleMapsUrl),
             mode: LaunchMode.externalApplication);
-      }
-      // Altrimenti prova Apple Maps su iOS
-      else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
+      } else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
         await launchUrl(Uri.parse(appleMapsUrl),
             mode: LaunchMode.externalApplication);
       }
@@ -948,11 +946,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Esempio di riga dettaglio per il Manager
   Widget _buildManagerSosDetail(Map<String, dynamic> datiSos) {
     return Column(
       children: [
-        // BOX POSIZIONE
         ListTile(
           leading: const Icon(Icons.location_on, color: AppColors.error),
           title: const Text("Posizione segnalata"),
@@ -962,7 +958,6 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => _apriMappaEsterna(datiSos['posizione_emergenza']),
           ),
         ),
-        // BOX DANNO
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           color: AppColors.white,
@@ -1029,21 +1024,26 @@ class _HomeScreenState extends State<HomeScreen> {
             isManager
                 ? "Un driver ha segnalato un guasto o incidente. Verifica subito la posizione."
                 : "Hai segnalato un'emergenza per il veicolo ${prenotazione.targa}. Completa i dati appena possibile.",
-            style: TextStyle(color: AppColors.white.withOpacity(0.7), fontSize: 14),
+            style: TextStyle(
+                color: AppColors.white.withOpacity(0.7), fontSize: 14),
           ),
           const SizedBox(height: 15),
-          ElevatedButton(
-            onPressed: onTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.white,
-              foregroundColor: AppColors.error,
-              // CORREZIONE QUI:
-              textStyle: const TextStyle(fontWeight: FontWeight.bold),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+          // FIX: SizedBox per vincolare la larghezza del bottone nell'emergency card
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.white,
+                foregroundColor: AppColors.error,
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusDefault)),
+              ),
+              child: Text(
+                  isManager ? "VEDI DETTAGLI E MAPPA" : "COMPLETA PROCEDURA"),
             ),
-            child: Text(
-                isManager ? "VEDI DETTAGLI E MAPPA" : "COMPLETA PROCEDURA"),
           ),
         ],
       ),
@@ -1051,7 +1051,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _vaiACompletamentoDriver(BuildContext context, Prenotazione p) {
-    // Sostituisci 'FormRestituzione' con il nome esatto della tua classe
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1078,19 +1077,15 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               "Dettaglio Emergenza",
               style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.error),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.error),
             ),
             const Divider(height: 30),
-
-            // Passiamo i dati necessari al widget di dettaglio
-            // Se _buildManagerSosDetail vuole una Map, usiamo sos.toJson()
             _buildManagerSosDetail({
-              'posizione_emergenza':
-                  sos.posizioneEmergenza, // o il nome che hai nel modello
-              'descrizione_danni':
-                  sos.descrizioneDanni, // o il nome che hai nel modello
+              'posizione_emergenza': sos.posizioneEmergenza,
+              'descrizione_danni': sos.descrizioneDanni,
             }),
-
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

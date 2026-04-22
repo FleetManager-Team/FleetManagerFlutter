@@ -185,6 +185,8 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
     return GestureDetector(
       onTap: () => _prendiFoto(lato),
       child: Container(
+        height: 150,
+        width: 150,
         clipBehavior:
             Clip.antiAlias, // Assicura che l'immagine segua i bordi arrotondati
         decoration: BoxDecoration(
@@ -202,7 +204,9 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 40), // Spazio per l'icona
+                    const Icon(Icons.camera_alt, 
+                        color: AppColors.grey500, size: 32),
+                    const SizedBox(height: 8),
                     Text(label,
                         style: const TextStyle(
                             fontSize: 11, color: AppColors.grey500)),
@@ -277,10 +281,13 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
       ),
       child: Column(
         children: [
-          Signature(
-            controller: _sigController,
+          SizedBox(
+            width: double.infinity,
             height: 150,
-            backgroundColor: Colors.transparent,
+            child: Signature(
+              controller: _sigController,
+              backgroundColor: Colors.transparent,
+            ),
           ),
           const Divider(height: 1, color: AppColors.grey300),
           TextButton.icon(
