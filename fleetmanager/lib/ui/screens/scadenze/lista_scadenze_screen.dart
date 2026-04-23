@@ -97,14 +97,14 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (isFirstClosed)
-                            Padding(
-                              padding: const EdgeInsets.only(
+                            const Padding(
+                              padding: EdgeInsets.only(
                                   top: 16, bottom: 8, left: 4),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.history,
+                                  Icon(Icons.history,
                                       size: 16, color: AppColors.grey500),
-                                  const SizedBox(width: 6),
+                                  SizedBox(width: 6),
                                   Text(
                                     "INTERVENTI COMPLETATI",
                                     style: TextStyle(
@@ -240,7 +240,6 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     final giorniRimanenti = scadenza.data.difference(now).inDays;
     final isClosed = scadenza.chiusa;
 
-    // Logica colore urgenza
     Color urgenzaColor;
     Color urgenzaBg;
     String urgenzaLabel;
