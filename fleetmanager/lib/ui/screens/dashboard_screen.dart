@@ -640,93 +640,110 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDrawer(BuildContext context, Utente? utente) {
     final bool isManager = utente?.ruoloUtente == RuoloUtente.manager;
     return Drawer(
-      child: Column(children: [
-        UserAccountsDrawerHeader(
-          decoration: const BoxDecoration(color: AppColors.primaryDark),
-          accountName: Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
-          accountEmail: Text(utente?.email ?? ''),
-          currentAccountPicture: const CircleAvatar(
-              backgroundColor: AppColors.white,
-              child: Icon(Icons.person, size: 40)),
+      child: SafeArea(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              decoration: const BoxDecoration(color: AppColors.primaryDark),
+              accountName:
+                  Text("${utente?.nome ?? ''} ${utente?.cognome ?? ''}"),
+              accountEmail: Text(utente?.email ?? ''),
+              currentAccountPicture: const CircleAvatar(
+                  backgroundColor: AppColors.white,
+                  child: Icon(Icons.person, size: 40)),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    ListTile(
+                        leading:
+                            const Icon(Icons.home, color: AppColors.primary),
+                        title: const Text("Dashboard"),
+                        onTap: () => Navigator.pop(context)),
+                    if (isManager)
+                      ListTile(
+                          leading: const Icon(Icons.people,
+                              color: AppColors.success),
+                          title: const Text("Gestione Utenti"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const UserManagementScreen()));
+                          }),
+                    ListTile(
+                        leading: const Icon(Icons.history, color: Colors.brown),
+                        title: const Text("Storico Prenotazioni"),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const BookingHistoryScreen()));
+                        }),
+                    if (isManager)
+                      ListTile(
+                        leading: const Icon(Icons.bar_chart_rounded,
+                            color: AppColors.secondary),
+                        title: const Text("Analisi Costi"),
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const AnalisiCostiScreen()));
+                        },
+                      ),
+                    if (isManager)
+                      ListTile(
+                        leading: const Icon(Icons.warning_amber_rounded,
+                            color: AppColors.error),
+                        title: const Text("Emergenze"),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const EmergenzeScreen()));
+                        },
+                      ),
+                    if (isManager)
+                      ListTile(
+                          leading: const Icon(Icons.calendar_month_outlined,
+                              color: AppColors.warning),
+                          title: const Text("Scadenze"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ListaScadenzeScreen()));
+                          }),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(),
+            ListTile(
+                leading: const Icon(Icons.exit_to_app, color: AppColors.error),
+                title: const Text("Logout"),
+                onTap: () {
+                  context.read<FleetProvider>().logout();
+                  Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false);
+                }),
+            const SizedBox(height: 20),
+          ],
         ),
-        ListTile(
-            leading: const Icon(Icons.home, color: AppColors.primary),
-            title: const Text("Dashboard"),
-            onTap: () => Navigator.pop(context)),
-        if (isManager)
-          ListTile(
-              leading: const Icon(Icons.people, color: AppColors.success),
-              title: const Text("Gestione Utenti"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const UserManagementScreen()));
-              }),
-        ListTile(
-            leading: const Icon(Icons.history, color: Colors.brown),
-            title: const Text("Storico Prenotazioni"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const BookingHistoryScreen()));
-            }),
-        if (isManager)
-          ListTile(
-            leading:
-                const Icon(Icons.bar_chart_rounded, color: AppColors.secondary),
-            title: const Text("Analisi Costi"),
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AnalisiCostiScreen()));
-            },
-          ),
-        if (isManager)
-          ListTile(
-            leading:
-                const Icon(Icons.warning_amber_rounded, color: AppColors.error),
-            title: const Text("Emergenze"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const EmergenzeScreen()),
-              );
-            },
-          ),
-        if (isManager)
-          ListTile(
-              leading: const Icon(Icons.calendar_month_outlined,
-                  color: AppColors.warning),
-              title: const Text("Scadenze"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ListaScadenzeScreen()),
-                );
-              }),
-        const Spacer(),
-        const Divider(),
-        ListTile(
-            leading: const Icon(Icons.exit_to_app, color: AppColors.error),
-            title: const Text("Logout"),
-            onTap: () {
-              context.read<FleetProvider>().logout();
-              Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false);
-            }),
-        const SizedBox(height: 20),
-      ]),
+      ),
     );
   }
 

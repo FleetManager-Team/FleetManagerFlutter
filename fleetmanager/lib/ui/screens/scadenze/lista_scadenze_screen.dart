@@ -16,15 +16,41 @@ class ListaScadenzeScreen extends StatefulWidget {
 class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
   TipoScadenza? filtroSelezionato;
 
+  // Ordina: prima le scadute, poi per data crescente, le chiuse in fondo
+  List<Scadenza> _ordinaScadenze(List<Scadenza> lista) {
+    final aperte = lista.where((s) => !s.chiusa).toList()
+      ..sort((a, b) => a.data.compareTo(b.data));
+    final chiuse = lista.where((s) => s.chiusa).toList()
+      ..sort((a, b) => b.data.compareTo(a.data));
+    return [...aperte, ...chiuse];
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
 
-    final scadenzeFiltrate = filtroSelezionato == null
+    final tutteLeScadenze = filtroSelezionato == null
         ? provider.scadenze
         : provider.scadenze
             .where((s) => s.tipoScadenza == filtroSelezionato)
             .toList();
+
+    final scadenzeFiltrate = _ordinaScadenze(tutteLeScadenze);
+
+    // Contatori per i badge sui chip
+    Map<TipoScadenza, int> contatoriUrgenti = {};
+    for (var tipo in TipoScadenza.values) {
+      contatoriUrgenti[tipo] = provider.scadenze
+          .where((s) =>
+              s.tipoScadenza == tipo &&
+              !s.chiusa &&
+              s.data.difference(DateTime.now()).inDays <= 30)
+          .length;
+    }
+    final totaleUrgenti = provider.scadenze
+        .where(
+            (s) => !s.chiusa && s.data.difference(DateTime.now()).inDays <= 30)
+        .length;
 
     return Scaffold(
       backgroundColor: AppColors.grey100,
@@ -37,119 +63,356 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
       ),
       body: Column(
         children: [
-          _buildFilterBar(),
+          // --- BARRA FILTRI A CHIP ---
+          _buildChipFilterBar(contatoriUrgenti, totaleUrgenti),
+
+          // --- LISTA ---
           Expanded(
             child: scadenzeFiltrate.isEmpty
                 ? const Center(
-                    child: Text("Nessuna scadenza presente",
-                        style: TextStyle(color: AppColors.textSecondary)))
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline,
+                            size: 64, color: AppColors.grey400),
+                        SizedBox(height: 12),
+                        Text("Nessuna scadenza presente",
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 16)),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md, AppSpacing.sm, AppSpacing.md, 80),
                     itemCount: scadenzeFiltrate.length,
                     itemBuilder: (context, index) {
                       final scadenza = scadenzeFiltrate[index];
-                      return _buildScadenzaCard(scadenza);
+
+                      // Separatore visivo tra aperte e chiuse
+                      final bool isFirstClosed = scadenza.chiusa &&
+                          (index == 0 || !scadenzeFiltrate[index - 1].chiusa);
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (isFirstClosed)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  top: 16, bottom: 8, left: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.history,
+                                      size: 16, color: AppColors.grey500),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "INTERVENTI COMPLETATI",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.grey500,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          _buildScadenzaCard(scadenza),
+                        ],
+                      );
                     },
                   ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _mostraFormCreazioneScadenza(context),
         backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text("Nuova scadenza"),
       ),
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildChipFilterBar(
+      Map<TipoScadenza, int> contatoriUrgenti, int totaleUrgenti) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       color: AppColors.white,
-      child: Row(
-        children: [
-          const Text("Filtra per tipo:",
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: DropdownButton<TipoScadenza?>(
-              value: filtroSelezionato,
-              hint: const Text("Tutti"),
-              isExpanded: true,
-              items: [
-                const DropdownMenuItem(value: null, child: Text("Tutti")),
-                ...TipoScadenza.values.map((tipo) => DropdownMenuItem(
-                      value: tipo,
-                      child: Text(tipo.name.toUpperCase()),
-                    )),
-              ],
-              onChanged: (value) => setState(() => filtroSelezionato = value),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Chip "Tutti"
+            _buildFilterChip(
+              label: "Tutti",
+              icon: Icons.grid_view_rounded,
+              isSelected: filtroSelezionato == null,
+              urgenti: totaleUrgenti,
+              onTap: () => setState(() => filtroSelezionato = null),
             ),
+            const SizedBox(width: 8),
+            // Chip per ogni tipo
+            ...TipoScadenza.values.map((tipo) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _buildFilterChip(
+                  label: _labelTipo(tipo),
+                  icon: _iconTipo(tipo),
+                  isSelected: filtroSelezionato == tipo,
+                  urgenti: contatoriUrgenti[tipo] ?? 0,
+                  onTap: () => setState(() => filtroSelezionato = tipo),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required int urgenti,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.grey100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.grey300,
+            width: 1.5,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 16,
+                color: isSelected ? AppColors.white : AppColors.grey600),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? AppColors.white : AppColors.textPrimary,
+              ),
+            ),
+            // Badge rosso se ci sono urgenti
+            if (urgenti > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.white.withOpacity(0.3)
+                      : AppColors.error,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$urgenti',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? AppColors.white : AppColors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildScadenzaCard(Scadenza scadenza) {
-    final isScaduta = scadenza.data.isBefore(DateTime.now());
-    final giorniRimanenti = scadenza.data.difference(DateTime.now()).inDays;
+    final now = DateTime.now();
+    final isScaduta = scadenza.data.isBefore(now);
+    final giorniRimanenti = scadenza.data.difference(now).inDays;
     final isClosed = scadenza.chiusa;
 
+    // Logica colore urgenza
+    Color urgenzaColor;
+    Color urgenzaBg;
+    String urgenzaLabel;
+    IconData urgenzaIcon;
+
+    if (isClosed) {
+      urgenzaColor = AppColors.grey500;
+      urgenzaBg = AppColors.grey100;
+      urgenzaLabel = "Completata";
+      urgenzaIcon = Icons.check_circle;
+    } else if (isScaduta) {
+      urgenzaColor = AppColors.error;
+      urgenzaBg = AppColors.error.withOpacity(0.08);
+      urgenzaLabel = "Scaduta";
+      urgenzaIcon = Icons.error_outline;
+    } else if (giorniRimanenti <= 7) {
+      urgenzaColor = AppColors.error;
+      urgenzaBg = AppColors.error.withOpacity(0.08);
+      urgenzaLabel =
+          giorniRimanenti == 0 ? "Scade oggi" : "Scade in $giorniRimanenti gg";
+      urgenzaIcon = Icons.warning_amber_rounded;
+    } else if (giorniRimanenti <= 30) {
+      urgenzaColor = AppColors.warning;
+      urgenzaBg = AppColors.warning.withOpacity(0.08);
+      urgenzaLabel = "Scade in $giorniRimanenti gg";
+      urgenzaIcon = Icons.schedule;
+    } else {
+      urgenzaColor = AppColors.success;
+      urgenzaBg = AppColors.success.withOpacity(0.08);
+      urgenzaLabel = "Scade in $giorniRimanenti gg";
+      urgenzaIcon = Icons.check_circle_outline;
+    }
+
     return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: isClosed ? 0 : 2,
       color: isClosed ? AppColors.grey100 : AppColors.white,
-      child: ListTile(
-        leading: Icon(
-          _getIconForTipo(scadenza.tipoScadenza),
-          color: isClosed 
-              ? AppColors.grey400 
-              : (isScaduta ? AppColors.error : AppColors.primary),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+        side: BorderSide(
+          color: isClosed ? AppColors.grey300 : urgenzaColor.withOpacity(0.3),
+          width: 1,
         ),
-        title: Text(
-          "${scadenza.tipoScadenza.name.toUpperCase()} - ${scadenza.targa}",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            decoration: isClosed ? TextDecoration.lineThrough : null,
-            color: isClosed ? AppColors.grey500 : null,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Data: ${DateFormat('dd/MM/yyyy').format(scadenza.data)}"),
-            if (isClosed)
-              Text(
-                "Chiusa il ${DateFormat('dd/MM/yyyy').format(scadenza.dataChiusura!)} - Costo: €${scadenza.costoChiusura?.toStringAsFixed(2) ?? '0.00'}",
-                style: const TextStyle(
-                  color: AppColors.success,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 12,
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+        onTap: () => _mostraDettagliScadenza(scadenza),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              // Icona tipo con sfondo colorato
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isClosed ? AppColors.grey200 : urgenzaBg,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              )
-            else
-              Text(
-                isScaduta
-                    ? "SCADUTA"
-                    : giorniRimanenti == 0
-                        ? "Scade oggi"
-                        : "Scade tra $giorniRimanenti giorni",
-                style: TextStyle(
-                  color: isScaduta ? AppColors.error : AppColors.success,
-                  fontWeight: FontWeight.w500,
+                child: Icon(
+                  _iconTipo(scadenza.tipoScadenza),
+                  color: isClosed ? AppColors.grey400 : urgenzaColor,
+                  size: 24,
                 ),
               ),
-          ],
+              const SizedBox(width: 14),
+
+              // Contenuto centrale
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "${_labelTipo(scadenza.tipoScadenza)} — ${scadenza.targa}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              decoration:
+                                  isClosed ? TextDecoration.lineThrough : null,
+                              color: isClosed
+                                  ? AppColors.grey500
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Scadenza: ${DateFormat('dd/MM/yyyy').format(scadenza.data)}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isClosed
+                            ? AppColors.grey400
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    if (isClosed && scadenza.dataChiusura != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        "Chiusa il ${DateFormat('dd/MM/yyyy').format(scadenza.dataChiusura!)} · €${scadenza.costoChiusura?.toStringAsFixed(2) ?? '0.00'}",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Badge urgenza a destra
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: urgenzaBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(urgenzaIcon, size: 12, color: urgenzaColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          urgenzaLabel,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: urgenzaColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (scadenza.notificata) ...[
+                    const SizedBox(height: 6),
+                    const Icon(Icons.notifications_active,
+                        size: 16, color: AppColors.warning),
+                  ],
+                ],
+              ),
+            ],
+          ),
         ),
-        trailing: scadenza.notificata
-            ? const Icon(Icons.notifications_active, color: AppColors.warning)
-            : const Icon(Icons.notifications_none, color: AppColors.grey400),
-        onTap: () => _mostraDettagliScadenza(scadenza),
       ),
     );
   }
 
-  IconData _getIconForTipo(TipoScadenza tipo) {
+  // --- HELPER ---
+  String _labelTipo(TipoScadenza tipo) {
+    switch (tipo) {
+      case TipoScadenza.assicurazione:
+        return "Assicurazione";
+      case TipoScadenza.bollo:
+        return "Bollo";
+      case TipoScadenza.revisione:
+        return "Revisione";
+      case TipoScadenza.tagliando:
+        return "Tagliando";
+    }
+  }
+
+  IconData _iconTipo(TipoScadenza tipo) {
     switch (tipo) {
       case TipoScadenza.assicurazione:
         return Icons.security;
@@ -162,27 +425,37 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     }
   }
 
+  // --- DIALOG DETTAGLIO ---
   void _mostraDettagliScadenza(Scadenza scadenza) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("${scadenza.tipoScadenza.name.toUpperCase()} - ${scadenza.targa}"),
+        title: Text("${_labelTipo(scadenza.tipoScadenza)} - ${scadenza.targa}"),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Data scadenza: ${DateFormat('dd/MM/yyyy').format(scadenza.data)}"),
+              Text(
+                  "Data scadenza: ${DateFormat('dd/MM/yyyy').format(scadenza.data)}"),
               const SizedBox(height: AppSpacing.sm),
               Text("Notificata: ${scadenza.notificata ? 'Sì' : 'No'}"),
-              const SizedBox(height: AppSpacing.sm),
+              if (scadenza.descrizione != null &&
+                  scadenza.descrizione!.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text("Descrizione: ${scadenza.descrizione}"),
+              ],
               if (scadenza.chiusa) ...[
                 const Divider(),
                 const SizedBox(height: AppSpacing.sm),
-                const Text("INTERVENTO CHIUSO", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.success)),
+                const Text("INTERVENTO CHIUSO",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: AppColors.success)),
                 const SizedBox(height: AppSpacing.sm),
-                Text("Data chiusura: ${DateFormat('dd/MM/yyyy').format(scadenza.dataChiusura!)}"),
-                Text("Costo: €${scadenza.costoChiusura?.toStringAsFixed(2) ?? '0.00'}"),
+                Text(
+                    "Data chiusura: ${DateFormat('dd/MM/yyyy').format(scadenza.dataChiusura!)}"),
+                Text(
+                    "Costo: €${scadenza.costoChiusura?.toStringAsFixed(2) ?? '0.00'}"),
                 const SizedBox(height: AppSpacing.sm),
                 Text("Dettagli: ${scadenza.dettagliChiusura ?? 'N/A'}"),
               ],
@@ -198,12 +471,13 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             if (!scadenza.notificata)
               ElevatedButton(
                 onPressed: () async {
-                  await context.read<FleetProvider>().segnaScadenzaNotificata(scadenza.idScadenza);
-                  Navigator.pop(context);
+                  await context
+                      .read<FleetProvider>()
+                      .segnaScadenzaNotificata(scadenza.idScadenza);
+                  if (mounted) Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.warning,
-                ),
+                    backgroundColor: AppColors.warning),
                 child: const Text("Notificata"),
               ),
             ElevatedButton(
@@ -211,9 +485,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 Navigator.pop(context);
                 _mostraFormModificaScadenza(context, scadenza);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.info,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.info),
               child: const Text("Modifica"),
             ),
             ElevatedButton(
@@ -221,9 +493,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 Navigator.pop(context);
                 _mostraFormChiusuraIntervento(context, scadenza);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-              ),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.success),
               child: const Text("Chiudi"),
             ),
             ElevatedButton(
@@ -232,7 +503,9 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 if (await _mostraConfermaEliminazione(context)) {
                   if (mounted) {
                     try {
-                      await context.read<FleetProvider>().eliminaScadenza(scadenza.idScadenza);
+                      await context
+                          .read<FleetProvider>()
+                          .eliminaScadenza(scadenza.idScadenza);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Scadenza eliminata")),
                       );
@@ -244,9 +517,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   }
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
               child: const Text("Elimina"),
             ),
           ],
@@ -255,6 +526,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     );
   }
 
+  // --- FORM CREAZIONE ---
   void _mostraFormCreazioneScadenza(BuildContext context) {
     String? targaSelezionata;
     TipoScadenza? tipoSelezionato;
@@ -274,55 +546,49 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Selezione veicolo
                 DropdownButton<String?>(
                   value: targaSelezionata,
                   hint: const Text("Seleziona veicolo"),
                   isExpanded: true,
-                  items: provider.veicoli.map((v) => DropdownMenuItem(
-                        value: v.targa,
-                        child: Text(v.targa),
-                      )).toList(),
-                  onChanged: (value) => setState(() => targaSelezionata = value),
+                  items: provider.veicoli
+                      .map((v) => DropdownMenuItem(
+                            value: v.targa,
+                            child: Text(v.targa),
+                          ))
+                      .toList(),
+                  onChanged: (value) =>
+                      setState(() => targaSelezionata = value),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
-                // Selezione tipo scadenza
                 DropdownButton<TipoScadenza?>(
                   value: tipoSelezionato,
                   hint: const Text("Seleziona tipo scadenza"),
                   isExpanded: true,
-                  items: TipoScadenza.values.map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.name.toUpperCase()),
-                      )).toList(),
+                  items: TipoScadenza.values
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(_labelTipo(t)),
+                          ))
+                      .toList(),
                   onChanged: (value) {
                     setState(() {
                       tipoSelezionato = value;
-                      // Reset campi quando cambia il tipo
                       mesi = null;
                       km = null;
                       descrizione = '';
-                      
-                      // Pre-compilazione mesi in base al tipo
-                      if (value == TipoScadenza.bollo) {
-                        mesi = 12; // Bollo ogni 12 mesi
-                      } else if (value == TipoScadenza.assicurazione) {
-                        mesi = 12; // Assicurazione ogni 12 mesi
-                      } else if (value == TipoScadenza.revisione) {
-                        mesi = 24; // Revisione ogni 24 mesi
-                      }
+                      if (value == TipoScadenza.bollo) mesi = 12;
+                      if (value == TipoScadenza.assicurazione) mesi = 12;
+                      if (value == TipoScadenza.revisione) mesi = 24;
                     });
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
-
-                // Selezione data
                 ListTile(
                   title: const Text("Data scadenza"),
-                  subtitle: Text(dataScadenza == null 
-                      ? "Seleziona data" 
+                  subtitle: Text(dataScadenza == null
+                      ? "Seleziona data"
                       : DateFormat('dd/MM/yyyy').format(dataScadenza!)),
+                  trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final selected = await showDatePicker(
                       context: context,
@@ -336,13 +602,11 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
-
-                // TAGLIANDO: mostra descrizione, km e mesi
                 if (tipoSelezionato == TipoScadenza.tagliando) ...[
                   TextField(
                     decoration: const InputDecoration(
                       labelText: "Descrizione manutenzione",
-                      hintText: "Es: Cambio olio, Sostituzione filtri, ecc.",
+                      hintText: "Es: Cambio olio, Sostituzione filtri",
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,
@@ -366,41 +630,19 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                     keyboardType: TextInputType.number,
                     onChanged: (value) => mesi = int.tryParse(value),
                   ),
-                ] else if (tipoSelezionato == TipoScadenza.bollo) ...[
-                  // BOLLO: solo mesi (pre-compilati a 12)
+                ] else if (tipoSelezionato != null) ...[
                   TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Mesi validità bollo",
-                      border: OutlineInputBorder(),
-                      helperText: "Generalmente 12 mesi",
+                    decoration: InputDecoration(
+                      labelText: "Mesi validità",
+                      border: const OutlineInputBorder(),
+                      helperText: tipoSelezionato == TipoScadenza.revisione
+                          ? "Generalmente 24 mesi"
+                          : "Generalmente 12 mesi",
                     ),
                     keyboardType: TextInputType.number,
-                    controller: TextEditingController(text: mesi?.toString() ?? '12'),
-                    onChanged: (value) => mesi = int.tryParse(value) ?? 12,
-                  ),
-                ] else if (tipoSelezionato == TipoScadenza.assicurazione) ...[
-                  // ASSICURAZIONE: solo mesi (pre-compilati a 12)
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Mesi copertura assicurazione",
-                      border: OutlineInputBorder(),
-                      helperText: "Generalmente 12 mesi",
-                    ),
-                    keyboardType: TextInputType.number,
-                    controller: TextEditingController(text: mesi?.toString() ?? '12'),
-                    onChanged: (value) => mesi = int.tryParse(value) ?? 12,
-                  ),
-                ] else if (tipoSelezionato == TipoScadenza.revisione) ...[
-                  // REVISIONE: solo mesi (pre-compilati a 24)
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Mesi validità revisione",
-                      border: OutlineInputBorder(),
-                      helperText: "Generalmente 24 mesi",
-                    ),
-                    keyboardType: TextInputType.number,
-                    controller: TextEditingController(text: mesi?.toString() ?? '24'),
-                    onChanged: (value) => mesi = int.tryParse(value) ?? 24,
+                    controller:
+                        TextEditingController(text: mesi?.toString() ?? ''),
+                    onChanged: (value) => mesi = int.tryParse(value),
                   ),
                 ],
               ],
@@ -413,38 +655,41 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (targaSelezionata != null && tipoSelezionato != null && dataScadenza != null) {
-                  // Per tagliando è obbligatorio indicare almeno mesi o km
-                  if (tipoSelezionato == TipoScadenza.tagliando && descrizione.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Inserire descrizione per il tagliando")),
-                    );
-                    return;
-                  }
-                  
-                  try {
-                    await provider.creaScadenza(
-                      targa: targaSelezionata!,
-                      tipoScadenza: tipoSelezionato!,
-                      data: dataScadenza!,
-                      kmScadenza: km,
-                      mesiScadenza: mesi,
-                      descrizione: descrizione.isNotEmpty ? descrizione : null,
-                    );
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Scadenza creata")),
-                      );
-                    }
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Errore: $e")),
-                    );
-                  }
-                } else {
+                if (targaSelezionata == null ||
+                    tipoSelezionato == null ||
+                    dataScadenza == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Riempire i campi obbligatori")),
+                    const SnackBar(
+                        content: Text("Riempire i campi obbligatori")),
+                  );
+                  return;
+                }
+                if (tipoSelezionato == TipoScadenza.tagliando &&
+                    descrizione.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Inserire descrizione per il tagliando")),
+                  );
+                  return;
+                }
+                try {
+                  await provider.creaScadenza(
+                    targa: targaSelezionata!,
+                    tipoScadenza: tipoSelezionato!,
+                    data: dataScadenza!,
+                    kmScadenza: km,
+                    mesiScadenza: mesi,
+                    descrizione: descrizione.isNotEmpty ? descrizione : null,
+                  );
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Scadenza creata")),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Errore: $e")),
                   );
                 }
               },
@@ -456,6 +701,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     );
   }
 
+  // --- FORM MODIFICA ---
   void _mostraFormModificaScadenza(BuildContext context, Scadenza scadenza) {
     String targaSelezionata = scadenza.targa;
     TipoScadenza tipoSelezionato = scadenza.tipoScadenza;
@@ -475,34 +721,36 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Selezione veicolo
                 DropdownButton<String>(
                   value: targaSelezionata,
                   isExpanded: true,
-                  items: provider.veicoli.map((v) => DropdownMenuItem(
-                        value: v.targa,
-                        child: Text(v.targa),
-                      )).toList(),
-                  onChanged: (value) => setState(() => targaSelezionata = value ?? scadenza.targa),
+                  items: provider.veicoli
+                      .map((v) => DropdownMenuItem(
+                            value: v.targa,
+                            child: Text(v.targa),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(
+                      () => targaSelezionata = value ?? scadenza.targa),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
-                // Selezione tipo scadenza
                 DropdownButton<TipoScadenza>(
                   value: tipoSelezionato,
                   isExpanded: true,
-                  items: TipoScadenza.values.map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.name.toUpperCase()),
-                      )).toList(),
-                  onChanged: (value) => setState(() => tipoSelezionato = value ?? scadenza.tipoScadenza),
+                  items: TipoScadenza.values
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(_labelTipo(t)),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(
+                      () => tipoSelezionato = value ?? scadenza.tipoScadenza),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                
-                // Selezione data
                 ListTile(
                   title: const Text("Data scadenza"),
                   subtitle: Text(DateFormat('dd/MM/yyyy').format(dataScadenza)),
+                  trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final selected = await showDatePicker(
                       context: context,
@@ -516,13 +764,10 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
-
-                // TAGLIANDO: mostra descrizione, km e mesi
                 if (tipoSelezionato == TipoScadenza.tagliando) ...[
                   TextField(
                     decoration: const InputDecoration(
                       labelText: "Descrizione manutenzione",
-                      hintText: "Es: Cambio olio, Sostituzione filtri, ecc.",
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,
@@ -536,6 +781,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
+                    controller:
+                        TextEditingController(text: km?.toString() ?? ''),
                     onChanged: (value) => km = int.tryParse(value),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -545,43 +792,23 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
+                    controller:
+                        TextEditingController(text: mesi?.toString() ?? ''),
                     onChanged: (value) => mesi = int.tryParse(value),
                   ),
-                ] else if (tipoSelezionato == TipoScadenza.bollo) ...[
-                  // BOLLO: solo mesi
+                ] else ...[
                   TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Mesi validità bollo",
-                      border: OutlineInputBorder(),
-                      helperText: "Generalmente 12 mesi",
+                    decoration: InputDecoration(
+                      labelText: "Mesi validità",
+                      border: const OutlineInputBorder(),
+                      helperText: tipoSelezionato == TipoScadenza.revisione
+                          ? "Generalmente 24 mesi"
+                          : "Generalmente 12 mesi",
                     ),
                     keyboardType: TextInputType.number,
-                    controller: TextEditingController(text: mesi?.toString() ?? '12'),
-                    onChanged: (value) => mesi = int.tryParse(value) ?? 12,
-                  ),
-                ] else if (tipoSelezionato == TipoScadenza.assicurazione) ...[
-                  // ASSICURAZIONE: solo mesi
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Mesi copertura assicurazione",
-                      border: OutlineInputBorder(),
-                      helperText: "Generalmente 12 mesi",
-                    ),
-                    keyboardType: TextInputType.number,
-                    controller: TextEditingController(text: mesi?.toString() ?? '12'),
-                    onChanged: (value) => mesi = int.tryParse(value) ?? 12,
-                  ),
-                ] else if (tipoSelezionato == TipoScadenza.revisione) ...[
-                  // REVISIONE: solo mesi
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Mesi validità revisione",
-                      border: OutlineInputBorder(),
-                      helperText: "Generalmente 24 mesi",
-                    ),
-                    keyboardType: TextInputType.number,
-                    controller: TextEditingController(text: mesi?.toString() ?? '24'),
-                    onChanged: (value) => mesi = int.tryParse(value) ?? 24,
+                    controller:
+                        TextEditingController(text: mesi?.toString() ?? ''),
+                    onChanged: (value) => mesi = int.tryParse(value),
                   ),
                 ],
               ],
@@ -624,114 +851,390 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     );
   }
 
+  // --- FORM CHIUSURA ---
   void _mostraFormChiusuraIntervento(BuildContext context, Scadenza scadenza) {
     double costo = 0;
     String dettagli = '';
-
     final provider = context.read<FleetProvider>();
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text("Chiudi intervento"),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "${scadenza.tipoScadenza.name.toUpperCase()} - ${scadenza.targa}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text(
-                  "Registra i dettagli dell'intervento completato:",
-                  style: TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: "Costo intervento (€)",
-                    border: OutlineInputBorder(),
-                    prefixText: "€ ",
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (value) => costo = double.tryParse(value) ?? 0,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: "Dettagli intervento",
-                    border: OutlineInputBorder(),
-                    hintText: "Es: Cambio olio, Sostituzione batteria, ...",
-                  ),
-                  maxLines: 3,
-                  onChanged: (value) => dettagli = value,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Annulla"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (dettagli.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Inserire i dettagli dell'intervento")),
-                  );
-                  return;
-                }
-                
-                try {
-                  await provider.chiudiScadenza(
-                    idScadenza: scadenza.idScadenza,
-                    costo: costo,
-                    dettagli: dettagli,
-                  );
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Intervento completato")),
-                    );
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Errore: $e")),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
+      builder: (context) => AlertDialog(
+        title: const Text("Chiudi intervento"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "${_labelTipo(scadenza.tipoScadenza)} - ${scadenza.targa}",
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              child: const Text("Completa"),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.md),
+              const Text("Registra i dettagli dell'intervento completato:",
+                  style: TextStyle(fontSize: 14)),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: "Costo intervento (€)",
+                  border: OutlineInputBorder(),
+                  prefixText: "€ ",
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (value) => costo = double.tryParse(value) ?? 0,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: "Dettagli intervento",
+                  border: OutlineInputBorder(),
+                  hintText: "Es: Cambio olio, Sostituzione batteria, ...",
+                ),
+                maxLines: 3,
+                onChanged: (value) => dettagli = value,
+              ),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Annulla"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (dettagli.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text("Inserire i dettagli dell'intervento")),
+                );
+                return;
+              }
+              try {
+                await provider.chiudiScadenza(
+                  idScadenza: scadenza.idScadenza,
+                  costo: costo,
+                  dettagli: dettagli,
+                );
+                if (mounted) {
+                  Navigator.pop(context);
+                  // ✅ Apre automaticamente il form prossima scadenza
+                  _mostraFormProssimaScadenza(context, scadenza, provider);
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Errore: $e")),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            child: const Text("Completa"),
+          ),
+        ],
       ),
     );
   }
 
+  // --- FORM PROSSIMA SCADENZA ---
+  void _mostraFormProssimaScadenza(
+      BuildContext context, Scadenza scadenzaChiusa, FleetProvider provider) {
+    // Valori default intelligenti in base al tipo
+    int mesiDefault;
+    int? kmDefault;
+    switch (scadenzaChiusa.tipoScadenza) {
+      case TipoScadenza.tagliando:
+        mesiDefault = scadenzaChiusa.mesiScadenza ?? 12;
+        kmDefault = scadenzaChiusa.kmScadenza;
+        break;
+      case TipoScadenza.revisione:
+        mesiDefault = 24;
+        break;
+      case TipoScadenza.bollo:
+      case TipoScadenza.assicurazione:
+        mesiDefault = 12;
+        break;
+    }
+
+    int mesi = mesiDefault;
+    int? km = kmDefault;
+    final ora = DateTime.now();
+    DateTime dataCalcolata = DateTime(ora.year, ora.month + mesi, ora.day);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          void aggiornaData(int nuoviMesi) {
+            setState(() {
+              mesi = nuoviMesi;
+              dataCalcolata =
+                  DateTime(ora.year, ora.month + nuoviMesi, ora.day);
+            });
+          }
+
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(_iconTipo(scadenzaChiusa.tipoScadenza),
+                      color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text("Prossima scadenza",
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Info contestuale
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.info.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: AppColors.info.withOpacity(0.3), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 18, color: AppColors.info),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Stai pianificando il prossimo ${_labelTipo(scadenzaChiusa.tipoScadenza)} per ${scadenzaChiusa.targa}",
+                            style: const TextStyle(
+                                fontSize: 13, color: AppColors.info),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Controllo mesi con +/-
+                  const Text("Tra quanti mesi?",
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: OutlinedButton(
+                          onPressed:
+                              mesi > 1 ? () => aggiornaData(mesi - 1) : null,
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Icon(Icons.remove, size: 18),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            "$mesi mesi",
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: OutlinedButton(
+                          onPressed: () => aggiornaData(mesi + 1),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Icon(Icons.add, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Chip scorciatoie
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: _scorciatoieMesi(scadenzaChiusa.tipoScadenza)
+                        .map((m) => GestureDetector(
+                              onTap: () => aggiornaData(m),
+                              child: Chip(
+                                label: Text("$m mesi"),
+                                backgroundColor: mesi == m
+                                    ? AppColors.primary
+                                    : AppColors.grey100,
+                                labelStyle: TextStyle(
+                                  fontSize: 12,
+                                  color: mesi == m
+                                      ? AppColors.white
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+
+                  // KM solo per tagliando
+                  if (scadenzaChiusa.tipoScadenza ==
+                      TipoScadenza.tagliando) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text("Tra quanti km? (opzionale)",
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: "Es: 10000",
+                        border: OutlineInputBorder(),
+                        suffixText: "km",
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller:
+                          TextEditingController(text: km?.toString() ?? ''),
+                      onChanged: (value) =>
+                          setState(() => km = int.tryParse(value)),
+                    ),
+                  ],
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Data risultante calcolata
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppColors.success.withOpacity(0.3), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event_available,
+                            color: AppColors.success, size: 22),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("Prossima scadenza fissata al:",
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
+                            Text(
+                              DateFormat('dd MMMM yyyy', 'it')
+                                  .format(dataCalcolata),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Salta"),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await provider.creaScadenza(
+                      targa: scadenzaChiusa.targa,
+                      tipoScadenza: scadenzaChiusa.tipoScadenza,
+                      data: dataCalcolata,
+                      kmScadenza: km,
+                      mesiScadenza: mesi,
+                      descrizione: scadenzaChiusa.descrizione,
+                    );
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Prossimo ${_labelTipo(scadenzaChiusa.tipoScadenza)} fissato al ${DateFormat('dd/MM/yyyy').format(dataCalcolata)}",
+                          ),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Errore: $e")),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.add_task),
+                label: const Text("Crea scadenza"),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Scorciatoie mesi suggerite per tipo
+  List<int> _scorciatoieMesi(TipoScadenza tipo) {
+    switch (tipo) {
+      case TipoScadenza.tagliando:
+        return [6, 12, 18];
+      case TipoScadenza.revisione:
+        return [12, 24, 48];
+      case TipoScadenza.bollo:
+      case TipoScadenza.assicurazione:
+        return [6, 12];
+    }
+  }
+
   Future<bool> _mostraConfermaEliminazione(BuildContext context) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Eliminare scadenza?"),
-        content: const Text("Questa azione non può essere annullata."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Annulla"),
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Eliminare scadenza?"),
+            content: const Text("Questa azione non può essere annullata."),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Annulla"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                child: const Text("Elimina"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text("Elimina"),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 }
