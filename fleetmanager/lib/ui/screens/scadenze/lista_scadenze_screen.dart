@@ -98,8 +98,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                         children: [
                           if (isFirstClosed)
                             const Padding(
-                              padding: EdgeInsets.only(
-                                  top: 16, bottom: 8, left: 4),
+                              padding:
+                                  EdgeInsets.only(top: 16, bottom: 8, left: 4),
                               child: Row(
                                 children: [
                                   Icon(Icons.history,
@@ -498,21 +498,21 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.pop(context);
-                if (await _mostraConfermaEliminazione(context)) {
-                  if (mounted) {
-                    try {
-                      await context
-                          .read<FleetProvider>()
-                          .eliminaScadenza(scadenza.idScadenza);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Scadenza eliminata")),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Errore: $e")),
-                      );
-                    }
+                final conferma = await _mostraConfermaEliminazione(context);
+                if (!conferma) return;
+                if (mounted) Navigator.pop(context);
+                if (mounted) {
+                  try {
+                    await context
+                        .read<FleetProvider>()
+                        .eliminaScadenza(scadenza.idScadenza);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Scadenza eliminata")),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Errore: $e")),
+                    );
                   }
                 }
               },
