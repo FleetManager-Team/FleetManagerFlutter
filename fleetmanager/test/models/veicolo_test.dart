@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:FleetManager/models/veicolo.dart';
-import 'package:FleetManager/models/enums/tipo_veicolo.dart';
-import 'package:FleetManager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/models/veicolo.dart';
+import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
+import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 
 void main() {
   group('Veicolo model', () {

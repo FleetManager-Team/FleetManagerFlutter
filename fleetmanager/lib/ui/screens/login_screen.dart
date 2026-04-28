@@ -1,9 +1,9 @@
-import 'package:FleetManager/ui/screens/dashboard_screen.dart';
+import 'package:fleetmanager/ui/screens/dashboard_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:FleetManager/provider/fleet_provider.dart';
-import 'package:FleetManager/core/theme/index.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -134,13 +134,13 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  void _mostraDialogRecupero(BuildContext context) {
+  void _mostraDialogRecupero() {
     final TextEditingController recoveryEmailController =
         TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Recupero Password"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -159,14 +159,14 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("Annulla")),
           ElevatedButton(
             onPressed: () async {
               final email = recoveryEmailController.text.trim();
               if (email.isNotEmpty) {
-                final messenger = ScaffoldMessenger.of(context);
-                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(dialogContext);
+                final navigator = Navigator.of(dialogContext);
 
                 final success =
                     await context.read<FleetProvider>().recuperaPassword(
@@ -176,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen>
                               : "io.supabase.flutter://reset-callback/",
                         );
 
-                if (!context.mounted) return;
+                if (!mounted) return;
 
                 navigator.pop(); 
                 messenger.showSnackBar(
@@ -356,8 +356,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                             const SizedBox(height: 16),
                             TextButton(
-                              onPressed: () => _mostraDialogRecupero(
-                                  context), // <--- Cambia qui
+                              onPressed: () => _mostraDialogRecupero(),
                               child: Text(
                                 'Password dimenticata?',
                                 style:
@@ -387,7 +386,7 @@ class _LoginScreenState extends State<LoginScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge)),
@@ -463,7 +462,7 @@ class _LoginScreenState extends State<LoginScreen>
               const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("Annulla"),
             ),
             ElevatedButton(
@@ -477,12 +476,15 @@ class _LoginScreenState extends State<LoginScreen>
               onPressed: () async {
                 if (formKeyReset.currentState!.validate()) {
                   try {
+                    final navigator = Navigator.of(dialogContext);
+                    final messenger = ScaffoldMessenger.of(dialogContext);
+
                     final success = await context
                         .read<FleetProvider>()
                         .aggiornaPassword(passController.text);
                     if (success && mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      navigator.pop();
+                      messenger.showSnackBar(
                         const SnackBar(
                           content:
                               Text("✅ Password aggiornata! Ora puoi accedere."),
@@ -497,11 +499,13 @@ class _LoginScreenState extends State<LoginScreen>
                           "La nuova password non può essere uguale alla vecchia!";
                     }
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(erroreMessaggio),
-                          backgroundColor: AppColors.error),
-                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(erroreMessaggio),
+                            backgroundColor: AppColors.error),
+                      );
+                    }
                   }
                 }
               },

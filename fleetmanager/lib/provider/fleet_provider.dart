@@ -1,8 +1,8 @@
-import 'package:FleetManager/models/checkup.dart';
-import 'package:FleetManager/models/enums/tipo_prenotazione.dart';
-import 'package:FleetManager/models/enums/tipo_scadenza.dart';
-import 'package:FleetManager/models/manutenzione.dart';
-import 'package:FleetManager/models/enums/ruolo_utente.dart';
+import 'package:fleetmanager/models/checkup.dart';
+import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
+import 'package:fleetmanager/models/enums/tipo_scadenza.dart';
+import 'package:fleetmanager/models/manutenzione.dart';
+import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

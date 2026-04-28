@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:FleetManager/services/scadenza_service.dart';
+import 'package:fleetmanager/services/scadenza_service.dart';
 
 import '_service_test_helpers.dart';
 

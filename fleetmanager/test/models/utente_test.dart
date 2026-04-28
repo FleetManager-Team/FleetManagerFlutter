@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:FleetManager/models/utente.dart';
-import 'package:FleetManager/models/enums/ruolo_utente.dart';
+import 'package:fleetmanager/models/utente.dart';
+import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 
 void main() {
   group('Utente model', () {

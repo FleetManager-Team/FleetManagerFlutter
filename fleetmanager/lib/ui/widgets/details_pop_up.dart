@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:FleetManager/core/theme/index.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 
 class DetailsPopUp extends StatelessWidget {
   final String title;

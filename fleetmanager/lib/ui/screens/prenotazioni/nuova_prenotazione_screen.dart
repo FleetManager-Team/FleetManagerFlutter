@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:FleetManager/provider/fleet_provider.dart';
-import 'package:FleetManager/models/enums/stato_veicolo.dart';
-import 'package:FleetManager/core/theme/index.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 class NuovaPrenotazioneScreen extends StatefulWidget {
   const NuovaPrenotazioneScreen({super.key});
 
@@ -24,7 +24,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
       .copyWith(hour: 18, minute: 0, second: 0, millisecond: 0);
 
   // Helper per selezionare data e ora
-  Future<void> _selectDateTime(BuildContext context, bool isStart) async {
+  Future<void> _selectDateTime(bool isStart) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: isStart ? _inizio : _fine,
@@ -120,7 +120,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                       title: const Text("Inizio"),
                       subtitle:
                           Text(DateFormat('dd/MM/yyyy HH:mm').format(_inizio)),
-                      onTap: () => _selectDateTime(context, true),
+                      onTap: () => _selectDateTime(true),
                     ),
                   ),
 
@@ -131,7 +131,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                       title: const Text("Fine"),
                       subtitle:
                           Text(DateFormat('dd/MM/yyyy HH:mm').format(_fine)),
-                      onTap: () => _selectDateTime(context, false),
+                      onTap: () => _selectDateTime(false),
                     ),
                   ),
 
@@ -150,6 +150,9 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                             _fine.isBefore(_inizio))
                         ? null
                         : () async {
+                            final navigator = Navigator.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            
                             try {
                               if (provider.utenteLoggato == null) {
                                 throw "Utente non loggato";
@@ -169,7 +172,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                                 if (mounted) {
                                   showDialog(
                                     context: context,
-                                    builder: (context) => AlertDialog(
+                                    builder: (dialogContext) => AlertDialog(
                                       title:
                                           const Text("Veicolo non disponibile"),
                                       content: const Text(
@@ -177,7 +180,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                                       actions: [
                                         TextButton(
                                             onPressed: () =>
-                                                Navigator.pop(context),
+                                                Navigator.pop(dialogContext),
                                             child: const Text("HO CAPITO"))
                                       ],
                                     ),
@@ -195,16 +198,16 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                               );
 
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   const SnackBar(
                                       content: Text(
                                           "Richiesta inviata! In attesa di approvazione.")),
                                 );
-                                Navigator.pop(context);
+                                navigator.pop();
                               }
                             } catch (e) {
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                       content: Text("Errore: ${e.toString()}"),
                                       backgroundColor: AppColors.error),

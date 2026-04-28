@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
-import 'package:FleetManager/provider/fleet_provider.dart';
-import 'package:FleetManager/core/theme/index.dart';
-import 'package:FleetManager/models/prenotazione.dart';
-import 'package:FleetManager/models/enums/stato_prenotazione.dart';
-import 'package:FleetManager/models/enums/ruolo_utente.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
+import 'package:fleetmanager/models/prenotazione.dart';
+import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
+import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 
 class BookingListScreen extends StatefulWidget {
   const BookingListScreen({super.key});
@@ -193,7 +193,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
         title: const Text("Dettaglio Prenotazione"),
         content: Column(
@@ -219,17 +219,17 @@ class _BookingListScreenState extends State<BookingListScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("CHIUDI")),
           if (isManager &&
               p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
             _actionButton("RIFIUTA", AppColors.error, () async {
               await provider.annullaPrenotazione(p.idPrenotazione);
-              if (mounted) Navigator.pop(context);
+              if (mounted) Navigator.pop(dialogContext);
             }),
             _actionButton("APPROVA", AppColors.success, () async {
               await provider.confermaPrenotazione(p.idPrenotazione);
-              if (mounted) Navigator.pop(context);
+              if (mounted) Navigator.pop(dialogContext);
             }),
           ],
         ],
@@ -237,7 +237,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
     );
   }
 
-  Widget _actionButton(String label, Color color, VoidCallback onPressed) {
+  Widget _actionButton(String label, Color color, Function() onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(backgroundColor: color),
       onPressed: onPressed,

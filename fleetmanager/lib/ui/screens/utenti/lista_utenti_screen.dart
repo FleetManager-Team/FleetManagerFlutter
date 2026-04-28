@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:FleetManager/models/utente.dart';
-import 'package:FleetManager/models/enums/ruolo_utente.dart';
-import 'package:FleetManager/provider/fleet_provider.dart';
-import 'package:FleetManager/core/theme/index.dart';
+import 'package:fleetmanager/models/utente.dart';
+import 'package:fleetmanager/models/enums/ruolo_utente.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
 

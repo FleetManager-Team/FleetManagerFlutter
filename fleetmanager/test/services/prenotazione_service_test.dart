@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:FleetManager/services/prenotazione_service.dart';
-import 'package:FleetManager/models/prenotazione.dart';
-import 'package:FleetManager/models/enums/stato_prenotazione.dart';
-import 'package:FleetManager/models/enums/tipo_prenotazione.dart';
+import 'package:fleetmanager/services/prenotazione_service.dart';
+import 'package:fleetmanager/models/prenotazione.dart';
+import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
+import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
 
 import '_service_test_helpers.dart';
 

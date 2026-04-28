@@ -1,7 +1,7 @@
-import 'package:FleetManager/models/enums/tipo_scadenza.dart';
-import 'package:FleetManager/core/theme/index.dart';
-import 'package:FleetManager/models/scadenza.dart';
-import 'package:FleetManager/provider/fleet_provider.dart';
+import 'package:fleetmanager/models/enums/tipo_scadenza.dart';
+import 'package:fleetmanager/core/theme/index.dart';
+import 'package:fleetmanager/models/scadenza.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';

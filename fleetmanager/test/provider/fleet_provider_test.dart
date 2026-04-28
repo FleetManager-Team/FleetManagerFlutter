@@ -6,28 +6,28 @@ import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Import Provider e Servizi
-import 'package:FleetManager/provider/fleet_provider.dart';
-import 'package:FleetManager/services/auth_service.dart';
-import 'package:FleetManager/services/veicolo_service.dart';
-import 'package:FleetManager/services/prenotazione_service.dart';
-import 'package:FleetManager/services/manutenzione_service.dart';
-import 'package:FleetManager/services/notifica_service.dart';
-import 'package:FleetManager/services/scadenza_service.dart';
+import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/services/auth_service.dart';
+import 'package:fleetmanager/services/veicolo_service.dart';
+import 'package:fleetmanager/services/prenotazione_service.dart';
+import 'package:fleetmanager/services/manutenzione_service.dart';
+import 'package:fleetmanager/services/notifica_service.dart';
+import 'package:fleetmanager/services/scadenza_service.dart';
 
 // Import Modelli ed Enums
-import 'package:FleetManager/models/utente.dart';
-import 'package:FleetManager/models/veicolo.dart';
-import 'package:FleetManager/models/prenotazione.dart';
-import 'package:FleetManager/models/manutenzione.dart';
-import 'package:FleetManager/models/notifica.dart';
-import 'package:FleetManager/models/restituzione.dart';
-import 'package:FleetManager/models/enums/ruolo_utente.dart';
-import 'package:FleetManager/models/enums/stato_prenotazione.dart';
-import 'package:FleetManager/models/enums/stato_veicolo.dart';
-import 'package:FleetManager/models/enums/tipo_manutenzione.dart';
-import 'package:FleetManager/models/enums/tipo_notifica.dart';
-import 'package:FleetManager/models/enums/tipo_prenotazione.dart';
-import 'package:FleetManager/models/enums/tipo_veicolo.dart';
+import 'package:fleetmanager/models/utente.dart';
+import 'package:fleetmanager/models/veicolo.dart';
+import 'package:fleetmanager/models/prenotazione.dart';
+import 'package:fleetmanager/models/manutenzione.dart';
+import 'package:fleetmanager/models/notifica.dart';
+import 'package:fleetmanager/models/restituzione.dart';
+import 'package:fleetmanager/models/enums/ruolo_utente.dart';
+import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
+import 'package:fleetmanager/models/enums/stato_veicolo.dart';
+import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
+import 'package:fleetmanager/models/enums/tipo_notifica.dart';
+import 'package:fleetmanager/models/enums/tipo_prenotazione.dart';
+import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 
 // 1. MOCK CLASSES
 class MockAuthService extends Mock implements AuthService {}

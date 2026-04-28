@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../provider/fleet_provider.dart';
 import '../../../models/enums/tipo_notifica.dart';
-import 'package:FleetManager/core/theme/index.dart';
+import 'package:fleetmanager/core/theme/index.dart';
 class NotificheScreen extends StatelessWidget {
   const NotificheScreen({super.key});
 

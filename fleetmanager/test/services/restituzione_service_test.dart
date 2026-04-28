@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:postgrest/postgrest.dart';
 
-import 'package:FleetManager/services/restituzione_service.dart';
+import 'package:fleetmanager/services/restituzione_service.dart';
 
 import '_service_test_helpers.dart';
 

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:FleetManager/services/manutenzione_service.dart';
-import 'package:FleetManager/models/manutenzione.dart';
-import 'package:FleetManager/models/enums/tipo_manutenzione.dart';
+import 'package:fleetmanager/services/manutenzione_service.dart';
+import 'package:fleetmanager/models/manutenzione.dart';
+import 'package:fleetmanager/models/enums/tipo_manutenzione.dart';
 
 import '_service_test_helpers.dart';
 
