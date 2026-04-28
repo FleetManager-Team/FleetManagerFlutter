@@ -86,7 +86,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       height: 60,
       decoration: BoxDecoration(
         color: AppColors.white,
-        boxShadow: [BoxShadow(color: AppColors.grey900.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: AppColors.grey900.withValues(alpha:0.05), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
@@ -138,7 +138,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: InkWell( // Rende tutta la card cliccabile
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
@@ -154,7 +154,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(statusIcon, color: statusColor, size: 24),

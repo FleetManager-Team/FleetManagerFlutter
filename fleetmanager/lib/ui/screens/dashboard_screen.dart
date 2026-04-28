@@ -219,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
-              color: Colors.green.withOpacity(0.2),
+              color: Colors.green..withValues(alpha:0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -234,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   "VEICOLO IN USO",
                   style: TextStyle(
-                      color: AppColors.white.withOpacity(0.7),
+                      color: AppColors.white..withValues(alpha:0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1),
@@ -476,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                 : null,
             leading: CircleAvatar(
-              backgroundColor: _getStatusColor(p, provider).withOpacity(0.1),
+              backgroundColor: _getStatusColor(p, provider)..withValues(alpha:0.1),
               child: Icon(Icons.calendar_today,
                   color: _getStatusColor(p, provider), size: 20),
             ),
@@ -500,7 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       // FIX: colore con opacità per rendere il testo leggibile
-                      color: AppColors.secondary.withOpacity(0.15),
+                      color: AppColors.secondary..withValues(alpha:0.15),
                       border: Border.all(color: AppColors.secondary, width: 1),
                       borderRadius:
                           BorderRadius.circular(AppSpacing.radiusDefault),
@@ -872,7 +872,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
-              color: AppColors.secondary.withOpacity(0.2),
+              color: AppColors.secondary..withValues(alpha:0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -887,7 +887,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   "PRENOTAZIONE PRONTA",
                   style: TextStyle(
-                      color: AppColors.white.withOpacity(0.7),
+                      color: AppColors.white..withValues(alpha:0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1),
@@ -910,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               "Esegui il controllo perimetrale per partire",
               style: TextStyle(
-                  color: AppColors.white.withOpacity(0.7), fontSize: 13),
+                  color: AppColors.white..withValues(alpha:0.7), fontSize: 13),
             ),
             const SizedBox(height: 15),
             // FIX: SizedBox per vincolare la larghezza del bottone
@@ -1009,7 +1009,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red..withValues(alpha:0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -1042,7 +1042,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? "Un driver ha segnalato un guasto o incidente. Verifica subito la posizione."
                 : "Hai segnalato un'emergenza per il veicolo ${prenotazione.targa}. Completa i dati appena possibile.",
             style: TextStyle(
-                color: AppColors.white.withOpacity(0.7), fontSize: 14),
+                color: AppColors.white..withValues(alpha:0.7), fontSize: 14),
           ),
           const SizedBox(height: 15),
           // FIX: SizedBox per vincolare la larghezza del bottone nell'emergency card

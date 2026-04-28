@@ -132,7 +132,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
-            color: _getStatusColor(v.statoVeicolo).withOpacity(0.1),
+            color: _getStatusColor(v.statoVeicolo).withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           ),
           child: Icon(

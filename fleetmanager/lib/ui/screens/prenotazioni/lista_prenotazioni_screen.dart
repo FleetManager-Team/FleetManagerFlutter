@@ -165,7 +165,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
       child: ListTile(
         onTap: () => _showBookingDetails(p, provider, isManager, driver),
         leading: CircleAvatar(
-          backgroundColor: statusColor.withOpacity(0.1),
+          backgroundColor: statusColor.withValues(alpha:0.1),
           child: Icon(Icons.calendar_month, color: statusColor),
         ),
         title: Text("Targa: ${p.targa}",
@@ -209,7 +209,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
               child: Text(p.statoPrenotazione.name.toUpperCase(),
                   style: TextStyle(

@@ -214,7 +214,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.white.withOpacity(0.3)
+                      ? AppColors.white.withValues(alpha:0.3)
                       : AppColors.error,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -252,23 +252,23 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
       urgenzaIcon = Icons.check_circle;
     } else if (isScaduta) {
       urgenzaColor = AppColors.error;
-      urgenzaBg = AppColors.error.withOpacity(0.08);
+      urgenzaBg = AppColors.error.withValues(alpha: 0.08);
       urgenzaLabel = "Scaduta";
       urgenzaIcon = Icons.error_outline;
     } else if (giorniRimanenti <= 7) {
       urgenzaColor = AppColors.error;
-      urgenzaBg = AppColors.error.withOpacity(0.08);
+      urgenzaBg = AppColors.error.withValues(alpha: 0.08);
       urgenzaLabel =
           giorniRimanenti == 0 ? "Scade oggi" : "Scade in $giorniRimanenti gg";
       urgenzaIcon = Icons.warning_amber_rounded;
     } else if (giorniRimanenti <= 30) {
       urgenzaColor = AppColors.warning;
-      urgenzaBg = AppColors.warning.withOpacity(0.08);
+      urgenzaBg = AppColors.warning.withValues(alpha: 0.08);
       urgenzaLabel = "Scade in $giorniRimanenti gg";
       urgenzaIcon = Icons.schedule;
     } else {
       urgenzaColor = AppColors.success;
-      urgenzaBg = AppColors.success.withOpacity(0.08);
+      urgenzaBg = AppColors.success.withValues(alpha: 0.08);
       urgenzaLabel = "Scade in $giorniRimanenti gg";
       urgenzaIcon = Icons.check_circle_outline;
     }
@@ -280,7 +280,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
         side: BorderSide(
-          color: isClosed ? AppColors.grey300 : urgenzaColor.withOpacity(0.3),
+          color: isClosed ? AppColors.grey300 : urgenzaColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -981,7 +981,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(_iconTipo(scadenzaChiusa.tipoScadenza),
@@ -1004,10 +1004,10 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.08),
+                      color: AppColors.info.withValues(alpha:0.08),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: AppColors.info.withOpacity(0.3), width: 1),
+                          color: AppColors.info.withValues(alpha:0.3), width: 1),
                     ),
                     child: Row(
                       children: [
@@ -1122,10 +1122,10 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.08),
+                      color: AppColors.success.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: AppColors.success.withOpacity(0.3), width: 1),
+                          color: AppColors.success.withValues(alpha: 0.3), width: 1),
                     ),
                     child: Row(
                       children: [

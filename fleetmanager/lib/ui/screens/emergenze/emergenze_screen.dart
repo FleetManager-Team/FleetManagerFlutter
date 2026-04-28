@@ -100,7 +100,7 @@ class EmergenzeScreen extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.1),
+            color: AppColors.error..withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           ),
           child: Icon(
@@ -193,10 +193,10 @@ class EmergenzeScreen extends StatelessWidget {
   Widget _buildEmptyCard(String message) {
     return Card(
       elevation: 0,
-      color: Colors.white.withOpacity(0.5),
+      color: Colors.white..withValues(alpha:0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        side: BorderSide(color: Colors.grey..withValues(alpha:0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),

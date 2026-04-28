@@ -314,7 +314,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               "Danni Segnalati",
               dati['descrizione_danni'] ?? "Vedi foto",
               dati['url_foto_danni'],
-              AppColors.error.withOpacity(0.1)),
+              AppColors.error.withValues(alpha:0.1)),
       ],
     );
   }
@@ -380,7 +380,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
           border: Border.all(color: color)),
       child: Text(text,
@@ -441,11 +441,11 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
   Widget _buildStatusCard(String text, Color color) {
     return Card(
-      color: color.withOpacity(0.05),
+      color: color.withValues(alpha: 0.05),
       elevation: 0,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-          side: BorderSide(color: color.withOpacity(0.2))),
+          side: BorderSide(color: color.withValues(alpha: 0.2))),
       child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Center(

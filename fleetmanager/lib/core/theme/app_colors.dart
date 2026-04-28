@@ -49,7 +49,7 @@ class AppColors {
   static const Color divider = grey200;
 
   // Shadows
-  static Color shadowColor = black.withOpacity(0.1);
+  static Color shadowColor = black..withValues(alpha:0.1);
 
   // Semantic Colors (mapping to primary/secondary)
   static const Color positive = success;
@@ -58,9 +58,9 @@ class AppColors {
   static const Color attention = warning;
 
   // Transparency variants for overlays
-  static Color overlayDark = black.withOpacity(0.05);
-  static Color overlayDarker = black.withOpacity(0.1);
-  static Color overlayDarkest = black.withOpacity(0.2);
+  static Color overlayDark = black..withValues(alpha:0.05);
+  static Color overlayDarker = black..withValues(alpha:0.1);
+  static Color overlayDarkest = black..withValues(alpha:0.2);
 
   // Gradient colors
   static const List<Color> primaryGradient = [primary, primaryLight];

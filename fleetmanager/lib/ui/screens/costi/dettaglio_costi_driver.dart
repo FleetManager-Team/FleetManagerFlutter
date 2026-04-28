@@ -276,7 +276,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
           border: Border.all(color: AppColors.grey300),
           boxShadow: [
             BoxShadow(
-              color: AppColors.grey900.withOpacity(0.05),
+              color: AppColors.grey900..withValues(alpha:0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -321,7 +321,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
           label: const Text("Carburante"),
           selected: _mostraCarburante,
           onSelected: (v) => setState(() => _mostraCarburante = v),
-          selectedColor: AppColors.secondary.withOpacity(0.2),
+          selectedColor: AppColors.secondary..withValues(alpha:0.2),
           checkmarkColor: AppColors.secondary,
         ),
         const SizedBox(width: 10),
@@ -329,7 +329,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
           label: const Text("Pedaggi"),
           selected: _mostraPedaggi,
           onSelected: (v) => setState(() => _mostraPedaggi = v),
-          selectedColor: AppColors.primary.withOpacity(0.2),
+          selectedColor: AppColors.primary..withValues(alpha:0.2),
           checkmarkColor: AppColors.primary,
         ),
       ],

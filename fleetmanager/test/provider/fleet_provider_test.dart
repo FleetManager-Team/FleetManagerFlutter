@@ -167,7 +167,9 @@ void main() {
       supabaseClient: mockSupabase,
     );
 
-    when(() => mockScadenze.segnaNotificata(any())).thenAnswer((_) async {});
+    when(() => mockScadenze.segnaNotificata(any())).thenAnswer((_) async {
+      return null;
+    });
   });
 
   group('FleetProvider - Test Autenticazione', () {
@@ -552,7 +554,9 @@ void main() {
       );
       fleetProvider.notifiche.add(notifica);
 
-      when(() => mockNotifiche.segnaLetta(any())).thenAnswer((_) async {});
+      when(() => mockNotifiche.segnaLetta(any())).thenAnswer((_) async {
+        return null;
+      });
 
       await fleetProvider.segnaNotificaLetta(99);
 
@@ -570,7 +574,9 @@ void main() {
       );
       fleetProvider.notifiche.add(notifica);
 
-      when(() => mockNotifiche.segnaLetta(any())).thenAnswer((_) async {});
+      when(() => mockNotifiche.segnaLetta(any())).thenAnswer((_) async {
+        return null;
+      });
 
       await fleetProvider.segnaNotificaLetta(999);
 
@@ -642,10 +648,14 @@ void main() {
       fleetProvider.utenti.add(manager);
 
       when(() => mockPrenotazioni.creaPrenotazione(any()))
-          .thenAnswer((_) async {});
+          .thenAnswer((_) async {
+            return null;
+          });
       when(() => mockNotifiche.notificaRichiestaPrenotazione(
               any(), any(), any(), any(), any()))
-          .thenAnswer((_) async {});
+          .thenAnswer((_) async {
+            return null;
+          });
       when(() => mockVeicoli.fetchAllVeicoli())
           .thenAnswer((_) async => <Veicolo>[]);
       when(() => mockPrenotazioni.fetchPrenotazioni())

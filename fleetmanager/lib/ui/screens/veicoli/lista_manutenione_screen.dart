@@ -119,7 +119,7 @@ class _MaintenanceDashboardScreenState
       decoration: BoxDecoration(
         color: AppColors.white,
         boxShadow: [
-          BoxShadow(color: AppColors.grey900.withOpacity(0.05), blurRadius: 10)
+          BoxShadow(color: AppColors.grey900.withValues(alpha:0.05), blurRadius: 10)
         ],
       ),
       child: Column(
