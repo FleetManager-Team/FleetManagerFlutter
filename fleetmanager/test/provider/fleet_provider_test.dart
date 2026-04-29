@@ -168,7 +168,7 @@ void main() {
     );
 
     when(() => mockScadenze.segnaNotificata(any())).thenAnswer((_) async {
-      return null;
+      return;
     });
   });
 
@@ -555,7 +555,7 @@ void main() {
       fleetProvider.notifiche.add(notifica);
 
       when(() => mockNotifiche.segnaLetta(any())).thenAnswer((_) async {
-        return null;
+        return;
       });
 
       await fleetProvider.segnaNotificaLetta(99);
@@ -575,7 +575,7 @@ void main() {
       fleetProvider.notifiche.add(notifica);
 
       when(() => mockNotifiche.segnaLetta(any())).thenAnswer((_) async {
-        return null;
+        return;
       });
 
       await fleetProvider.segnaNotificaLetta(999);
@@ -649,12 +649,12 @@ void main() {
 
       when(() => mockPrenotazioni.creaPrenotazione(any()))
           .thenAnswer((_) async {
-            return null;
+            return;
           });
       when(() => mockNotifiche.notificaRichiestaPrenotazione(
               any(), any(), any(), any(), any()))
           .thenAnswer((_) async {
-            return null;
+            return;
           });
       when(() => mockVeicoli.fetchAllVeicoli())
           .thenAnswer((_) async => <Veicolo>[]);

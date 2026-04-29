@@ -253,12 +253,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     return;
                   }
 
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+
                   try {
                     if (u == null) {
                       // --- CREAZIONE NUOVO UTENTE ---
                       // Controllo lunghezza password (limite Supabase)
                       if (passwordController.text.length < 6) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                               content: Text(
                                   "La password deve essere di almeno 6 caratteri")),
@@ -284,8 +287,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                     // Se tutto è andato bene, chiudiamo il pannello
                     if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      navigator.pop();
+                      messenger.showSnackBar(
                         const SnackBar(
                             content:
                                 Text("Operazione completata con successo!")),
@@ -294,7 +297,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   } catch (e) {
                     // Gestione errori (es: email già registrata o problemi di rete)
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         SnackBar(content: Text("Errore: ${e.toString()}")),
                       );
                     }
@@ -313,18 +316,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _confirmDelete(Utente u) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Sei sicuro?"),
         content: Text("L'utente ${u.nome} verrà eliminato definitivamente."),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("ANNULLA")),
           TextButton(
             onPressed: () async {
-              await context.read<FleetProvider>().eliminaUtente(u.idUtente);
+              final provider = context.read<FleetProvider>();
+              final navigator = Navigator.of(dialogContext);
+              await provider.eliminaUtente(u.idUtente);
               if (mounted) {
-                Navigator.pop(context);
+                navigator.pop();
                 // Non serve chiamare _caricaDati() perché eliminaUtente nel provider
                 // dovrebbe già gestire la rimozione dalla lista o chiamare notifyListeners()
               }

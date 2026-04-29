@@ -193,7 +193,7 @@ class _MaintenanceDashboardScreenState
 
     showDialog(
       context: context,
-      builder: (context) => DetailsPopUp(
+      builder: (dialogContext) => DetailsPopUp(
         title: "Dettaglio Intervento",
         titleIcon: Icons.build_circle,
         details: [
@@ -218,13 +218,13 @@ class _MaintenanceDashboardScreenState
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text("CHIUDI")),
           if (provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager)
             IconButton(
               icon: const Icon(Icons.edit, color: AppColors.secondary),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 _showMaintenanceForm(context,
                     manutenzioneEsistente: intervento);
               },
@@ -232,10 +232,11 @@ class _MaintenanceDashboardScreenState
           ElevatedButton(
             onPressed: () async {
               int nuoviKm = int.tryParse(kmController.text) ?? v.km;
+              final navigator = Navigator.of(dialogContext);
               await provider.chiudiManutenzione(
                   intervento.idManutenzione, v.targa,
                   nuoviKm: nuoviKm);
-              if (mounted) Navigator.pop(context);
+              if (mounted) navigator.pop();
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success, foregroundColor: AppColors.white),
@@ -278,7 +279,7 @@ class _MaintenanceDashboardScreenState
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => StatefulBuilder(
+      builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom + 20,
@@ -358,6 +359,7 @@ class _MaintenanceDashboardScreenState
                       dataSelezionata.day,
                       oraSelezionata.hour,
                       oraSelezionata.minute);
+                  final navigator = Navigator.of(sheetContext);
                   if (isEditing) {
                     await provider.modificaManutenzione(
                         idManutenzione: manutenzioneEsistente.idManutenzione,
@@ -370,7 +372,7 @@ class _MaintenanceDashboardScreenState
                         dataCompleta, tipoSelezionato, descController.text,
                         luogo: luogoController.text);
                   }
-                  Navigator.pop(context);
+                  navigator.pop();
                 },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.secondary,

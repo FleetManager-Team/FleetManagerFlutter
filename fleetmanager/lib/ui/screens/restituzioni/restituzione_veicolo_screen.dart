@@ -445,10 +445,11 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       setState(() {
         if (tipo == "danni") {
           _fotoDanni = image;
-        } else if (tipo == "pedaggi")
+        } else if (tipo == "pedaggi") {
           _fotoPedaggio = image;
-        else
+        } else {
           _fotoScontrino = image;
+        }
       });
     }
   }

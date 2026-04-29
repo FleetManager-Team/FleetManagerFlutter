@@ -224,12 +224,14 @@ class _BookingListScreenState extends State<BookingListScreen> {
           if (isManager &&
               p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
             _actionButton("RIFIUTA", AppColors.error, () async {
+              final navigator = Navigator.of(dialogContext);
               await provider.annullaPrenotazione(p.idPrenotazione);
-              if (mounted) Navigator.pop(dialogContext);
+              if (mounted) navigator.pop();
             }),
             _actionButton("APPROVA", AppColors.success, () async {
+              final navigator = Navigator.of(dialogContext);
               await provider.confermaPrenotazione(p.idPrenotazione);
-              if (mounted) Navigator.pop(dialogContext);
+              if (mounted) navigator.pop();
             }),
           ],
         ],

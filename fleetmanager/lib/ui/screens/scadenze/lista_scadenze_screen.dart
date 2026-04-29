@@ -426,9 +426,11 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
 
   // --- DIALOG DETTAGLIO ---
   void _mostraDettagliScadenza(Scadenza scadenza) {
+    final provider = context.read<FleetProvider>();
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text("${_labelTipo(scadenza.tipoScadenza)} - ${scadenza.targa}"),
         content: SingleChildScrollView(
           child: Column(
@@ -463,17 +465,16 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Chiudi"),
           ),
           if (!scadenza.chiusa) ...[
             if (!scadenza.notificata)
               ElevatedButton(
                 onPressed: () async {
-                  await context
-                      .read<FleetProvider>()
-                      .segnaScadenzaNotificata(scadenza.idScadenza);
-                  if (mounted) Navigator.pop(context);
+                  final navigator = Navigator.of(dialogContext);
+                  await provider.segnaScadenzaNotificata(scadenza.idScadenza);
+                  if (mounted) navigator.pop();
                 },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.warning),
@@ -481,7 +482,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
               ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 _mostraFormModificaScadenza(context, scadenza);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.info),
@@ -489,7 +490,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 _mostraFormChiusuraIntervento(context, scadenza);
               },
               style:
@@ -498,19 +499,19 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(dialogContext);
                 final conferma = await _mostraConfermaEliminazione(context);
                 if (!conferma) return;
-                if (mounted) Navigator.pop(context);
+                if (mounted) navigator.pop();
                 if (mounted) {
                   try {
-                    await context
-                        .read<FleetProvider>()
-                        .eliminaScadenza(scadenza.idScadenza);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    await provider.eliminaScadenza(scadenza.idScadenza);
+                    messenger.showSnackBar(
                       const SnackBar(content: Text("Scadenza eliminata")),
                     );
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(content: Text("Errore: $e")),
                     );
                   }
@@ -538,7 +539,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text("Crea nuova scadenza"),
           content: SingleChildScrollView(
@@ -671,6 +672,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   );
                   return;
                 }
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
                 try {
                   await provider.creaScadenza(
                     targa: targaSelezionata!,
@@ -681,13 +684,13 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                     descrizione: descrizione.isNotEmpty ? descrizione : null,
                   );
                   if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    messenger.showSnackBar(
                       const SnackBar(content: Text("Scadenza creata")),
                     );
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text("Errore: $e")),
                   );
                 }
@@ -713,7 +716,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text("Modifica scadenza"),
           content: SingleChildScrollView(
@@ -820,6 +823,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
                 try {
                   await provider.modificaScadenza(
                     idScadenza: scadenza.idScadenza,
@@ -831,13 +836,13 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                     descrizione: descrizione.isNotEmpty ? descrizione : null,
                   );
                   if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    messenger.showSnackBar(
                       const SnackBar(content: Text("Scadenza modificata")),
                     );
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text("Errore: $e")),
                   );
                 }
@@ -858,7 +863,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Chiudi intervento"),
         content: SingleChildScrollView(
           child: Column(
@@ -898,31 +903,32 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Annulla"),
           ),
           ElevatedButton(
             onPressed: () async {
               if (dettagli.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
                       content: Text("Inserire i dettagli dell'intervento")),
                 );
                 return;
               }
+              final navigator = Navigator.of(dialogContext);
+              final messenger = ScaffoldMessenger.of(dialogContext);
               try {
                 await provider.chiudiScadenza(
                   idScadenza: scadenza.idScadenza,
                   costo: costo,
                   dettagli: dettagli,
                 );
-                if (mounted) {
-                  Navigator.pop(context);
-                  // ✅ Apre automaticamente il form prossima scadenza
-                  _mostraFormProssimaScadenza(context, scadenza, provider);
-                }
+                if (!context.mounted || !dialogContext.mounted) return;
+                navigator.pop();
+                _mostraFormProssimaScadenza(context, scadenza, provider);
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (!dialogContext.mounted) return;
+                messenger.showSnackBar(
                   SnackBar(content: Text("Errore: $e")),
                 );
               }
@@ -963,7 +969,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
           void aggiornaData(int nuoviMesi) {
             setState(() {
@@ -1163,6 +1169,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
               ),
               ElevatedButton.icon(
                 onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
                   try {
                     await provider.creaScadenza(
                       targa: scadenzaChiusa.targa,
@@ -1173,8 +1181,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                       descrizione: scadenzaChiusa.descrizione,
                     );
                     if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      navigator.pop();
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text(
                             "Prossimo ${_labelTipo(scadenzaChiusa.tipoScadenza)} fissato al ${DateFormat('dd/MM/yyyy').format(dataCalcolata)}",
@@ -1184,7 +1192,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                       );
                     }
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(content: Text("Errore: $e")),
                     );
                   }

@@ -167,9 +167,10 @@ class _LoginScreenState extends State<LoginScreen>
               if (email.isNotEmpty) {
                 final messenger = ScaffoldMessenger.of(dialogContext);
                 final navigator = Navigator.of(dialogContext);
+                final provider = context.read<FleetProvider>();
 
                 final success =
-                    await context.read<FleetProvider>().recuperaPassword(
+                    await provider.recuperaPassword(
                           email,
                           redirectTo: kIsWeb
                               ? Uri.base.origin + Uri.base.path
@@ -478,11 +479,12 @@ class _LoginScreenState extends State<LoginScreen>
                   try {
                     final navigator = Navigator.of(dialogContext);
                     final messenger = ScaffoldMessenger.of(dialogContext);
+                    final provider = context.read<FleetProvider>();
 
-                    final success = await context
-                        .read<FleetProvider>()
-                        .aggiornaPassword(passController.text);
-                    if (success && mounted) {
+                    final success =
+                        await provider.aggiornaPassword(passController.text);
+                    if (!dialogContext.mounted) return;
+                    if (success) {
                       navigator.pop();
                       messenger.showSnackBar(
                         const SnackBar(
@@ -499,13 +501,13 @@ class _LoginScreenState extends State<LoginScreen>
                           "La nuova password non può essere uguale alla vecchia!";
                     }
 
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(erroreMessaggio),
-                            backgroundColor: AppColors.error),
-                      );
-                    }
+                    if (!dialogContext.mounted) return;
+                    final messenger = ScaffoldMessenger.of(dialogContext);
+                    messenger.showSnackBar(
+                      SnackBar(
+                          content: Text(erroreMessaggio),
+                          backgroundColor: AppColors.error),
+                    );
                   }
                 }
               },
