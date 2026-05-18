@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/provider/impostazioni_provider.dart';
 
 class RestituzioneVeicoloScreen extends StatefulWidget {
   final Prenotazione prenotazione;
@@ -195,7 +196,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     _buildVehicleHeader(themeColor),
                     const SizedBox(height: 25),
                     if (widget.isEmergenza) ..._buildEmergencyFields(),
-                    if (!widget.isEmergenza) ..._buildStandardReturnFields(),
+                    if (!widget.isEmergenza)
+            ..._buildStandardReturnFields(
+                context.read<ImpostazioniProvider>()),
                     const SizedBox(height: 40),
                     _buildSubmitButton(themeColor),
                   ],
@@ -222,10 +225,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     ];
   }
 
-  List<Widget> _buildStandardReturnFields() {
+  List<Widget> _buildStandardReturnFields(ImpostazioniProvider imp) {
     return [
-      const Text("Dati di rientro",
-          style: AppTextStyles.headlineMedium),
+      const Text("Dati di rientro", style: AppTextStyles.headlineMedium),
       const SizedBox(height: 15),
       _buildKmField(),
       const SizedBox(height: 25),
@@ -249,15 +251,29 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     _euroController, "Importo Euro", Icons.euro)),
           ],
         ),
-        _buildPhotoSelector("Foto Scontrino", _fotoScontrino, "scontrino"),
+        _buildPhotoSelector(
+          imp.fotoScontrinoObbligatoria
+              ? "Foto Scontrino *"
+              : "Foto Scontrino (opzionale)",
+          _fotoScontrino,
+          "scontrino",
+        ),
       ],
-      const Divider(height: 40),
-      _buildSwitch("Hai pagato pedaggi o parcheggi?", _haPedaggi,
-          (v) => setState(() => _haPedaggi = v), Colors.blueAccent),
-      if (_haPedaggi) ...[
-        _buildTextField(_euroPedaggiController, "Importo Pedaggi (Euro)",
-            Icons.payments_outlined),
-        _buildPhotoSelector("Foto Ricevuta Pedaggio", _fotoPedaggio, "pedaggi"),
+      if (imp.moduloPedaggiAbilitato) ...[
+        const Divider(height: 40),
+        _buildSwitch("Hai pagato pedaggi o parcheggi?", _haPedaggi,
+            (v) => setState(() => _haPedaggi = v), Colors.blueAccent),
+        if (_haPedaggi) ...[
+          _buildTextField(_euroPedaggiController, "Importo Pedaggi (Euro)",
+              Icons.payments_outlined),
+          _buildPhotoSelector(
+            imp.fotoPedaggiObbligatoria
+                ? "Foto Ricevuta Pedaggio *"
+                : "Foto Ricevuta Pedaggio (opzionale)",
+            _fotoPedaggio,
+            "pedaggi",
+          ),
+        ],
       ],
       const Divider(height: 40),
       _buildSwitch("Sono presenti nuovi danni?", _danniPresenti,
@@ -266,7 +282,13 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         _buildTextField(
             _descrizioneDanniController, "Descrizione danni", Icons.edit_note,
             maxLines: 3),
-        _buildPhotoSelector("Foto Danno", _fotoDanni, "danni"),
+        _buildPhotoSelector(
+          imp.fotoDanniObbligatoria
+              ? "Foto Danno *"
+              : "Foto Danno (opzionale)",
+          _fotoDanni,
+          "danni",
+        ),
       ],
     ];
   }
@@ -457,15 +479,38 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Controllo foto obbligatoria solo se non è emergenza
-    if (!widget.isEmergenza &&
-        _rifornimentoEffettuato &&
-        _fotoScontrino == null &&
-        _urlFotoScontrinoEsistente == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Inserisci la foto dello scontrino."),
-          backgroundColor: AppColors.secondary));
-      return;
+    if (!widget.isEmergenza) {
+      final imp = context.read<ImpostazioniProvider>();
+
+      if (imp.fotoScontrinoObbligatoria &&
+          _rifornimentoEffettuato &&
+          _fotoScontrino == null &&
+          _urlFotoScontrinoEsistente == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Inserisci la foto dello scontrino."),
+            backgroundColor: AppColors.secondary));
+        return;
+      }
+
+      if (imp.fotoPedaggiObbligatoria &&
+          _haPedaggi &&
+          _fotoPedaggio == null &&
+          _urlFotoPedaggioEsistente == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Inserisci la foto della ricevuta pedaggi."),
+            backgroundColor: AppColors.secondary));
+        return;
+      }
+
+      if (imp.fotoDanniObbligatoria &&
+          _danniPresenti &&
+          _fotoDanni == null &&
+          _urlFotoDanniEsistente == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Inserisci la foto dei danni."),
+            backgroundColor: AppColors.secondary));
+        return;
+      }
     }
 
     final navigator = Navigator.of(context);

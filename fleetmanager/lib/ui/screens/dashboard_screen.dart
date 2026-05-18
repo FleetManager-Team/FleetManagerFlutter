@@ -12,6 +12,7 @@ import 'package:fleetmanager/ui/screens/prenotazioni/storico_prenotazioni_screen
 import 'package:fleetmanager/ui/screens/utenti/lista_utenti_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_manutenione_screen.dart';
 import 'package:fleetmanager/ui/screens/veicoli/lista_veicoli_screen.dart';
+import 'package:fleetmanager/ui/screens/impostazioni/impostazioni_manager_screen.dart';
 import 'package:fleetmanager/ui/screens/scadenze/lista_scadenze_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -724,6 +725,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         const ListaScadenzeScreen()));
+                          }),
+                    if (isManager)
+                      ListTile(
+                          leading: const Icon(Icons.settings_outlined,
+                              color: AppColors.grey600),
+                          title: const Text("Impostazioni Azienda"),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ImpostazioniManagerScreen()));
                           }),
                   ],
                 ),

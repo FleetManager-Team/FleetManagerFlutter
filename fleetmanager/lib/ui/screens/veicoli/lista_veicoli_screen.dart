@@ -294,6 +294,28 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
 
         const SizedBox(height: 12),
 
+        // 3. TASTO ELIMINA (Rosso, con conferma)
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.delete_forever_outlined,
+                color: AppColors.error),
+            label: const Text("RIMUOVI DALLA FLOTTA",
+                style: TextStyle(
+                    color: AppColors.error, fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: const BorderSide(color: AppColors.error, width: 1.5),
+              shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(AppSpacing.radiusDefault)),
+            ),
+            onPressed: () => _confermaEliminazioneVeicolo(context, v, provider),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
         // 2. TASTO DINAMICO (Cambia in base allo stato)
         SizedBox(
           width: double.infinity,
@@ -497,6 +519,53 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confermaEliminazioneVeicolo(
+      BuildContext context, Veicolo v, FleetProvider provider) {
+    Navigator.pop(context); // chiude il popup dettagli
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Rimuovi veicolo"),
+        content: Text(
+            "Sei sicuro di voler rimuovere ${v.marca} ${v.modello} (${v.targa}) dalla flotta?\n\nQuesta operazione non può essere annullata."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("ANNULLA"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await provider.eliminaVeicolo(v.targa);
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            "${v.marca} ${v.modello} rimosso dalla flotta."),
+                        backgroundColor: AppColors.error),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                        content: Text("Errore: ${e.toString()}"),
+                        backgroundColor: AppColors.error),
+                  );
+                }
+              }
+            },
+            child: const Text("RIMUOVI",
+                style: TextStyle(color: AppColors.white)),
+          ),
+        ],
       ),
     );
   }
