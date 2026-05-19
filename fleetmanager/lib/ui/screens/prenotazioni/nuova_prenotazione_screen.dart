@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/provider/impostazioni_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 import 'package:fleetmanager/core/theme/index.dart';
@@ -412,19 +413,22 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
         return;
       }
 
+      final imp = context.read<ImpostazioniProvider>();
       await provider.creaPrenotazione(
         provider.utenteLoggato!,
         veicolo,
         _inizio,
         _fine,
+        autoConferma: !imp.approvazioneRichiesta,
+        checkupObbligatorio: imp.checkupObbligatorio,
       );
 
       if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(
-              content:
-                  Text("Richiesta inviata! In attesa di approvazione.")),
-        );
+        final imp = context.read<ImpostazioniProvider>();
+        final msg = imp.approvazioneRichiesta
+            ? "Richiesta inviata! In attesa di approvazione."
+            : "Prenotazione confermata automaticamente!";
+        messenger.showSnackBar(SnackBar(content: Text(msg)));
         navigator.pop();
       }
     } catch (e) {

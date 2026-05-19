@@ -400,6 +400,8 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((p) =>
             p.statoPrenotazione == StatoPrenotazione.richiesta ||
             p.statoPrenotazione == StatoPrenotazione.attiva ||
+            p.statoPrenotazione == StatoPrenotazione.confermata ||
+            p.statoPrenotazione == StatoPrenotazione.attesaCheckup ||
             p.statoPrenotazione == StatoPrenotazione.sospesa)
         .toList();
     return _buildPrenotazioniList(list, true, provider);
@@ -449,7 +451,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final bool canEditOrCancel = !isManager &&
             (p.statoPrenotazione == StatoPrenotazione.richiesta ||
-                p.statoPrenotazione == StatoPrenotazione.confermata);
+                p.statoPrenotazione == StatoPrenotazione.confermata ||
+                p.statoPrenotazione == StatoPrenotazione.attesaCheckup);
 
         final driver = provider.utenti.firstWhere(
           (u) => u.idUtente == p.idUtente,
@@ -861,7 +864,8 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       daRitirare = provider.prenotazioni.firstWhere((p) =>
           p.idUtente == utente?.idUtente &&
-          p.statoPrenotazione == StatoPrenotazione.attesaCheckup);
+          (p.statoPrenotazione == StatoPrenotazione.attesaCheckup ||
+              p.statoPrenotazione == StatoPrenotazione.confermata));
     } catch (_) {
       daRitirare = null;
     }
@@ -875,6 +879,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
+    final bool richiedeCheckup =
+        daRitirare.statoPrenotazione == StatoPrenotazione.attesaCheckup;
+
     return Padding(
       padding: const EdgeInsets.only(top: 15),
       child: Container(
@@ -886,7 +893,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
-              color: AppColors.secondary..withValues(alpha:0.2),
+              color: AppColors.secondary..withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -901,7 +908,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   "PRENOTAZIONE PRONTA",
                   style: TextStyle(
-                      color: AppColors.white..withValues(alpha:0.7),
+                      color: AppColors.white..withValues(alpha: 0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1),
@@ -922,33 +929,47 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold),
             ),
             Text(
-              "Esegui il controllo perimetrale per partire",
+              richiedeCheckup
+                  ? "Esegui il controllo perimetrale per partire"
+                  : "Il checkup non è richiesto dalla tua azienda",
               style: TextStyle(
-                  color: AppColors.white..withValues(alpha:0.7), fontSize: 13),
+                  color: AppColors.white..withValues(alpha: 0.7), fontSize: 13),
             ),
             const SizedBox(height: 15),
-            // FIX: SizedBox per vincolare la larghezza del bottone
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CheckingVeicoloScreen(
-                        idPrenotazione: daRitirare!.idPrenotazione,
-                        targa: daRitirare.targa,
+              child: richiedeCheckup
+                  ? ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CheckingVeicoloScreen(
+                              idPrenotazione: daRitirare!.idPrenotazione,
+                              targa: daRitirare.targa,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.camera_enhance),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.white,
+                        foregroundColor: AppColors.secondary,
                       ),
+                      label: const Text("INIZIA ISPEZIONE E PARTI"),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: () async {
+                        await provider.attivaPrenotazioneSenzaCheckup(
+                            daRitirare!.idPrenotazione);
+                      },
+                      icon: const Icon(Icons.directions_car),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.white,
+                        foregroundColor: AppColors.secondary,
+                      ),
+                      label: const Text("PARTI SUBITO"),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.camera_enhance),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.white,
-                  foregroundColor: AppColors.secondary,
-                ),
-                label: const Text("INIZIA ISPEZIONE E PARTI"),
-              ),
             ),
           ],
         ),

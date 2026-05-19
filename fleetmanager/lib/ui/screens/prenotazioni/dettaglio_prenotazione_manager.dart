@@ -1,6 +1,7 @@
 import 'package:fleetmanager/models/checkup.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/provider/impostazioni_provider.dart';
 import 'package:fleetmanager/ui/screens/restituzioni/restituzione_veicolo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fleetmanager/core/theme/index.dart';
@@ -55,7 +56,9 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
 
     try {
       if (nuovoStato == StatoPrenotazione.attiva) {
-        await provider.confermaPrenotazione(prenotazione.idPrenotazione);
+        final imp = Provider.of<ImpostazioniProvider>(context, listen: false);
+        await provider.confermaPrenotazione(prenotazione.idPrenotazione,
+            checkupObbligatorio: imp.checkupObbligatorio);
       } else {
         await provider.annullaPrenotazione(prenotazione.idPrenotazione);
       }

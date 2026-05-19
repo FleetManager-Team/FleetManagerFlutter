@@ -52,10 +52,11 @@ class PrenotazioneService {
     }
   }
 
-  Future<void> confermaPrenotazione(int id) async {
+  Future<void> confermaPrenotazione(int id,
+      {String stato = 'confermata'}) async {
     await _supabase
         .from('prenotazioni')
-        .update({'stato': 'confermata'}).eq('id_prenotazione', id);
+        .update({'stato': stato}).eq('id_prenotazione', id);
   }
 
   Future<void> annullaPrenotazione(int id) =>

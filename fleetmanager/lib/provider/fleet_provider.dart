@@ -374,8 +374,11 @@ class FleetProvider with ChangeNotifier {
   }
 
   /// --- LOGICA PRENOTAZIONI ---
+  /// [autoConferma]: se true, la prenotazione è approvata automaticamente.
+  /// [checkupObbligatorio]: se true (e autoConferma=true), va in `attesaCheckup`; altrimenti `confermata`.
   Future<void> creaPrenotazione(
-      Utente driver, Veicolo veicolo, DateTime inizio, DateTime fine) async {
+      Utente driver, Veicolo veicolo, DateTime inizio, DateTime fine,
+      {bool autoConferma = false, bool checkupObbligatorio = true}) async {
     if (driver.patente == null || driver.patente == 'Da inserire') {
       throw Exception('Patente mancante.');
     }
@@ -389,21 +392,45 @@ class FleetProvider with ChangeNotifier {
           fine: fine)) {
         throw Exception('Auto o Driver occupati.');
       }
+
+      // Con auto-approvazione saltiamo lo stato "richiesta"
+      final StatoPrenotazione statoIniziale = autoConferma
+          ? (checkupObbligatorio
+              ? StatoPrenotazione.attesaCheckup
+              : StatoPrenotazione.confermata)
+          : StatoPrenotazione.richiesta;
+
       Prenotazione p = Prenotazione(
         idPrenotazione: 0,
         dataInizio: inizio.toUtc(),
         dataFine: fine.toUtc(),
-        statoPrenotazione: StatoPrenotazione.richiesta,
+        statoPrenotazione: statoIniziale,
         tipoPrenotazione: TipoPrenotazione.utente,
         idUtente: driver.idUtente,
         targa: veicolo.targa,
       );
       await _prenotazioneService.creaPrenotazione(p);
 
-      for (var idManager in _tuttiManagerIds) {
-        await _notificaService.notificaRichiestaPrenotazione(idManager,
-            "${driver.nome} ${driver.cognome}", veicolo.targa, inizio, fine);
+      if (autoConferma) {
+        // Informiamo comunque i manager dell'avvenuta prenotazione
+        for (var idManager in _tuttiManagerIds) {
+          await _notificaService.notificaRichiestaPrenotazione(idManager,
+              "${driver.nome} ${driver.cognome}", veicolo.targa, inizio, fine);
+        }
+        // Notifichiamo il driver della conferma immediata
+        await _notificaService.notificaConfermaPrenotazione(
+            driver.idUtente, veicolo.targa, inizio, fine);
+        if (checkupObbligatorio) {
+          await _notificaService.notificaCheckupRichiesto(
+              driver.idUtente, veicolo.targa);
+        }
+      } else {
+        for (var idManager in _tuttiManagerIds) {
+          await _notificaService.notificaRichiestaPrenotazione(idManager,
+              "${driver.nome} ${driver.cognome}", veicolo.targa, inizio, fine);
+        }
       }
+
       await inizializzaDati();
     } finally {
       _isLoading = false;
@@ -411,12 +438,13 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
-  Future<void> confermaPrenotazione(int id) async {
+  /// [checkupObbligatorio]: se true → stato diventa `attesaCheckup`, altrimenti `confermata`
+  Future<void> confermaPrenotazione(int id,
+      {bool checkupObbligatorio = true}) async {
     try {
       final pApprovata =
           _prenotazioni.firstWhere((element) => element.idPrenotazione == id);
 
-      // Devono avere: stessa targa, stato 'richiesta' e orari sovrapposti
       final conflitti = _prenotazioni
           .where((p) =>
               p.idPrenotazione != id &&
@@ -426,14 +454,13 @@ class FleetProvider with ChangeNotifier {
               pApprovata.dataFine.isAfter(p.dataInizio))
           .toList();
 
-      await _prenotazioneService.confermaPrenotazione(id);
+      final statoTarget =
+          checkupObbligatorio ? 'attesaCheckup' : 'confermata';
+      await _prenotazioneService.confermaPrenotazione(id, stato: statoTarget);
 
       if (conflitti.isNotEmpty) {
         for (var conf in conflitti) {
-          // Usiamo il tuo metodo esistente per annullare le altre
           await _prenotazioneService.annullaPrenotazione(conf.idPrenotazione);
-
-          // Invia notifica di "rifiuto per sovrapposizione" ai driver scavalcati
           await _notificaService.notificaRifiutoPrenotazione(
               conf.idUtente, conf.targa, conf.dataInizio, conf.dataFine);
         }
@@ -442,16 +469,31 @@ class FleetProvider with ChangeNotifier {
       await _notificaService.notificaConfermaPrenotazione(pApprovata.idUtente,
           pApprovata.targa, pApprovata.dataInizio, pApprovata.dataFine);
 
-      final checkupEsistente = _checkups.any((c) => c.idPrenotazione == id);
-      if (!checkupEsistente) {
-        await _notificaService.notificaCheckupRichiesto(
-            pApprovata.idUtente, pApprovata.targa);
+      if (checkupObbligatorio) {
+        final checkupEsistente = _checkups.any((c) => c.idPrenotazione == id);
+        if (!checkupEsistente) {
+          await _notificaService.notificaCheckupRichiesto(
+              pApprovata.idUtente, pApprovata.targa);
+        }
       }
 
       await inizializzaDati();
     } catch (e) {
       debugPrint("Errore in confermaPrenotazione: ${e.toString()}");
-      rethrow; // Importante per far capire alla UI che qualcosa è andato storto
+      rethrow;
+    }
+  }
+
+  /// Attiva direttamente la prenotazione senza richiedere il checkup.
+  Future<void> attivaPrenotazioneSenzaCheckup(int idPrenotazione) async {
+    try {
+      await supabase
+          .from('prenotazioni')
+          .update({'stato': 'attiva'}).eq('id_prenotazione', idPrenotazione);
+      await inizializzaDati();
+    } catch (e) {
+      debugPrint("Errore attivazione senza checkup: $e");
+      rethrow;
     }
   }
 
