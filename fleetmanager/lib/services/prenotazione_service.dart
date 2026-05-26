@@ -45,18 +45,20 @@ class PrenotazioneService {
     try {
       await _supabase
           .from('prenotazioni')
-          .update({'stato': nuovoStato.name}).eq('id_prenotazione', id);
+          .update({'stato': nuovoStato.dbValue}).eq('id_prenotazione', id);
     } catch (e) {
       throw Exception(
-          "Impossibile aggiornare lo stato a ${nuovoStato.name}: $e");
+          "Impossibile aggiornare lo stato a ${nuovoStato.dbValue}: $e");
     }
   }
 
   Future<void> confermaPrenotazione(int id,
       {String stato = 'confermata'}) async {
+    final statoDb = stato == 'attesaCheckup' ? 'attesa_checkup' : stato;
+
     await _supabase
         .from('prenotazioni')
-        .update({'stato': stato}).eq('id_prenotazione', id);
+        .update({'stato': statoDb}).eq('id_prenotazione', id);
   }
 
   Future<void> annullaPrenotazione(int id) =>
@@ -72,7 +74,7 @@ class PrenotazioneService {
           .from('prenotazioni')
           .select()
           .eq('targa', targa)
-          .neq('stato', StatoPrenotazione.annullata.name);
+          .neq('stato', StatoPrenotazione.annullata.dbValue);
 
       final esistenti = (response as List)
           .map((json) => Prenotazione.fromJson(json))

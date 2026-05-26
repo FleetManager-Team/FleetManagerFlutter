@@ -62,6 +62,7 @@ class Prenotazione {
         return StatoPrenotazione.richiesta;
       case 'confermata':
         return StatoPrenotazione.confermata;
+      case 'attesaCheckup':
       case 'attesa_checkup':
         return StatoPrenotazione.attesaCheckup;
       case 'attiva':
@@ -82,7 +83,7 @@ class Prenotazione {
       'id_prenotazione': idPrenotazione,
       'data_inizio': dataInizio.toUtc().toIso8601String(),
       'data_fine': dataFine.toUtc().toIso8601String(),
-      'stato': statoPrenotazione.name,
+      'stato': statoPrenotazione.dbValue,
       'tipo': tipoPrenotazione.name,
       'id_utente': idUtente,
       'targa': targa,

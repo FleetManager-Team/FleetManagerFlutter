@@ -175,6 +175,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         widget.isEmergenza ? AppColors.error : const Color(0xFF388E3C);
     final String title =
         widget.isEmergenza ? "Segnalazione Emergenza" : "Restituzione Veicolo";
+    final impostazioni = context.watch<ImpostazioniProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -197,8 +198,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
                     const SizedBox(height: 25),
                     if (widget.isEmergenza) ..._buildEmergencyFields(),
                     if (!widget.isEmergenza)
-            ..._buildStandardReturnFields(
-                context.read<ImpostazioniProvider>()),
+                      ..._buildStandardReturnFields(impostazioni),
                     const SizedBox(height: 40),
                     _buildSubmitButton(themeColor),
                   ],
@@ -479,8 +479,13 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
+    ImpostazioniProvider? imp;
+    bool haPedaggiEffettivo = _haPedaggi;
+
     if (!widget.isEmergenza) {
-      final imp = context.read<ImpostazioniProvider>();
+      imp = context.read<ImpostazioniProvider>();
+      await imp.ensureLoaded();
+      haPedaggiEffettivo = imp.moduloPedaggiAbilitato && _haPedaggi;
 
       if (imp.fotoScontrinoObbligatoria &&
           _rifornimentoEffettuato &&
@@ -493,7 +498,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       }
 
       if (imp.fotoPedaggiObbligatoria &&
-          _haPedaggi &&
+          haPedaggiEffettivo &&
           _fotoPedaggio == null &&
           _urlFotoPedaggioEsistente == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -534,18 +539,19 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
         livelloCarburante: _livelloCarburante,
         rifornimento: _rifornimentoEffettuato,
         haDanni: _danniPresenti || persistenceEmergenza,
-        haPedaggi: _haPedaggi,
+        haPedaggi: haPedaggiEffettivo,
         isEmergenza: persistenceEmergenza,
         noteEmergenza: _descrizioneDanniController.text,
         posizioneEmergenza: _posizioneController.text,
         litri: double.tryParse(_litriController.text.replaceAll(',', '.')),
         euro: double.tryParse(_euroController.text.replaceAll(',', '.')),
-        euroPedaggi:
-            double.tryParse(_euroPedaggiController.text.replaceAll(',', '.')),
+        euroPedaggi: haPedaggiEffettivo
+            ? double.tryParse(_euroPedaggiController.text.replaceAll(',', '.'))
+            : null,
         descDanni: _descrizioneDanniController.text,
         fotoScontrino: _fotoScontrino,
         fotoDanni: _fotoDanni,
-        fotoPedaggio: _fotoPedaggio,
+        fotoPedaggio: haPedaggiEffettivo ? _fotoPedaggio : null,
       );
 
       await provider.inizializzaDati();

@@ -10,17 +10,29 @@ class ImpostazioniProvider with ChangeNotifier {
   bool checkupObbligatorio = true;
   bool approvazioneRichiesta = true;
   bool moduloPedaggiAbilitato = true;
+  bool _caricato = false;
+  Future<void>? _caricamento;
 
   ImpostazioniProvider({ImpostazioniService? service})
       : _service = service ?? ImpostazioniService();
 
-  Future<void> carica() async {
+  bool get caricato => _caricato;
+
+  Future<void> carica() {
+    _caricamento ??= _caricaInterno();
+    return _caricamento!;
+  }
+
+  Future<void> ensureLoaded() => carica();
+
+  Future<void> _caricaInterno() async {
     fotoScontrinoObbligatoria = await _service.getFotoScontrinoObbligatoria();
     fotoDanniObbligatoria = await _service.getFotoDanniObbligatoria();
     fotoPedaggiObbligatoria = await _service.getFotoPedaggiObbligatoria();
     checkupObbligatorio = await _service.getCheckupObbligatorio();
     approvazioneRichiesta = await _service.getApprovazioneRichiesta();
     moduloPedaggiAbilitato = await _service.getModuloPedaggiAbilitato();
+    _caricato = true;
     notifyListeners();
   }
 

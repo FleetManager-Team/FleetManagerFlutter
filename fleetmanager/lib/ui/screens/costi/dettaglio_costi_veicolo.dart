@@ -10,23 +10,23 @@ import 'package:provider/provider.dart';
 
 enum _PeriodPreset { today, week, month, quarter, year, custom }
 
-class DettaglioCostiDriver extends StatefulWidget {
-  final int idDriver;
-  final String nomeDriver;
+class DettaglioCostiVeicolo extends StatefulWidget {
+  final String targa;
+  final String nomeVeicolo;
   final DateTimeRange rangeIniziale;
 
-  const DettaglioCostiDriver({
+  const DettaglioCostiVeicolo({
     super.key,
-    required this.idDriver,
-    required this.nomeDriver,
+    required this.targa,
+    required this.nomeVeicolo,
     required this.rangeIniziale,
   });
 
   @override
-  State<DettaglioCostiDriver> createState() => _DettaglioCostiDriverState();
+  State<DettaglioCostiVeicolo> createState() => _DettaglioCostiVeicoloState();
 }
 
-class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
+class _DettaglioCostiVeicoloState extends State<DettaglioCostiVeicolo> {
   final _money = NumberFormat.currency(locale: 'it_IT', symbol: '\u20AC');
   final _shortDate = DateFormat('dd/MM/yy');
   final _fullDate = DateFormat('dd/MM/yyyy');
@@ -53,7 +53,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     return Scaffold(
       backgroundColor: AppColors.grey100,
       appBar: AppBar(
-        title: const Text('Dettaglio costi driver'),
+        title: const Text('Dettaglio costi veicolo'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -102,18 +102,25 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'COSTI DRIVER',
+            'COSTI VEICOLO',
             style: AppTextStyles.overline.copyWith(
               color: AppColors.white.withValues(alpha: 0.72),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            widget.nomeDriver,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            widget.targa,
             style: AppTextStyles.headlineLarge.copyWith(
               color: AppColors.white,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            widget.nomeVeicolo,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.white.withValues(alpha: 0.82),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -244,7 +251,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     );
   }
 
-  Widget _buildChartCard(Map<DateTime, _DailyDriverCost> dati) {
+  Widget _buildChartCard(Map<DateTime, _DailyVehicleCost> dati) {
     return _sectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,7 +269,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     );
   }
 
-  Widget _buildGraficoTemporale(Map<DateTime, _DailyDriverCost> dati) {
+  Widget _buildGraficoTemporale(Map<DateTime, _DailyVehicleCost> dati) {
     final entries = _filteredEntries(dati);
 
     if (entries.isEmpty) {
@@ -297,9 +304,9 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
             tooltipRoundedRadius: AppSpacing.radiusMedium,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               final entry = entries[groupIndex];
-              final veicoli = entry.value.sourcesLabel;
+              final drivers = entry.value.sourcesLabel;
               return BarTooltipItem(
-                '${_fullDate.format(entry.key)}\n$veicoli\n${_money.format(rod.toY)}',
+                '${_fullDate.format(entry.key)}\n$drivers\n${_money.format(rod.toY)}',
                 AppTextStyles.labelMedium.copyWith(
                   color: AppColors.white,
                   fontWeight: FontWeight.w700,
@@ -388,7 +395,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     );
   }
 
-  Widget _buildDailyMovements(Map<DateTime, _DailyDriverCost> dati) {
+  Widget _buildDailyMovements(Map<DateTime, _DailyVehicleCost> dati) {
     final entries = _filteredEntries(dati).reversed.toList();
 
     return _sectionCard(
@@ -666,9 +673,8 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
   }
 
   Widget _legendRow(String label, Color color) {
-    final disabled =
-        (label == 'Carburante' && !_mostraCarburante) ||
-            (label == 'Pedaggi' && !_mostraPedaggi);
+    final disabled = (label == 'Carburante' && !_mostraCarburante) ||
+        (label == 'Pedaggi' && !_mostraPedaggi);
 
     return Row(
       children: [
@@ -726,8 +732,8 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     return Column(children: rows);
   }
 
-  Map<DateTime, _DailyDriverCost> _buildTemporalData(FleetProvider provider) {
-    final Map<DateTime, _DailyDriverCost> data = {};
+  Map<DateTime, _DailyVehicleCost> _buildTemporalData(FleetProvider provider) {
+    final Map<DateTime, _DailyVehicleCost> data = {};
     final endOfDay = DateTime(
       _rangeSelezionato.end.year,
       _rangeSelezionato.end.month,
@@ -746,7 +752,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
         );
       } catch (_) {}
 
-      if (prenotazione?.idUtente != widget.idDriver) continue;
+      if (prenotazione?.targa != widget.targa) continue;
 
       final date = restituzione.dataRestituzione;
       if (date.isBefore(_rangeSelezionato.start) || date.isAfter(endOfDay)) {
@@ -754,27 +760,28 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
       }
 
       final day = DateTime(date.year, date.month, date.day);
-      data.putIfAbsent(day, _DailyDriverCost.new);
+      data.putIfAbsent(day, _DailyVehicleCost.new);
       data[day]!.carburante += restituzione.importoEuro ?? 0;
       data[day]!.pedaggi += restituzione.importoPedaggi ?? 0;
-      data[day]!.vehicles.add(_vehicleLabel(provider, prenotazione!.targa));
+      data[day]!.drivers.add(_driverName(provider, prenotazione!.idUtente));
     }
 
     return data;
   }
 
-  String _vehicleLabel(FleetProvider provider, String targa) {
+  String _driverName(FleetProvider provider, int idDriver) {
     try {
-      final veicolo =
-          provider.veicoli.firstWhere((veicolo) => veicolo.targa == targa);
-      return '$targa - ${veicolo.marca} ${veicolo.modello}';
+      final driver =
+          provider.utenti.firstWhere((utente) => utente.idUtente == idDriver);
+      final fullName = '${driver.nome} ${driver.cognome}'.trim();
+      return fullName.isEmpty ? 'Driver $idDriver' : fullName;
     } catch (_) {
-      return targa;
+      return 'Driver $idDriver';
     }
   }
 
-  List<MapEntry<DateTime, _DailyDriverCost>> _filteredEntries(
-    Map<DateTime, _DailyDriverCost> dati,
+  List<MapEntry<DateTime, _DailyVehicleCost>> _filteredEntries(
+    Map<DateTime, _DailyVehicleCost> dati,
   ) {
     final entries = dati.entries.where((entry) {
       return _visibleTotal(entry.value) > 0;
@@ -791,7 +798,7 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
     );
   }
 
-  double _visibleTotal(_DailyDriverCost spesa) {
+  double _visibleTotal(_DailyVehicleCost spesa) {
     double totale = 0;
     if (_mostraCarburante) totale += spesa.carburante;
     if (_mostraPedaggi) totale += spesa.pedaggi;
@@ -897,6 +904,18 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
   }
 }
 
+class _DailyVehicleCost {
+  double carburante = 0;
+  double pedaggi = 0;
+  final Set<String> drivers = {};
+
+  String get sourcesLabel {
+    if (drivers.isEmpty) return 'Driver non trovato';
+    if (drivers.length <= 2) return drivers.join(', ');
+    return '${drivers.length} driver';
+  }
+}
+
 class _CostTotals {
   final double carburante;
   final double pedaggi;
@@ -908,22 +927,10 @@ class _CostTotals {
 
   double get totale => carburante + pedaggi;
 
-  factory _CostTotals.fromData(Iterable<_DailyDriverCost> items) {
+  factory _CostTotals.fromData(Iterable<_DailyVehicleCost> items) {
     return _CostTotals(
       carburante: items.fold(0.0, (sum, item) => sum + item.carburante),
       pedaggi: items.fold(0.0, (sum, item) => sum + item.pedaggi),
     );
-  }
-}
-
-class _DailyDriverCost {
-  double carburante = 0;
-  double pedaggi = 0;
-  final Set<String> vehicles = {};
-
-  String get sourcesLabel {
-    if (vehicles.isEmpty) return 'Veicolo non trovato';
-    if (vehicles.length <= 2) return vehicles.join(', ');
-    return '${vehicles.length} veicoli';
   }
 }

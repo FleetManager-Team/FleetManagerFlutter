@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/provider/impostazioni_provider.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
@@ -858,6 +859,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCheckinActionCard(BuildContext context, FleetProvider provider) {
+    final imp = context.watch<ImpostazioniProvider>();
     final utente = provider.utenteLoggato;
     Prenotazione? daRitirare;
 
@@ -871,6 +873,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (daRitirare == null) return const SizedBox.shrink();
+    if (!imp.caricato) return const SizedBox.shrink();
 
     final DateTime oraInizioUtc = daRitirare.dataInizio.toUtc();
     final DateTime oraAttualeUtc = DateTime.now().toUtc();
@@ -879,7 +882,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
-    final bool richiedeCheckup =
+    final bool richiedeCheckup = imp.checkupObbligatorio &&
         daRitirare.statoPrenotazione == StatoPrenotazione.attesaCheckup;
 
     return Padding(
@@ -960,6 +963,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   : ElevatedButton.icon(
                       onPressed: () async {
+                        await imp.ensureLoaded();
                         await provider.attivaPrenotazioneSenzaCheckup(
                             daRitirare!.idPrenotazione);
                       },

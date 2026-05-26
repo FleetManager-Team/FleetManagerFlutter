@@ -414,6 +414,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
       }
 
       final imp = context.read<ImpostazioniProvider>();
+      await imp.ensureLoaded();
       await provider.creaPrenotazione(
         provider.utenteLoggato!,
         veicolo,
@@ -424,7 +425,6 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
       );
 
       if (mounted) {
-        final imp = context.read<ImpostazioniProvider>();
         final msg = imp.approvazioneRichiesta
             ? "Richiesta inviata! In attesa di approvazione."
             : "Prenotazione confermata automaticamente!";

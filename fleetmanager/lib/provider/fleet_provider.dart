@@ -455,7 +455,7 @@ class FleetProvider with ChangeNotifier {
           .toList();
 
       final statoTarget =
-          checkupObbligatorio ? 'attesaCheckup' : 'confermata';
+          checkupObbligatorio ? 'attesa_checkup' : 'confermata';
       await _prenotazioneService.confermaPrenotazione(id, stato: statoTarget);
 
       if (conflitti.isNotEmpty) {

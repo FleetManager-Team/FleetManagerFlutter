@@ -57,6 +57,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
     try {
       if (nuovoStato == StatoPrenotazione.attiva) {
         final imp = Provider.of<ImpostazioniProvider>(context, listen: false);
+        await imp.ensureLoaded();
         await provider.confermaPrenotazione(prenotazione.idPrenotazione,
             checkupObbligatorio: imp.checkupObbligatorio);
       } else {
@@ -129,7 +130,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               if (prenotazione.statoPrenotazione == StatoPrenotazione.annullata)
                 _buildStatusCard("Prenotazione annullata", AppColors.error),
 
-              // 4. REPORT TECNICO (CHECKUP): Foto carrozzeria e checklist (NOVITÀ)
+              // 4. REPORT TECNICO (CHECKUP): Foto carrozzeria e checklist
               if (checkup != null) ...[
                 _buildSectionTitle("Report Tecnico e Ispezione"),
                 _buildCheckupSection(context, checkup),
@@ -301,47 +302,85 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
           _buildDetailTile(
               context,
               "Spesa Carburante",
-              "${dati['importo_euro']} € | ${dati['litri_carburante']} L",
+              "${dati['importo_euro']} \u20AC | ${dati['litri_carburante']} L",
               dati['url_scontrino'],
-              AppColors.grey50),
+              AppColors.secondary,
+              Icons.local_gas_station),
         if (dati['ha_pedaggi'] == true)
           _buildDetailTile(
               context,
               "Pedaggi / Parcheggi",
-              "${dati['importo_pedaggi']} €",
+              "${dati['importo_pedaggi']} \u20AC",
               dati['url_foto_pedaggio'],
-              AppColors.secondaryLight),
+              AppColors.primaryLight,
+              Icons.route_rounded),
         if (dati['danni_presenti'] == true)
           _buildDetailTile(
               context,
               "Danni Segnalati",
               dati['descrizione_danni'] ?? "Vedi foto",
               dati['url_foto_danni'],
-              AppColors.error.withValues(alpha:0.1)),
+              AppColors.error,
+              Icons.car_crash_outlined),
       ],
     );
   }
 
   // --- UTILITY WIDGETS ---
 
-  Widget _buildDetailTile(BuildContext context, String title, String subtitle,
-      String? url, Color bg) {
-    return Card(
-      color: bg,
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+  Widget _buildDetailTile(
+    BuildContext context,
+    String title,
+    String subtitle,
+    String? url,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
       child: ListTile(
-        title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 13)),
+        minVerticalPadding: AppSpacing.md,
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        title: Text(
+          title,
+          style: AppTextStyles.titleMedium.copyWith(
+            color: AppColors.grey900,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.xs),
+          child: Text(
+            subtitle,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.grey700,
+            ),
+          ),
+        ),
         trailing: url != null
             ? GestureDetector(
                 onTap: () => _mostraImmagine(context, url),
                 child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.network(url,
-                        width: 50, height: 50, fit: BoxFit.cover)),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                  child: Image.network(
+                    url,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               )
             : null,
       ),
@@ -531,7 +570,7 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
               "Approvando questa, le seguenti richieste saranno annullate:",
               style: TextStyle(fontSize: 11)),
           ...conflitti.map((c) => Text(
-              "• ${c.idUtente} (${df.format(c.dataInizio.toLocal())})",
+              "- ${c.idUtente} (${df.format(c.dataInizio.toLocal())})",
               style:
                   const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
         ],
@@ -612,3 +651,4 @@ class DettaglioPrenotazioneManager extends StatelessWidget {
   Widget _imgPreview(BuildContext context, String? url) =>
       _imgThumb(context, url);
 }
+

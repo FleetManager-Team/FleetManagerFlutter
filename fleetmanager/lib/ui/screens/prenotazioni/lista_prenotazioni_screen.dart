@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/provider/impostazioni_provider.dart';
 import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
@@ -230,7 +231,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
             }),
             _actionButton("APPROVA", AppColors.success, () async {
               final navigator = Navigator.of(dialogContext);
-              await provider.confermaPrenotazione(p.idPrenotazione);
+              final imp = context.read<ImpostazioniProvider>();
+              await imp.ensureLoaded();
+              await provider.confermaPrenotazione(
+                p.idPrenotazione,
+                checkupObbligatorio: imp.checkupObbligatorio,
+              );
               if (mounted) navigator.pop();
             }),
           ],

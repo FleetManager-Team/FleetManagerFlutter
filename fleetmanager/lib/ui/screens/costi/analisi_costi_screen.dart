@@ -9,6 +9,8 @@ import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/models/veicolo.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/ui/screens/costi/dettaglio_costi_driver.dart';
+import 'package:fleetmanager/ui/screens/costi/dettaglio_costi_veicolo.dart';
+import 'package:fleetmanager/ui/screens/costi/grafici_costi_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -44,7 +46,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
 
   _PeriodPreset _periodPreset = _PeriodPreset.month;
   Set<int>? _driverSelezionati = {};
-  String? _targaSelezionata;
+  Set<String>? _targheSelezionate = {};
   TipoVeicolo? _tipoVeicoloSelezionato;
   _CostSort _ordinamento = _CostSort.totaleDesc;
 
@@ -54,6 +56,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     final records = _buildRecords(provider);
     final filteredRecords = _filterRecords(records);
     final summaries = _buildSummaries(filteredRecords);
+    final vehicleSummaries = _buildVehicleSummaries(filteredRecords);
     final visibleDriverIds =
         summaries.map((summary) => summary.driverId).toSet();
     final displayedRecords = filteredRecords
@@ -67,13 +70,6 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
       backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text('Analisi Costi'),
-        actions: [
-          IconButton(
-            tooltip: 'Reimposta filtri',
-            icon: const Icon(Icons.restart_alt_rounded),
-            onPressed: _resetFilters,
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<FleetProvider>().inizializzaDati(),
@@ -92,7 +88,12 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
               if (summaries.isEmpty)
                 _buildEmptyState(records.isEmpty)
               else ...[
-                _buildCharts(summaries, totals),
+                _buildCharts(
+                  summaries,
+                  vehicleSummaries,
+                  totals,
+                  filteredRecords,
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 _buildDriverList(summaries),
                 const SizedBox(height: AppSpacing.lg),
@@ -239,19 +240,10 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
                 onTap: () => _showDriverPicker(drivers),
               ),
               _selectionTile(
-                label: 'Targa',
+                label: 'Veicoli',
                 icon: Icons.directions_car_outlined,
                 value: _selectedVehicleLabel(veicoli),
-                onTap: () => _showSingleSelectMenu<String>(
-                  includeAll: true,
-                  currentValue: _targaSelezionata,
-                  entries: veicoli
-                      .map((veicolo) =>
-                          _SelectOption(veicolo.targa, _vehicleLabel(veicolo)))
-                      .toList(),
-                  onSelected: (value) =>
-                      setState(() => _targaSelezionata = value),
-                ),
+                onTap: () => _showVehiclePicker(veicoli),
               ),
               _selectionTile(
                 label: 'Tipo veicolo',
@@ -408,8 +400,14 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     );
   }
 
-  Widget _buildCharts(List<_DriverCostSummary> summaries, _CostTotals totals) {
+  Widget _buildCharts(
+    List<_DriverCostSummary> summaries,
+    List<_VehicleCostSummary> vehicleSummaries,
+    _CostTotals totals,
+    List<_CostRecord> records,
+  ) {
     final chartData = summaries.take(10).toList();
+    final vehicleChartData = vehicleSummaries.take(10).toList();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -426,16 +424,98 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
           ),
         );
         final pieChart = _sectionCard(
+          onTap: () => _openChartsDashboard(
+            summaries: summaries,
+            vehicleSummaries: vehicleSummaries,
+            totals: totals,
+            records: records,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Composizione', style: AppTextStyles.headlineSmall),
-              const SizedBox(height: AppSpacing.lg),
-              SizedBox(height: 220, child: _buildPieChart(totals)),
-              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Composizione',
+                      style: AppTextStyles.headlineSmall,
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Apri dashboard grafici',
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight.withValues(alpha: 0.10),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusMedium),
+                      ),
+                      child: const Icon(
+                        Icons.insights_rounded,
+                        color: AppColors.primaryDark,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (wide) const Spacer() else const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                height: wide ? 260 : 220,
+                child: _buildPieChart(totals),
+              ),
+              if (wide) const Spacer() else const SizedBox(height: AppSpacing.md),
+              if (wide) const SizedBox(height: AppSpacing.md),
               _legendRow('Carburante', totals.carburante, AppColors.secondary),
               const SizedBox(height: AppSpacing.sm),
               _legendRow('Pedaggi', totals.pedaggi, AppColors.primaryLight),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.radiusMedium,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.open_in_new_rounded,
+                      color: AppColors.primaryDark,
+                      size: 16,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Apri dashboard grafici',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.primaryDark,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+        final vehicleChart = _sectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Spesa per veicolo',
+                  style: AppTextStyles.headlineSmall),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                height: 310,
+                child: _buildVehicleBarChart(vehicleChartData),
+              ),
             ],
           ),
         );
@@ -446,23 +526,33 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
               barChart,
               const SizedBox(height: AppSpacing.md),
               pieChart,
+              const SizedBox(height: AppSpacing.md),
+              vehicleChart,
             ],
           );
         }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 7,
-              child: barChart,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              flex: 4,
-              child: pieChart,
-            ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 7,
+                child: Column(
+                  children: [
+                    barChart,
+                    const SizedBox(height: AppSpacing.md),
+                    vehicleChart,
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                flex: 4,
+                child: pieChart,
+              ),
+            ],
+          ),
         );
       },
     );
@@ -669,6 +759,161 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     );
   }
 
+  Widget _buildVehicleBarChart(List<_VehicleCostSummary> summaries) {
+    if (summaries.isEmpty) {
+      return const Center(
+        child: Text('Nessun veicolo nel grafico',
+            style: TextStyle(color: AppColors.grey500)),
+      );
+    }
+
+    final maxY = summaries
+        .map((summary) => summary.totaleVisibile)
+        .fold<double>(0, math.max);
+
+    return BarChart(
+      BarChartData(
+        maxY: maxY <= 0 ? 10 : maxY * 1.18,
+        alignment: BarChartAlignment.spaceAround,
+        gridData: FlGridData(
+          drawVerticalLine: false,
+          horizontalInterval: _chartInterval(maxY),
+          getDrawingHorizontalLine: (value) => const FlLine(
+            color: AppColors.grey200,
+            strokeWidth: 1,
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        barTouchData: BarTouchData(
+          touchCallback: (event, response) {
+            if (event is! FlTapUpEvent || response?.spot == null) return;
+            final index = response!.spot!.touchedBarGroupIndex;
+            if (index < 0 || index >= summaries.length) return;
+            final summary = summaries[index];
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DettaglioCostiVeicolo(
+                  targa: summary.targa,
+                  nomeVeicolo: summary.vehicleLabel,
+                  rangeIniziale: _rangeSelezionato,
+                ),
+              ),
+            );
+          },
+          touchTooltipData: BarTouchTooltipData(
+            tooltipBgColor: AppColors.grey800,
+            tooltipRoundedRadius: AppSpacing.radiusMedium,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final summary = summaries[groupIndex];
+              return BarTooltipItem(
+                '${summary.vehicleLabel}\n',
+                const TextStyle(
+                    color: AppColors.white, fontWeight: FontWeight.bold),
+                children: [
+                  TextSpan(
+                    text: _money.format(summary.totaleVisibile),
+                    style: const TextStyle(
+                      color: AppColors.secondaryLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 52,
+              interval: _chartInterval(maxY),
+              getTitlesWidget: (value, meta) {
+                if (value <= 0) return const SizedBox.shrink();
+                return Text(
+                  _compactMoney(value),
+                  style: AppTextStyles.captionSmall.copyWith(
+                    color: AppColors.grey500,
+                  ),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 44,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= summaries.length) {
+                  return const SizedBox.shrink();
+                }
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  space: 10,
+                  child: SizedBox(
+                    width: 68,
+                    child: Text(
+                      summaries[index].targa,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.captionSmall.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        barGroups: List.generate(summaries.length, (index) {
+          final summary = summaries[index];
+          final fuelEnd = _categorie.contains(_CostCategory.carburante)
+              ? summary.carburante
+              : 0.0;
+          final tollEnd = fuelEnd +
+              (_categorie.contains(_CostCategory.pedaggi)
+                  ? summary.pedaggi
+                  : 0.0);
+
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: summary.totaleVisibile,
+                width: 24,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(6)),
+                rodStackItems: [
+                  if (_categorie.contains(_CostCategory.carburante))
+                    BarChartRodStackItem(
+                      0,
+                      fuelEnd,
+                      AppColors.secondary,
+                    ),
+                  if (_categorie.contains(_CostCategory.pedaggi))
+                    BarChartRodStackItem(
+                      fuelEnd,
+                      tollEnd,
+                      AppColors.primaryLight,
+                    ),
+                ],
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildPieChart(_CostTotals totals) {
     if (totals.totale <= 0) {
       return const Center(
@@ -707,6 +952,48 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  void _openChartsDashboard({
+    required List<_DriverCostSummary> summaries,
+    required List<_VehicleCostSummary> vehicleSummaries,
+    required _CostTotals totals,
+    required List<_CostRecord> records,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GraficiCostiScreen(
+          periodLabel:
+              '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}',
+          carburante: totals.carburante,
+          pedaggi: totals.pedaggi,
+          movimenti: records.length,
+          driverData: summaries
+              .map(
+                (summary) => CostChartAmount(
+                  label: summary.nomeDriver.split(' ').first,
+                  subtitle: summary.nomeDriver,
+                  carburante: summary.carburante,
+                  pedaggi: summary.pedaggi,
+                ),
+              )
+              .toList(),
+          vehicleData: vehicleSummaries
+              .map(
+                (summary) => CostChartAmount(
+                  label: summary.targa,
+                  subtitle: summary.vehicleLabel,
+                  carburante: summary.carburante,
+                  pedaggi: summary.pedaggi,
+                ),
+              )
+              .toList(),
+          dailyData: _buildDailyChartData(records),
+          weekdayData: _buildWeekdayChartData(records),
+        ),
       ),
     );
   }
@@ -852,23 +1139,33 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     );
   }
 
-  Widget _sectionCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        border: Border.all(color: AppColors.grey200),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+  Widget _sectionCard({required Widget child, VoidCallback? onTap}) {
+    final borderRadius = BorderRadius.circular(AppSpacing.radiusLarge);
+
+    return Material(
+      color: AppColors.white,
+      borderRadius: borderRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: borderRadius,
+            border: Border.all(color: AppColors.grey200),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
+          child: child,
+        ),
       ),
-      child: child,
     );
   }
 
@@ -916,17 +1213,18 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
       avatar: Icon(
         Icons.calendar_today_outlined,
         size: 16,
-        color: selected ? AppColors.white : AppColors.primaryDark,
+        color: AppColors.primaryDark,
       ),
       selected: selected,
-      selectedColor: AppColors.primaryDark,
+      selectedColor: AppColors.primaryLight.withValues(alpha: 0.08),
       backgroundColor: AppColors.white,
       labelStyle: AppTextStyles.labelMedium.copyWith(
-        color: selected ? AppColors.white : AppColors.primaryDark,
+        color: AppColors.primaryDark,
         fontWeight: FontWeight.w700,
       ),
       side: BorderSide(
-        color: selected ? AppColors.primaryDark : AppColors.border,
+        color: selected ? AppColors.primaryLight : AppColors.border,
+        width: selected ? 1.5 : 1,
       ),
       onSelected: (_) => _setPreset(preset),
       shape: RoundedRectangleBorder(
@@ -1007,20 +1305,19 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     );
   }
 
-  String _vehicleLabel(Veicolo veicolo) {
-    return '${veicolo.targa} - ${veicolo.marca} ${veicolo.modello}';
-  }
-
   String _selectedVehicleLabel(List<Veicolo> veicoli) {
-    if (_targaSelezionata == null) return 'Tutti';
+    final targheSelezionate = _targheSelezionateSicure;
+    if (targheSelezionate.isEmpty) return 'Tutti i veicoli';
 
-    try {
-      return _vehicleLabel(
-        veicoli.firstWhere((veicolo) => veicolo.targa == _targaSelezionata),
-      );
-    } catch (_) {
-      return _targaSelezionata!;
-    }
+    final selectedLabels = veicoli
+        .where((veicolo) => targheSelezionate.contains(veicolo.targa))
+        .map((veicolo) => veicolo.targa)
+        .toList();
+
+    if (selectedLabels.isEmpty) return '${targheSelezionate.length} veicoli';
+    if (selectedLabels.length == 1) return selectedLabels.first;
+    if (selectedLabels.length == 2) return selectedLabels.join(', ');
+    return '${selectedLabels.length} veicoli selezionati';
   }
 
   Widget _legendRow(String label, double value, Color color) {
@@ -1103,7 +1400,9 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
           !driverSelezionati.contains(record.prenotazione?.idUtente)) {
         return false;
       }
-      if (_targaSelezionata != null && record.targa != _targaSelezionata) {
+      final targheSelezionate = _targheSelezionateSicure;
+      if (targheSelezionate.isNotEmpty &&
+          !targheSelezionate.contains(record.targa)) {
         return false;
       }
       if (_tipoVeicoloSelezionato != null &&
@@ -1149,6 +1448,84 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     return summaries;
   }
 
+  List<_VehicleCostSummary> _buildVehicleSummaries(List<_CostRecord> records) {
+    final Map<String, _VehicleCostSummary> byVehicle = {};
+
+    for (final record in records) {
+      final key = record.targa;
+      byVehicle.putIfAbsent(
+        key,
+        () => _VehicleCostSummary(
+          targa: key,
+          vehicleLabel: record.vehicleLabel,
+        ),
+      );
+      byVehicle[key]!.add(record, _categorie);
+    }
+
+    final summaries = byVehicle.values.toList();
+
+    switch (_ordinamento) {
+      case _CostSort.totaleDesc:
+        summaries.sort((a, b) => b.totaleVisibile.compareTo(a.totaleVisibile));
+        break;
+      case _CostSort.carburanteDesc:
+        summaries.sort((a, b) => b.carburante.compareTo(a.carburante));
+        break;
+      case _CostSort.pedaggiDesc:
+        summaries.sort((a, b) => b.pedaggi.compareTo(a.pedaggi));
+        break;
+      case _CostSort.nomeAsc:
+        summaries.sort((a, b) => a.targa.compareTo(b.targa));
+        break;
+    }
+
+    return summaries;
+  }
+
+  List<CostChartDay> _buildDailyChartData(List<_CostRecord> records) {
+    final byDay = <DateTime, _ChartAmountAccumulator>{};
+
+    for (final record in records) {
+      final date = record.restituzione.dataRestituzione;
+      final key = DateTime(date.year, date.month, date.day);
+      final accumulator = byDay.putIfAbsent(key, _ChartAmountAccumulator.new);
+      accumulator.add(record, _categorie);
+    }
+
+    final days = byDay.keys.toList()..sort();
+
+    return days
+        .map(
+          (day) => CostChartDay(
+            date: day,
+            carburante: byDay[day]!.carburante,
+            pedaggi: byDay[day]!.pedaggi,
+          ),
+        )
+        .toList();
+  }
+
+  List<CostChartAmount> _buildWeekdayChartData(List<_CostRecord> records) {
+    const labels = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+    final byWeekday = List.generate(7, (_) => _ChartAmountAccumulator());
+
+    for (final record in records) {
+      final weekday = record.restituzione.dataRestituzione.weekday - 1;
+      if (weekday < 0 || weekday >= byWeekday.length) continue;
+      byWeekday[weekday].add(record, _categorie);
+    }
+
+    return List.generate(
+      labels.length,
+      (index) => CostChartAmount(
+        label: labels[index],
+        carburante: byWeekday[index].carburante,
+        pedaggi: byWeekday[index].pedaggi,
+      ),
+    );
+  }
+
   void _toggleCategory(_CostCategory category, bool selected) {
     setState(() {
       if (selected) {
@@ -1173,15 +1550,97 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
   }
 
   Future<void> _pickDateRange() async {
-    final picked = await showDateRangePicker(
+    DateTime start = _rangeSelezionato.start;
+    DateTime end = _rangeSelezionato.end;
+
+    final picked = await showDialog<DateTimeRange>(
       context: context,
-      initialDateRange: _rangeSelezionato,
-      firstDate: DateTime(DateTime.now().year - 5),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> pickDate({required bool isStart}) async {
+              final selected = await _pickSingleDate(
+                initialDate: isStart ? start : end,
+                firstDate: DateTime(DateTime.now().year - 5),
+                lastDate: DateTime.now().add(const Duration(days: 1)),
+              );
+
+              if (selected == null) return;
+
+              setDialogState(() {
+                if (isStart) {
+                  start = selected;
+                  if (start.isAfter(end)) end = start;
+                } else {
+                  end = selected;
+                  if (end.isBefore(start)) start = end;
+                }
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Periodo personalizzato'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _datePickerRow(
+                      label: 'Dal',
+                      value: _fullDate.format(start),
+                      onTap: () => pickDate(isStart: true),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _datePickerRow(
+                      label: 'Al',
+                      value: _fullDate.format(end),
+                      onTap: () => pickDate(isStart: false),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Annulla',
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(dialogContext),
+                ),
+                IconButton(
+                  tooltip: 'Applica',
+                  icon: const Icon(Icons.check_rounded),
+                  onPressed: () => Navigator.pop(
+                    dialogContext,
+                    DateTimeRange(start: start, end: end),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _periodPreset = _PeriodPreset.custom;
+        _rangeSelezionato = picked;
+      });
+    }
+  }
+
+  Future<DateTime?> _pickSingleDate({
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required DateTime lastDate,
+  }) {
+    return showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
       initialEntryMode: DatePickerEntryMode.calendarOnly,
-      helpText: 'Periodo',
       cancelText: 'Annulla',
-      confirmText: 'Applica',
+      confirmText: 'Seleziona',
       builder: (context, child) {
         final theme = Theme.of(context);
 
@@ -1202,17 +1661,125 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
         );
       },
     );
+  }
 
-    if (picked != null) {
-      setState(() {
-        _periodPreset = _PeriodPreset.custom;
-        _rangeSelezionato = picked;
-      });
-    }
+  Widget _datePickerRow({
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: AppColors.grey50,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.grey200),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_today_outlined,
+                  color: AppColors.primaryDark),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.grey600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      value,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.edit_calendar_outlined,
+                  color: AppColors.grey500),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showDriverPicker(List<Utente> drivers) async {
-    final selected = {..._driverSelezionatiSicuri};
+    await _showMultiSelectPicker<int>(
+      title: 'Seleziona driver',
+      allLabel: 'Tutti i driver',
+      titleIcon: Icons.person_outline,
+      selectedValues: _driverSelezionatiSicuri,
+      options: drivers
+          .map(
+            (driver) => _MultiSelectOption<int>(
+              value: driver.idUtente,
+              title: _driverName(driver),
+              subtitle: driver.email.isEmpty ? null : driver.email,
+              icon: Icons.person_outline,
+            ),
+          )
+          .toList(),
+      onApply: (selected) {
+        setState(() {
+          _driverSelezionatiSicuri
+            ..clear()
+            ..addAll(selected);
+        });
+      },
+    );
+  }
+
+  Future<void> _showVehiclePicker(List<Veicolo> veicoli) async {
+    await _showMultiSelectPicker<String>(
+      title: 'Seleziona veicoli',
+      allLabel: 'Tutti i veicoli',
+      titleIcon: Icons.directions_car_outlined,
+      selectedValues: _targheSelezionateSicure,
+      options: veicoli
+          .map(
+            (veicolo) => _MultiSelectOption<String>(
+              value: veicolo.targa,
+              title: veicolo.targa,
+              subtitle: '${veicolo.marca} ${veicolo.modello}',
+              icon: Icons.directions_car_outlined,
+            ),
+          )
+          .toList(),
+      onApply: (selected) {
+        setState(() {
+          _targheSelezionateSicure
+            ..clear()
+            ..addAll(selected);
+        });
+      },
+    );
+  }
+
+  Future<void> _showMultiSelectPicker<T>({
+    required String title,
+    required String allLabel,
+    required IconData titleIcon,
+    required Set<T> selectedValues,
+    required List<_MultiSelectOption<T>> options,
+    required ValueChanged<Set<T>> onApply,
+  }) async {
+    final selected = {...selectedValues};
 
     await showDialog<void>(
       context: context,
@@ -1220,53 +1787,65 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Seleziona driver'),
+              title: Row(
+                children: [
+                  Icon(titleIcon, color: AppColors.primaryDark),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(title),
+                ],
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                0,
+              ),
               content: SizedBox(
-                width: 420,
+                width: 460,
                 height: math.min(
                   MediaQuery.of(context).size.height * 0.72,
-                  520.0,
+                  540.0,
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CheckboxListTile(
-                        value: selected.isEmpty,
-                        title: const Text('Tutti i driver'),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        onChanged: (_) {
-                          setDialogState(() => selected.clear());
+                child: Column(
+                  children: [
+                    _multiSelectRow<T>(
+                      title: allLabel,
+                      subtitle: 'Nessun filtro applicato',
+                      icon: Icons.select_all_rounded,
+                      selected: selected.isEmpty,
+                      onTap: () => setDialogState(selected.clear),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const Divider(height: 1),
+                    const SizedBox(height: AppSpacing.sm),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: options.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, index) {
+                          final option = options[index];
+                          final isSelected = selected.contains(option.value);
+
+                          return _multiSelectRow<T>(
+                            title: option.title,
+                            subtitle: option.subtitle,
+                            icon: option.icon,
+                            selected: isSelected,
+                            onTap: () {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  selected.remove(option.value);
+                                } else {
+                                  selected.add(option.value);
+                                }
+                              });
+                            },
+                          );
                         },
                       ),
-                      const Divider(height: AppSpacing.lg),
-                      ...drivers.map((driver) {
-                        final isSelected = selected.contains(driver.idUtente);
-
-                        return CheckboxListTile(
-                          value: isSelected,
-                          title: Text(_driverName(driver)),
-                          subtitle: driver.email.isEmpty
-                              ? null
-                              : Text(
-                                  driver.email,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              if (value == true) {
-                                selected.add(driver.idUtente);
-                              } else {
-                                selected.remove(driver.idUtente);
-                              }
-                            });
-                          },
-                        );
-                      }),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               actions: [
@@ -1279,11 +1858,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
                   tooltip: 'Applica',
                   icon: const Icon(Icons.check_rounded),
                   onPressed: () {
-                    setState(() {
-                      _driverSelezionatiSicuri
-                        ..clear()
-                        ..addAll(selected);
-                    });
+                    onApply(selected);
                     Navigator.pop(dialogContext);
                   },
                 ),
@@ -1292,6 +1867,94 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _multiSelectRow<T>({
+    required String title,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+    String? subtitle,
+  }) {
+    return Material(
+      color: selected
+          ? AppColors.primaryLight.withValues(alpha: 0.08)
+          : AppColors.grey50,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 62),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selected ? AppColors.primaryLight : AppColors.grey200,
+              width: selected ? 1.5 : 1,
+            ),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.primaryLight.withValues(alpha: 0.14)
+                      : AppColors.white,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? AppColors.primaryDark : AppColors.grey500,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: selected
+                            ? AppColors.primaryDark
+                            : AppColors.grey900,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.circle_outlined,
+                color: selected ? AppColors.primaryDark : AppColors.grey400,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1305,7 +1968,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
         ..clear()
         ..addAll({_CostCategory.carburante, _CostCategory.pedaggi});
       _driverSelezionatiSicuri.clear();
-      _targaSelezionata = null;
+      _targheSelezionateSicure.clear();
       _tipoVeicoloSelezionato = null;
       _ordinamento = _CostSort.totaleDesc;
       _periodPreset = _PeriodPreset.month;
@@ -1401,6 +2064,10 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     return _driverSelezionati ??= <int>{};
   }
 
+  Set<String> get _targheSelezionateSicure {
+    return _targheSelezionate ??= <String>{};
+  }
+
   String _enumLabel(String value) {
     final spaced = value.replaceAllMapped(
       RegExp(r'([a-z])([A-Z])'),
@@ -1480,6 +2147,20 @@ class _SelectOption<T> {
   const _SelectOption(this.value, this.label);
 }
 
+class _MultiSelectOption<T> {
+  final T value;
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+
+  const _MultiSelectOption({
+    required this.value,
+    required this.title,
+    required this.icon,
+    this.subtitle,
+  });
+}
+
 class _DriverCostSummary {
   final int driverId;
   final String nomeDriver;
@@ -1502,6 +2183,45 @@ class _DriverCostSummary {
       pedaggi += record.pedaggi;
     }
     movimenti++;
+  }
+}
+
+class _VehicleCostSummary {
+  final String targa;
+  final String vehicleLabel;
+  double carburante = 0;
+  double pedaggi = 0;
+  int movimenti = 0;
+
+  _VehicleCostSummary({
+    required this.targa,
+    required this.vehicleLabel,
+  });
+
+  double get totaleVisibile => carburante + pedaggi;
+
+  void add(_CostRecord record, Set<_CostCategory> categories) {
+    if (categories.contains(_CostCategory.carburante)) {
+      carburante += record.carburante;
+    }
+    if (categories.contains(_CostCategory.pedaggi)) {
+      pedaggi += record.pedaggi;
+    }
+    movimenti++;
+  }
+}
+
+class _ChartAmountAccumulator {
+  double carburante = 0;
+  double pedaggi = 0;
+
+  void add(_CostRecord record, Set<_CostCategory> categories) {
+    if (categories.contains(_CostCategory.carburante)) {
+      carburante += record.carburante;
+    }
+    if (categories.contains(_CostCategory.pedaggi)) {
+      pedaggi += record.pedaggi;
+    }
   }
 }
 
