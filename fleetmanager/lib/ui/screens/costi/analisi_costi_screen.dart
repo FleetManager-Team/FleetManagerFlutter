@@ -49,6 +49,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
   Set<String>? _targheSelezionate = {};
   TipoVeicolo? _tipoVeicoloSelezionato;
   _CostSort _ordinamento = _CostSort.totaleDesc;
+  bool _filtriEspansi = true;
 
   @override
   Widget build(BuildContext context) {
@@ -171,114 +172,146 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
             children: [
               const Icon(Icons.tune_rounded, color: AppColors.primaryDark),
               const SizedBox(width: AppSpacing.sm),
-              const Text('Filtri analisi', style: AppTextStyles.headlineSmall),
-              const Spacer(),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Filtri analisi',
+                        style: AppTextStyles.headlineSmall),
+                    if (!_filtriEspansi) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        _activeFiltersSummary(drivers, veicoli),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               IconButton(
                 tooltip: 'Pulisci filtri',
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.filter_alt_off_rounded),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _filterBlockTitle('Periodo'),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _periodChip(_PeriodPreset.today),
-              _periodChip(_PeriodPreset.week),
-              _periodChip(_PeriodPreset.month),
-              _periodChip(_PeriodPreset.quarter),
-              _periodChip(_PeriodPreset.year),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _selectionTile(
-            label: 'Periodo personalizzato',
-            icon: Icons.date_range_rounded,
-            value:
-                '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}',
-            isActive: _periodPreset == _PeriodPreset.custom,
-            onTap: _pickDateRange,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _filterBlockTitle('Categorie costo'),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _filterChip(
-                label: 'Carburante',
-                icon: Icons.local_gas_station,
-                selected: _categorie.contains(_CostCategory.carburante),
-                activeColor: AppColors.secondary,
-                onSelected: (selected) =>
-                    _toggleCategory(_CostCategory.carburante, selected),
-              ),
-              _filterChip(
-                label: 'Pedaggi',
-                icon: Icons.route_rounded,
-                selected: _categorie.contains(_CostCategory.pedaggi),
-                activeColor: AppColors.primaryLight,
-                onSelected: (selected) =>
-                    _toggleCategory(_CostCategory.pedaggi, selected),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _filterBlockTitle('Ambito analisi'),
-          const SizedBox(height: AppSpacing.sm),
-          _buildFilterGrid(
-            children: [
-              _selectionTile(
-                label: 'Driver',
-                icon: Icons.person_outline,
-                value: _selectedDriversLabel(drivers),
-                onTap: () => _showDriverPicker(drivers),
-              ),
-              _selectionTile(
-                label: 'Veicoli',
-                icon: Icons.directions_car_outlined,
-                value: _selectedVehicleLabel(veicoli),
-                onTap: () => _showVehiclePicker(veicoli),
-              ),
-              _selectionTile(
-                label: 'Tipo veicolo',
-                icon: Icons.category_outlined,
-                value: _tipoVeicoloSelezionato == null
-                    ? 'Tutti'
-                    : _enumLabel(_tipoVeicoloSelezionato!.name),
-                onTap: () => _showSingleSelectMenu<TipoVeicolo>(
-                  includeAll: true,
-                  currentValue: _tipoVeicoloSelezionato,
-                  entries: TipoVeicolo.values
-                      .map((tipo) => _SelectOption(tipo, _enumLabel(tipo.name)))
-                      .toList(),
-                  onSelected: (value) =>
-                      setState(() => _tipoVeicoloSelezionato = value),
-                ),
-              ),
-              _selectionTile(
-                label: 'Ordinamento',
-                icon: Icons.sort_rounded,
-                value: _sortLabel(_ordinamento),
-                onTap: () => _showSingleSelectMenu<_CostSort>(
-                  currentValue: _ordinamento,
-                  entries: _CostSort.values
-                      .map((sort) => _SelectOption(sort, _sortLabel(sort)))
-                      .toList(),
-                  onSelected: (value) {
-                    if (value != null) {
-                      setState(() => _ordinamento = value);
-                    }
-                  },
+              IconButton(
+                tooltip: _filtriEspansi ? 'Chiudi filtri' : 'Apri filtri',
+                onPressed: () =>
+                    setState(() => _filtriEspansi = !_filtriEspansi),
+                icon: Icon(
+                  _filtriEspansi
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
                 ),
               ),
             ],
           ),
+          if (_filtriEspansi) ...[
+            const SizedBox(height: AppSpacing.md),
+            _filterBlockTitle('Periodo'),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _periodChip(_PeriodPreset.today),
+                _periodChip(_PeriodPreset.week),
+                _periodChip(_PeriodPreset.month),
+                _periodChip(_PeriodPreset.quarter),
+                _periodChip(_PeriodPreset.year),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _selectionTile(
+              label: 'Periodo personalizzato',
+              icon: Icons.date_range_rounded,
+              value:
+                  '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}',
+              isActive: _periodPreset == _PeriodPreset.custom,
+              onTap: _pickDateRange,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _filterBlockTitle('Categorie costo'),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _filterChip(
+                  label: 'Carburante',
+                  icon: Icons.local_gas_station,
+                  selected: _categorie.contains(_CostCategory.carburante),
+                  activeColor: AppColors.secondary,
+                  onSelected: (selected) =>
+                      _toggleCategory(_CostCategory.carburante, selected),
+                ),
+                _filterChip(
+                  label: 'Pedaggi',
+                  icon: Icons.route_rounded,
+                  selected: _categorie.contains(_CostCategory.pedaggi),
+                  activeColor: AppColors.primaryLight,
+                  onSelected: (selected) =>
+                      _toggleCategory(_CostCategory.pedaggi, selected),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _filterBlockTitle('Ambito analisi'),
+            const SizedBox(height: AppSpacing.sm),
+            _buildFilterGrid(
+              children: [
+                _selectionTile(
+                  label: 'Driver',
+                  icon: Icons.person_outline,
+                  value: _selectedDriversLabel(drivers),
+                  onTap: () => _showDriverPicker(drivers),
+                ),
+                _selectionTile(
+                  label: 'Veicoli',
+                  icon: Icons.directions_car_outlined,
+                  value: _selectedVehicleLabel(veicoli),
+                  onTap: () => _showVehiclePicker(veicoli),
+                ),
+                _selectionTile(
+                  label: 'Tipo veicolo',
+                  icon: Icons.category_outlined,
+                  value: _tipoVeicoloSelezionato == null
+                      ? 'Tutti'
+                      : _enumLabel(_tipoVeicoloSelezionato!.name),
+                  onTap: () => _showSingleSelectMenu<TipoVeicolo>(
+                    includeAll: true,
+                    currentValue: _tipoVeicoloSelezionato,
+                    entries: TipoVeicolo.values
+                        .map((tipo) =>
+                            _SelectOption(tipo, _enumLabel(tipo.name)))
+                        .toList(),
+                    onSelected: (value) =>
+                        setState(() => _tipoVeicoloSelezionato = value),
+                  ),
+                ),
+                _selectionTile(
+                  label: 'Ordinamento',
+                  icon: Icons.sort_rounded,
+                  value: _sortLabel(_ordinamento),
+                  onTap: () => _showSingleSelectMenu<_CostSort>(
+                    currentValue: _ordinamento,
+                    entries: _CostSort.values
+                        .map((sort) => _SelectOption(sort, _sortLabel(sort)))
+                        .toList(),
+                    onSelected: (value) {
+                      if (value != null) {
+                        setState(() => _ordinamento = value);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1332,6 +1365,21 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
     if (selectedLabels.length == 1) return selectedLabels.first;
     if (selectedLabels.length == 2) return selectedLabels.join(', ');
     return '${selectedLabels.length} veicoli selezionati';
+  }
+
+  String _activeFiltersSummary(List<Utente> drivers, List<Veicolo> veicoli) {
+    final period = _periodPreset == _PeriodPreset.custom
+        ? '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}'
+        : _periodPresetLabel(_periodPreset);
+    final categories = _categorie.length == 2
+        ? 'Tutte le categorie'
+        : _categorie.isEmpty
+            ? 'Nessuna categoria'
+            : _categorie.contains(_CostCategory.carburante)
+                ? 'Carburante'
+                : 'Pedaggi';
+
+    return '$period - $categories - ${_selectedDriversLabel(drivers)} - ${_selectedVehicleLabel(veicoli)}';
   }
 
   Widget _legendRow(String label, double value, Color color) {

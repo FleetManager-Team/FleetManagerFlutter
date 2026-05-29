@@ -69,6 +69,7 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
   late Set<String>? _targheSelezionate;
   late TipoVeicolo? _tipoVeicoloSelezionato;
   late _CostSort _ordinamento;
+  bool _filtriEspansi = false;
 
   @override
   void initState() {
@@ -171,114 +172,146 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
             children: [
               const Icon(Icons.tune_rounded, color: AppColors.primaryDark),
               const SizedBox(width: AppSpacing.sm),
-              const Text('Filtri analisi', style: AppTextStyles.headlineSmall),
-              const Spacer(),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Filtri analisi',
+                        style: AppTextStyles.headlineSmall),
+                    if (!_filtriEspansi) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        _activeFiltersSummary(drivers, veicoli),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               IconButton(
                 tooltip: 'Pulisci filtri',
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.filter_alt_off_rounded),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _filterBlockTitle('Periodo'),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _periodChip(_PeriodPreset.today),
-              _periodChip(_PeriodPreset.week),
-              _periodChip(_PeriodPreset.month),
-              _periodChip(_PeriodPreset.quarter),
-              _periodChip(_PeriodPreset.year),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _selectionTile(
-            label: 'Periodo personalizzato',
-            icon: Icons.date_range_rounded,
-            value:
-                '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}',
-            isActive: _periodPreset == _PeriodPreset.custom,
-            onTap: _pickDateRange,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _filterBlockTitle('Categorie costo'),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _filterChip(
-                label: 'Carburante',
-                icon: Icons.local_gas_station,
-                selected: _categorie.contains(_CostCategory.carburante),
-                activeColor: AppColors.secondary,
-                onSelected: (selected) =>
-                    _toggleCategory(_CostCategory.carburante, selected),
-              ),
-              _filterChip(
-                label: 'Pedaggi',
-                icon: Icons.route_rounded,
-                selected: _categorie.contains(_CostCategory.pedaggi),
-                activeColor: AppColors.primaryLight,
-                onSelected: (selected) =>
-                    _toggleCategory(_CostCategory.pedaggi, selected),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _filterBlockTitle('Ambito analisi'),
-          const SizedBox(height: AppSpacing.sm),
-          _buildFilterGrid(
-            children: [
-              _selectionTile(
-                label: 'Driver',
-                icon: Icons.person_outline,
-                value: _selectedDriversLabel(drivers),
-                onTap: () => _showDriverPicker(drivers),
-              ),
-              _selectionTile(
-                label: 'Veicoli',
-                icon: Icons.directions_car_outlined,
-                value: _selectedVehicleLabel(veicoli),
-                onTap: () => _showVehiclePicker(veicoli),
-              ),
-              _selectionTile(
-                label: 'Tipo veicolo',
-                icon: Icons.category_outlined,
-                value: _tipoVeicoloSelezionato == null
-                    ? 'Tutti'
-                    : _enumLabel(_tipoVeicoloSelezionato!.name),
-                onTap: () => _showSingleSelectMenu<TipoVeicolo>(
-                  includeAll: true,
-                  currentValue: _tipoVeicoloSelezionato,
-                  entries: TipoVeicolo.values
-                      .map((tipo) => _SelectOption(tipo, _enumLabel(tipo.name)))
-                      .toList(),
-                  onSelected: (value) =>
-                      setState(() => _tipoVeicoloSelezionato = value),
-                ),
-              ),
-              _selectionTile(
-                label: 'Ordinamento',
-                icon: Icons.sort_rounded,
-                value: _sortLabel(_ordinamento),
-                onTap: () => _showSingleSelectMenu<_CostSort>(
-                  currentValue: _ordinamento,
-                  entries: _CostSort.values
-                      .map((sort) => _SelectOption(sort, _sortLabel(sort)))
-                      .toList(),
-                  onSelected: (value) {
-                    if (value != null) {
-                      setState(() => _ordinamento = value);
-                    }
-                  },
+              IconButton(
+                tooltip: _filtriEspansi ? 'Chiudi filtri' : 'Apri filtri',
+                onPressed: () =>
+                    setState(() => _filtriEspansi = !_filtriEspansi),
+                icon: Icon(
+                  _filtriEspansi
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
                 ),
               ),
             ],
           ),
+          if (_filtriEspansi) ...[
+            const SizedBox(height: AppSpacing.md),
+            _filterBlockTitle('Periodo'),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _periodChip(_PeriodPreset.today),
+                _periodChip(_PeriodPreset.week),
+                _periodChip(_PeriodPreset.month),
+                _periodChip(_PeriodPreset.quarter),
+                _periodChip(_PeriodPreset.year),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _selectionTile(
+              label: 'Periodo personalizzato',
+              icon: Icons.date_range_rounded,
+              value:
+                  '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}',
+              isActive: _periodPreset == _PeriodPreset.custom,
+              onTap: _pickDateRange,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _filterBlockTitle('Categorie costo'),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _filterChip(
+                  label: 'Carburante',
+                  icon: Icons.local_gas_station,
+                  selected: _categorie.contains(_CostCategory.carburante),
+                  activeColor: AppColors.secondary,
+                  onSelected: (selected) =>
+                      _toggleCategory(_CostCategory.carburante, selected),
+                ),
+                _filterChip(
+                  label: 'Pedaggi',
+                  icon: Icons.route_rounded,
+                  selected: _categorie.contains(_CostCategory.pedaggi),
+                  activeColor: AppColors.primaryLight,
+                  onSelected: (selected) =>
+                      _toggleCategory(_CostCategory.pedaggi, selected),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _filterBlockTitle('Ambito analisi'),
+            const SizedBox(height: AppSpacing.sm),
+            _buildFilterGrid(
+              children: [
+                _selectionTile(
+                  label: 'Driver',
+                  icon: Icons.person_outline,
+                  value: _selectedDriversLabel(drivers),
+                  onTap: () => _showDriverPicker(drivers),
+                ),
+                _selectionTile(
+                  label: 'Veicoli',
+                  icon: Icons.directions_car_outlined,
+                  value: _selectedVehicleLabel(veicoli),
+                  onTap: () => _showVehiclePicker(veicoli),
+                ),
+                _selectionTile(
+                  label: 'Tipo veicolo',
+                  icon: Icons.category_outlined,
+                  value: _tipoVeicoloSelezionato == null
+                      ? 'Tutti'
+                      : _enumLabel(_tipoVeicoloSelezionato!.name),
+                  onTap: () => _showSingleSelectMenu<TipoVeicolo>(
+                    includeAll: true,
+                    currentValue: _tipoVeicoloSelezionato,
+                    entries: TipoVeicolo.values
+                        .map((tipo) =>
+                            _SelectOption(tipo, _enumLabel(tipo.name)))
+                        .toList(),
+                    onSelected: (value) =>
+                        setState(() => _tipoVeicoloSelezionato = value),
+                  ),
+                ),
+                _selectionTile(
+                  label: 'Ordinamento',
+                  icon: Icons.sort_rounded,
+                  value: _sortLabel(_ordinamento),
+                  onTap: () => _showSingleSelectMenu<_CostSort>(
+                    currentValue: _ordinamento,
+                    entries: _CostSort.values
+                        .map((sort) => _SelectOption(sort, _sortLabel(sort)))
+                        .toList(),
+                    onSelected: (value) {
+                      if (value != null) {
+                        setState(() => _ordinamento = value);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -547,6 +580,21 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
     if (selectedLabels.length == 1) return selectedLabels.first;
     if (selectedLabels.length == 2) return selectedLabels.join(', ');
     return '${selectedLabels.length} veicoli selezionati';
+  }
+
+  String _activeFiltersSummary(List<Utente> drivers, List<Veicolo> veicoli) {
+    final period = _periodPreset == _PeriodPreset.custom
+        ? '${_fullDate.format(_rangeSelezionato.start)} - ${_fullDate.format(_rangeSelezionato.end)}'
+        : _periodPresetLabel(_periodPreset);
+    final categories = _categorie.length == 2
+        ? 'Tutte le categorie'
+        : _categorie.isEmpty
+            ? 'Nessuna categoria'
+            : _categorie.contains(_CostCategory.carburante)
+                ? 'Carburante'
+                : 'Pedaggi';
+
+    return '$period - $categories - ${_selectedDriversLabel(drivers)} - ${_selectedVehicleLabel(veicoli)}';
   }
 
   List<_CostRecord> _buildRecords(FleetProvider provider) {
@@ -1394,11 +1442,11 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
               minHeight: 390,
               children: [
                 _chartCard(
-                  title: 'Top driver',
-                  subtitle: 'Driver con maggiore incidenza sui costi',
+                  title: 'Distribuzione driver',
+                  subtitle: 'Incidenza dei costi per driver',
                   icon: Icons.person_outline,
                   accent: AppColors.primaryLight,
-                  child: _stackedBarChart(driverData.take(10).toList()),
+                  child: _TopDriverPieChart(entries: driverData),
                 ),
                 _chartCard(
                   title: 'Top veicoli',
@@ -2638,6 +2686,254 @@ class _CostTotals {
     return _CostTotals(
       carburante: summaries.fold(0.0, (sum, item) => sum + item.carburante),
       pedaggi: summaries.fold(0.0, (sum, item) => sum + item.pedaggi),
+    );
+  }
+}
+
+class _TopDriverPieChart extends StatefulWidget {
+  final List<CostChartAmount> entries;
+
+  const _TopDriverPieChart({required this.entries});
+
+  @override
+  State<_TopDriverPieChart> createState() => _TopDriverPieChartState();
+}
+
+class _TopDriverPieChartState extends State<_TopDriverPieChart> {
+  static const List<Color> _driverColors = [
+    Color(0xFF9333EA),
+    Color(0xFFDB2777),
+    Color(0xFF0891B2),
+    Color(0xFFC2410C),
+    Color(0xFF7E22CE),
+    Color(0xFFBE123C),
+    Color(0xFF0F766E),
+    Color(0xFFA16207),
+    Color(0xFF86198F),
+    Color(0xFF9F1239),
+    Color(0xFF155E75),
+    Color(0xFF854D0E),
+    Color(0xFF6D28D9),
+    Color(0xFFBE185D),
+    Color(0xFF0E7490),
+    Color(0xFFB45309),
+  ];
+
+  final _money = NumberFormat.currency(locale: 'it_IT', symbol: '\u20AC');
+  int _touchedIndex = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleEntries =
+        widget.entries.where((entry) => entry.totale > 0).toList();
+    if (visibleEntries.isEmpty) {
+      return const _DriverPieEmptyChart();
+    }
+
+    final total =
+        visibleEntries.fold<double>(0, (sum, entry) => sum + entry.totale);
+    final selectedEntry =
+        _touchedIndex >= 0 && _touchedIndex < visibleEntries.length
+            ? visibleEntries[_touchedIndex]
+            : null;
+
+    return Column(
+      children: [
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final side =
+                  math.min(constraints.maxWidth, constraints.maxHeight);
+
+              return Center(
+                child: SizedBox.square(
+                  dimension: side,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      PieChart(
+                        PieChartData(
+                          pieTouchData: PieTouchData(
+                            mouseCursorResolver: (event, response) {
+                              final hasSection =
+                                  response?.touchedSection?.touchedSection !=
+                                      null;
+                              return hasSection
+                                  ? SystemMouseCursors.click
+                                  : SystemMouseCursors.basic;
+                            },
+                            touchCallback: (event, response) {
+                              setState(() {
+                                if (!event.isInterestedForInteractions ||
+                                    response == null ||
+                                    response.touchedSection == null) {
+                                  _touchedIndex = -1;
+                                  return;
+                                }
+                                _touchedIndex = response
+                                    .touchedSection!.touchedSectionIndex;
+                              });
+                            },
+                          ),
+                          sectionsSpace: 0,
+                          centerSpaceRadius: 64,
+                          sections:
+                              List.generate(visibleEntries.length, (index) {
+                            final entry = visibleEntries[index];
+                            final selected = index == _touchedIndex;
+                            final share = total <= 0 ? 0 : entry.totale / total;
+
+                            return PieChartSectionData(
+                              value: entry.totale,
+                              color: _colorForIndex(index),
+                              radius: selected ? 79 : 74,
+                              title: selected || share >= 0.08
+                                  ? '${(share * 100).round()}%'
+                                  : '',
+                              titlePositionPercentageOffset: 0.62,
+                              titleStyle: TextStyle(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: selected ? 12 : 11,
+                              ),
+                              borderSide: BorderSide.none,
+                            );
+                          }),
+                        ),
+                      ),
+                      _DriverPieInfo(
+                        entry: selectedEntry,
+                        total: total,
+                        money: _money,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _colorForIndex(int index) {
+    if (index < _driverColors.length) return _driverColors[index];
+
+    final hue = 280 + ((index - _driverColors.length) * 31) % 80;
+    final lightness = index.isEven ? 0.42 : 0.52;
+    return HSLColor.fromAHSL(1, hue.toDouble(), 0.68, lightness).toColor();
+  }
+}
+
+class _DriverPieInfo extends StatelessWidget {
+  final CostChartAmount? entry;
+  final double total;
+  final NumberFormat money;
+
+  const _DriverPieInfo({
+    required this.entry,
+    required this.total,
+    required this.money,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = entry;
+    final title = selected?.subtitle ?? selected?.label ?? 'Totale driver';
+    final amount = selected?.totale ?? total;
+    final share =
+        selected == null || total <= 0 ? null : selected.totale / total;
+
+    return Container(
+      width: 124,
+      height: 124,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.94),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              maxLines: selected == null ? 1 : 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.captionSmall.copyWith(
+                color: AppColors.grey600,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              money.format(amount),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.titleSmall.copyWith(
+                color: AppColors.grey900,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            if (share != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '${(share * 100).toStringAsFixed(1)}% totale',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.captionSmall.copyWith(
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Carb. ${money.format(selected!.carburante)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.captionSmall.copyWith(
+                  color: AppColors.secondary,
+                ),
+              ),
+              Text(
+                'Ped. ${money.format(selected.pedaggi)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.captionSmall.copyWith(
+                  color: AppColors.primaryLight,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DriverPieEmptyChart extends StatelessWidget {
+  const _DriverPieEmptyChart();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Nessun dato disponibile',
+        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey500),
+      ),
     );
   }
 }
