@@ -1,17 +1,24 @@
 # FleetManager
 
-A new Flutter project.
+Applicazione Flutter per la gestione della flotta.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+Questo progetto e' pensato per essere eseguito con Flutter 3.35.0.
+La versione consigliata e' dichiarata in `.fvmrc`, cosi' chi usa FVM puo'
+allineare l'ambiente con:
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+fvm install
+fvm flutter pub get
+fvm flutter run -d chrome
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Senza FVM, usare una installazione Flutter aggiornata e avviare:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter pub get
+flutter run -d chrome
+```
+
+In VS Code usare la configurazione `FleetManager - Chrome`.

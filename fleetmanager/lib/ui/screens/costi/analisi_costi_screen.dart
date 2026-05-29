@@ -460,12 +460,18 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
                   ),
                 ],
               ),
-              if (wide) const Spacer() else const SizedBox(height: AppSpacing.lg),
+              if (wide)
+                const Spacer()
+              else
+                const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 height: wide ? 260 : 220,
                 child: _buildPieChart(totals),
               ),
-              if (wide) const Spacer() else const SizedBox(height: AppSpacing.md),
+              if (wide)
+                const Spacer()
+              else
+                const SizedBox(height: AppSpacing.md),
               if (wide) const SizedBox(height: AppSpacing.md),
               _legendRow('Carburante', totals.carburante, AppColors.secondary),
               const SizedBox(height: AppSpacing.sm),
@@ -993,6 +999,14 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
               .toList(),
           dailyData: _buildDailyChartData(records),
           weekdayData: _buildWeekdayChartData(records),
+          initialRange: _rangeSelezionato,
+          initialDriverIds: {..._driverSelezionatiSicuri},
+          initialVehiclePlates: {..._targheSelezionateSicure},
+          initialVehicleType: _tipoVeicoloSelezionato,
+          initialCategories:
+              _categorie.map((category) => category.name).toSet(),
+          initialSort: _ordinamento.name,
+          initialPeriodPreset: _periodPreset.name,
         ),
       ),
     );
@@ -1210,7 +1224,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
 
     return ChoiceChip(
       label: Text(_periodPresetLabel(preset)),
-      avatar: Icon(
+      avatar: const Icon(
         Icons.calendar_today_outlined,
         size: 16,
         color: AppColors.primaryDark,
@@ -1946,9 +1960,7 @@ class _AnalisiCostiScreenState extends State<AnalisiCostiScreen> {
                 ),
               ),
               Icon(
-                selected
-                    ? Icons.check_circle_rounded
-                    : Icons.circle_outlined,
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
                 color: selected ? AppColors.primaryDark : AppColors.grey400,
               ),
             ],
