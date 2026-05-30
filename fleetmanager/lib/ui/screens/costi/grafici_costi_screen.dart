@@ -1397,13 +1397,16 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final pagePadding = screenWidth < 600 ? AppSpacing.md : AppSpacing.lg;
+
     return Scaffold(
       backgroundColor: AppColors.grey100,
       appBar: AppBar(
         title: const Text('Grafici costi'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(pagePadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1446,34 +1449,46 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
                   subtitle: 'Incidenza dei costi per driver',
                   icon: Icons.person_outline,
                   accent: AppColors.primaryLight,
-                  child: _TopDriverPieChart(entries: driverData),
+                  child: _AmountDistributionPieChart(
+                    entries: driverData,
+                    hue: 218,
+                    totalLabel: 'Totale driver',
+                  ),
                 ),
                 _chartCard(
-                  title: 'Top veicoli',
-                  subtitle: 'Veicoli con maggiore spesa nel periodo',
+                  title: 'Distribuzione veicoli',
+                  subtitle: 'Incidenza dei costi per veicolo',
                   icon: Icons.directions_car_outlined,
                   accent: AppColors.success,
-                  child: _stackedBarChart(vehicleData.take(10).toList()),
+                  child: _AmountDistributionPieChart(
+                    entries: vehicleData,
+                    hue: 158,
+                    totalLabel: 'Totale veicoli',
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
             _responsiveGrid(
-              minHeight: 340,
+              minHeight: 390,
               children: [
                 _chartCard(
                   title: 'Distribuzione settimanale',
                   subtitle: 'Concentrazione dei costi per giorno',
                   icon: Icons.calendar_view_week_outlined,
                   accent: AppColors.primaryDark,
-                  child: _stackedBarChart(weekdayData),
+                  child: _AmountDistributionPieChart(
+                    entries: weekdayData,
+                    hue: 38,
+                    totalLabel: 'Totale settimana',
+                  ),
                 ),
                 _chartCard(
-                  title: 'Confronto categorie',
-                  subtitle: 'Lettura diretta tra carburante e pedaggi',
-                  icon: Icons.compare_arrows_rounded,
-                  accent: AppColors.secondary,
-                  child: _categoryComparisonChart(),
+                  title: 'Giorno di picco',
+                  subtitle: 'Massimo costo giornaliero nel periodo',
+                  icon: Icons.event_available_outlined,
+                  accent: AppColors.success,
+                  child: _peakDayAnalysis(),
                 ),
               ],
             ),
@@ -1487,123 +1502,134 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
     final topDriverLabel = topDriver?.subtitle ?? topDriver?.label ?? '-';
     final topVehicleLabel = topVehicle?.label ?? '-';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primaryDark,
-            AppColors.primaryLight,
-            AppColors.primary.withValues(alpha: 0.94),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.24),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        final narrow = constraints.maxWidth < 420;
+
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(narrow ? AppSpacing.lg : AppSpacing.xl),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primaryDark,
+                AppColors.primaryLight,
+                AppColors.primary.withValues(alpha: 0.94),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryDark.withValues(alpha: 0.24),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 760;
+          child: Builder(
+            builder: (context) {
+              final title = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.14),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusRound),
+                    ),
+                    child: Text(
+                      periodLabel,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Dashboard grafici',
+                    style: (narrow
+                            ? AppTextStyles.headlineLarge
+                            : AppTextStyles.displaySmall)
+                        .copyWith(color: AppColors.white),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Costi consolidati per categoria, driver, veicolo e periodo.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.82),
+                    ),
+                  ),
+                ],
+              );
 
-          final title = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
+              final summary = Container(
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
-                ),
-                child: Text(
-                  periodLabel,
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w700,
+                  color: AppColors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+                  border: Border.all(
+                    color: AppColors.white.withValues(alpha: 0.18),
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Dashboard grafici',
-                style:
-                    AppTextStyles.displaySmall.copyWith(color: AppColors.white),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Costi consolidati per categoria, driver, veicolo e periodo.',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.white.withValues(alpha: 0.82),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _money.format(totale),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.displayMedium.copyWith(
+                        color: AppColors.white,
+                        fontSize: narrow ? 26 : null,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '$movimenti movimenti analizzati',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.white.withValues(alpha: 0.78),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _headerMetric('Driver principale', topDriverLabel),
+                    const SizedBox(height: AppSpacing.sm),
+                    _headerMetric('Veicolo principale', topVehicleLabel),
+                  ],
                 ),
-              ),
-            ],
-          );
+              );
 
-          final summary = Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-              border: Border.all(
-                color: AppColors.white.withValues(alpha: 0.18),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _money.format(totale),
-                  style: AppTextStyles.displayMedium.copyWith(
-                    color: AppColors.white,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  '$movimenti movimenti analizzati',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.white.withValues(alpha: 0.78),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                _headerMetric('Driver principale', topDriverLabel),
-                const SizedBox(height: AppSpacing.sm),
-                _headerMetric('Veicolo principale', topVehicleLabel),
-              ],
-            ),
-          );
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    title,
+                    const SizedBox(height: AppSpacing.lg),
+                    summary,
+                  ],
+                );
+              }
 
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                title,
-                const SizedBox(height: AppSpacing.lg),
-                summary,
-              ],
-            );
-          }
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(flex: 7, child: title),
-              const SizedBox(width: AppSpacing.xl),
-              Expanded(flex: 4, child: summary),
-            ],
-          );
-        },
-      ),
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(flex: 7, child: title),
+                  const SizedBox(width: AppSpacing.xl),
+                  Expanded(flex: 4, child: summary),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -1744,7 +1770,11 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 900 ? 4 : 2;
+        final columns = constraints.maxWidth >= 900
+            ? 4
+            : constraints.maxWidth >= 560
+                ? 2
+                : 1;
         final items = [
           _kpiCard('Totale', _money.format(totale), Icons.payments_outlined,
               AppColors.primaryLight),
@@ -1780,11 +1810,14 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final mobile = constraints.maxWidth < 600;
+        final cardHeight = mobile ? math.max(minHeight, 400.0) : minHeight;
+
         if (constraints.maxWidth < 980) {
           return Column(
             children: [
               for (var i = 0; i < children.length; i++) ...[
-                SizedBox(height: minHeight, child: children[i]),
+                SizedBox(height: cardHeight, child: children[i]),
                 if (i != children.length - 1)
                   const SizedBox(height: AppSpacing.lg),
               ],
@@ -1793,7 +1826,7 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
         }
 
         return SizedBox(
-          height: minHeight,
+          height: cardHeight,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1817,74 +1850,88 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
     required Widget child,
     Color? titleColor,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        border: Border.all(color: AppColors.grey200),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 4,
-            width: 48,
-            decoration: BoxDecoration(
-              color: accent,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                ),
-                child: Icon(icon, color: accent, size: 20),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.headlineSmall.copyWith(
-                        color: titleColor ?? AppColors.grey900,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.grey600,
-                      ),
-                    ),
-                  ],
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+        final padding = compact ? AppSpacing.md : AppSpacing.lg;
+        final iconSize = compact ? 34.0 : 38.0;
+
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+            border: Border.all(color: AppColors.grey200),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Expanded(child: child),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 4,
+                width: compact ? 40 : 48,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: iconSize,
+                    height: iconSize,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.11),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusMedium),
+                    ),
+                    child: Icon(icon, color: accent, size: compact ? 18 : 20),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: (compact
+                                  ? AppTextStyles.titleLarge
+                                  : AppTextStyles.headlineSmall)
+                              .copyWith(
+                            color: titleColor ?? AppColors.grey900,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.grey600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
+              Expanded(child: child),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1965,59 +2012,69 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              PieChart(
-                PieChartData(
-                  sectionsSpace: 4,
-                  centerSpaceRadius: 62,
-                  sections: [
-                    if (carburante > 0)
-                      PieChartSectionData(
-                        value: carburante,
-                        color: AppColors.secondary,
-                        radius: 72,
-                        title: '${(carburanteShare * 100).round()}%',
-                        titleStyle: const TextStyle(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    if (pedaggi > 0)
-                      PieChartSectionData(
-                        value: pedaggi,
-                        color: AppColors.primaryLight,
-                        radius: 72,
-                        title: '${(pedaggiShare * 100).round()}%',
-                        titleStyle: const TextStyle(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final side =
+                  math.min(constraints.maxWidth, constraints.maxHeight);
+              final radius = math.min(72.0, side * 0.30);
+              final centerRadius = math.min(62.0, side * 0.25);
+
+              return Stack(
+                alignment: Alignment.center,
                 children: [
-                  Text(
-                    _money.format(totale),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.titleLarge.copyWith(
-                      color: AppColors.grey900,
+                  PieChart(
+                    PieChartData(
+                      sectionsSpace: 4,
+                      centerSpaceRadius: centerRadius,
+                      sections: [
+                        if (carburante > 0)
+                          PieChartSectionData(
+                            value: carburante,
+                            color: AppColors.secondary,
+                            radius: radius,
+                            title: '${(carburanteShare * 100).round()}%',
+                            titleStyle: const TextStyle(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        if (pedaggi > 0)
+                          PieChartSectionData(
+                            value: pedaggi,
+                            color: AppColors.primaryLight,
+                            radius: radius,
+                            title: '${(pedaggiShare * 100).round()}%',
+                            titleStyle: const TextStyle(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  Text(
-                    'totale',
-                    style: AppTextStyles.captionSmall.copyWith(
-                      color: AppColors.grey500,
-                    ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _money.format(totale),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.grey900,
+                          fontSize: side < 240 ? 16 : null,
+                        ),
+                      ),
+                      Text(
+                        'totale',
+                        style: AppTextStyles.captionSmall.copyWith(
+                          color: AppColors.grey500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -2223,12 +2280,12 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xs,
           children: [
             _compactLegend('Totale', _dailyTotalColor),
-            const SizedBox(width: AppSpacing.md),
             _compactLegend('Carburante', AppColors.secondary),
-            const SizedBox(width: AppSpacing.md),
             _compactLegend('Pedaggi', AppColors.primaryLight),
           ],
         ),
@@ -2260,229 +2317,175 @@ class _GraficiCostiDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _stackedBarChart(List<CostChartAmount> entries) {
-    final visibleEntries = entries.where((entry) => entry.totale > 0).toList();
-    if (visibleEntries.isEmpty) return _emptyChart('Nessun dato disponibile');
+  Widget _peakDayAnalysis() {
+    final peak = dayPeak;
+    if (peak == null || peak.totale <= 0) {
+      return _emptyChart('Nessun picco disponibile');
+    }
 
-    final maxY =
-        visibleEntries.map((entry) => entry.totale).fold<double>(0, math.max);
-    final interval = _chartInterval(maxY);
+    final peakShare = totale <= 0 ? 0.0 : peak.totale / totale;
+    final fuelShare = peak.totale <= 0 ? 0.0 : peak.carburante / peak.totale;
+    final tollShare = peak.totale <= 0 ? 0.0 : peak.pedaggi / peak.totale;
 
-    return BarChart(
-      BarChartData(
-        maxY: maxY <= 0 ? 10 : maxY * 1.18,
-        alignment: BarChartAlignment.spaceAround,
-        gridData: FlGridData(
-          drawVerticalLine: false,
-          horizontalInterval: interval,
-          getDrawingHorizontalLine: (_) => const FlLine(
-            color: AppColors.grey200,
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        barTouchData: BarTouchData(
-          touchTooltipData: BarTouchTooltipData(
-            tooltipBgColor: AppColors.grey800,
-            tooltipRoundedRadius: AppSpacing.radiusMedium,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final entry = visibleEntries[groupIndex];
-              return BarTooltipItem(
-                '${entry.label}\n',
-                const TextStyle(
-                    color: AppColors.white, fontWeight: FontWeight.bold),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(compact ? AppSpacing.sm : AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+                border: Border.all(
+                  color: AppColors.success.withValues(alpha: 0.22),
+                ),
+              ),
+              child: Row(
                 children: [
-                  if (entry.subtitle != null)
-                    TextSpan(
-                      text: '${entry.subtitle}\n',
-                      style: const TextStyle(
-                        color: AppColors.grey200,
-                        fontWeight: FontWeight.w400,
-                      ),
+                  Container(
+                    width: compact ? 38 : 44,
+                    height: compact ? 38 : 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.15),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusMedium),
                     ),
-                  TextSpan(
-                    text: _money.format(entry.totale),
-                    style: const TextStyle(
-                      color: AppColors.secondaryLight,
-                      fontWeight: FontWeight.w600,
+                    child: const Icon(
+                      Icons.calendar_today_outlined,
+                      color: AppColors.success,
                     ),
                   ),
-                ],
-              );
-            },
-          ),
-        ),
-        titlesData: FlTitlesData(
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 48,
-              interval: interval,
-              getTitlesWidget: (value, meta) {
-                if (value <= 0) return const SizedBox.shrink();
-                return Text(
-                  _compactMoney(value),
-                  style: AppTextStyles.captionSmall.copyWith(
-                    color: AppColors.grey500,
-                  ),
-                );
-              },
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 44,
-              getTitlesWidget: (value, meta) {
-                final index = value.toInt();
-                if (index < 0 || index >= visibleEntries.length) {
-                  return const SizedBox.shrink();
-                }
-                return SideTitleWidget(
-                  axisSide: meta.axisSide,
-                  space: 10,
-                  child: SizedBox(
-                    width: 70,
-                    child: Text(
-                      visibleEntries[index].label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.captionSmall.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _shortDate.format(peak.date),
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          _money.format(peak.totale),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: (compact
+                                  ? AppTextStyles.titleLarge
+                                  : AppTextStyles.headlineLarge)
+                              .copyWith(
+                            color: AppColors.grey900,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          '${(peakShare * 100).toStringAsFixed(1)}% del totale periodo',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.grey600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        ),
-        barGroups: List.generate(visibleEntries.length, (index) {
-          final entry = visibleEntries[index];
-          final fuelEnd = entry.carburante;
-          final tollEnd = entry.totale;
-
-          return BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: entry.totale,
-                width: 24,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(6)),
-                rodStackItems: [
-                  if (entry.carburante > 0)
-                    BarChartRodStackItem(
-                      0,
-                      fuelEnd,
-                      AppColors.secondary,
-                    ),
-                  if (entry.pedaggi > 0)
-                    BarChartRodStackItem(
-                      fuelEnd,
-                      tollEnd,
-                      AppColors.primaryLight,
-                    ),
                 ],
               ),
-            ],
-          );
-        }),
-      ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _peakBreakdownRow(
+              label: 'Carburante',
+              value: peak.carburante,
+              share: fuelShare,
+              color: AppColors.secondary,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _peakBreakdownRow(
+              label: 'Pedaggi',
+              value: peak.pedaggi,
+              share: tollShare,
+              color: AppColors.primaryLight,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.grey50,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                border: Border.all(color: AppColors.grey200),
+              ),
+              child: Text(
+                peak.totale >= totale
+                    ? 'Il picco coincide con tutto il costo filtrato.'
+                    : 'Picco calcolato sui dati giornalieri filtrati.',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.grey600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _categoryComparisonChart() {
-    if (totale <= 0) return _emptyChart('Nessun dato disponibile');
-    final maxY = math.max(carburante, pedaggi);
-    final interval = _chartInterval(maxY);
-    final entries = [
-      CostChartAmount(label: 'Carburante', carburante: carburante),
-      CostChartAmount(label: 'Pedaggi', pedaggi: pedaggi),
-    ];
-
-    return BarChart(
-      BarChartData(
-        maxY: maxY <= 0 ? 10 : maxY * 1.18,
-        alignment: BarChartAlignment.spaceAround,
-        gridData: FlGridData(
-          drawVerticalLine: false,
-          horizontalInterval: interval,
-          getDrawingHorizontalLine: (_) => const FlLine(
-            color: AppColors.grey200,
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 48,
-              interval: interval,
-              getTitlesWidget: (value, meta) {
-                if (value <= 0) return const SizedBox.shrink();
-                return Text(
-                  _compactMoney(value),
-                  style: AppTextStyles.captionSmall.copyWith(
-                    color: AppColors.grey500,
-                  ),
-                );
-              },
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 38,
-              getTitlesWidget: (value, meta) {
-                final index = value.toInt();
-                if (index < 0 || index >= entries.length) {
-                  return const SizedBox.shrink();
-                }
-                return SideTitleWidget(
-                  axisSide: meta.axisSide,
-                  space: 10,
-                  child: Text(
-                    entries[index].label,
-                    style: AppTextStyles.captionSmall.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        barGroups: List.generate(entries.length, (index) {
-          final entry = entries[index];
-          final color = entry.carburante > 0
-              ? AppColors.secondary
-              : AppColors.primaryLight;
-
-          return BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: entry.totale,
-                width: 44,
-                color: color,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(8)),
+  Widget _peakBreakdownRow({
+    required String label,
+    required double value,
+    required double share,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ],
-          );
-        }),
-      ),
+            ),
+            Text(
+              _money.format(value),
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.grey900,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusRound),
+          child: LinearProgressIndicator(
+            value: share.clamp(0.0, 1.0).toDouble(),
+            minHeight: 6,
+            backgroundColor: AppColors.grey100,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '${(share * 100).toStringAsFixed(1)}% del giorno di picco',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.captionSmall.copyWith(
+            color: AppColors.grey500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -2690,35 +2693,24 @@ class _CostTotals {
   }
 }
 
-class _TopDriverPieChart extends StatefulWidget {
+class _AmountDistributionPieChart extends StatefulWidget {
   final List<CostChartAmount> entries;
+  final double hue;
+  final String totalLabel;
 
-  const _TopDriverPieChart({required this.entries});
+  const _AmountDistributionPieChart({
+    required this.entries,
+    required this.hue,
+    required this.totalLabel,
+  });
 
   @override
-  State<_TopDriverPieChart> createState() => _TopDriverPieChartState();
+  State<_AmountDistributionPieChart> createState() =>
+      _AmountDistributionPieChartState();
 }
 
-class _TopDriverPieChartState extends State<_TopDriverPieChart> {
-  static const List<Color> _driverColors = [
-    Color(0xFF9333EA),
-    Color(0xFFDB2777),
-    Color(0xFF0891B2),
-    Color(0xFFC2410C),
-    Color(0xFF7E22CE),
-    Color(0xFFBE123C),
-    Color(0xFF0F766E),
-    Color(0xFFA16207),
-    Color(0xFF86198F),
-    Color(0xFF9F1239),
-    Color(0xFF155E75),
-    Color(0xFF854D0E),
-    Color(0xFF6D28D9),
-    Color(0xFFBE185D),
-    Color(0xFF0E7490),
-    Color(0xFFB45309),
-  ];
-
+class _AmountDistributionPieChartState
+    extends State<_AmountDistributionPieChart> {
   final _money = NumberFormat.currency(locale: 'it_IT', symbol: '\u20AC');
   int _touchedIndex = -1;
 
@@ -2727,11 +2719,16 @@ class _TopDriverPieChartState extends State<_TopDriverPieChart> {
     final visibleEntries =
         widget.entries.where((entry) => entry.totale > 0).toList();
     if (visibleEntries.isEmpty) {
-      return const _DriverPieEmptyChart();
+      return const _DistributionPieEmptyChart();
     }
 
     final total =
         visibleEntries.fold<double>(0, (sum, entry) => sum + entry.totale);
+    final minValue = visibleEntries
+        .map((entry) => entry.totale)
+        .fold<double>(double.infinity, math.min);
+    final maxValue =
+        visibleEntries.map((entry) => entry.totale).fold<double>(0, math.max);
     final selectedEntry =
         _touchedIndex >= 0 && _touchedIndex < visibleEntries.length
             ? visibleEntries[_touchedIndex]
@@ -2744,6 +2741,10 @@ class _TopDriverPieChartState extends State<_TopDriverPieChart> {
             builder: (context, constraints) {
               final side =
                   math.min(constraints.maxWidth, constraints.maxHeight);
+              final radius = math.min(74.0, side * 0.30);
+              final selectedRadius = math.min(radius + 5, side * 0.34);
+              final centerRadius = math.min(64.0, side * 0.25);
+              final infoSize = math.min(124.0, side * 0.48);
 
               return Center(
                 child: SizedBox.square(
@@ -2776,7 +2777,7 @@ class _TopDriverPieChartState extends State<_TopDriverPieChart> {
                             },
                           ),
                           sectionsSpace: 0,
-                          centerSpaceRadius: 64,
+                          centerSpaceRadius: centerRadius,
                           sections:
                               List.generate(visibleEntries.length, (index) {
                             final entry = visibleEntries[index];
@@ -2785,8 +2786,12 @@ class _TopDriverPieChartState extends State<_TopDriverPieChart> {
 
                             return PieChartSectionData(
                               value: entry.totale,
-                              color: _colorForIndex(index),
-                              radius: selected ? 79 : 74,
+                              color: _colorForAmount(
+                                entry.totale,
+                                minValue,
+                                maxValue,
+                              ),
+                              radius: selected ? selectedRadius : radius,
                               title: selected || share >= 0.08
                                   ? '${(share * 100).round()}%'
                                   : '',
@@ -2801,10 +2806,12 @@ class _TopDriverPieChartState extends State<_TopDriverPieChart> {
                           }),
                         ),
                       ),
-                      _DriverPieInfo(
+                      _DistributionPieInfo(
                         entry: selectedEntry,
                         total: total,
                         money: _money,
+                        totalLabel: widget.totalLabel,
+                        size: infoSize,
                       ),
                     ],
                   ),
@@ -2817,38 +2824,46 @@ class _TopDriverPieChartState extends State<_TopDriverPieChart> {
     );
   }
 
-  Color _colorForIndex(int index) {
-    if (index < _driverColors.length) return _driverColors[index];
+  Color _colorForAmount(double value, double minValue, double maxValue) {
+    if (maxValue <= minValue) {
+      return HSLColor.fromAHSL(1, widget.hue, 0.72, 0.40).toColor();
+    }
 
-    final hue = 280 + ((index - _driverColors.length) * 31) % 80;
-    final lightness = index.isEven ? 0.42 : 0.52;
-    return HSLColor.fromAHSL(1, hue.toDouble(), 0.68, lightness).toColor();
+    final normalized =
+        ((value - minValue) / (maxValue - minValue)).clamp(0.0, 1.0).toDouble();
+    final lightness = 0.72 - normalized * 0.42;
+
+    return HSLColor.fromAHSL(1, widget.hue, 0.72, lightness).toColor();
   }
 }
 
-class _DriverPieInfo extends StatelessWidget {
+class _DistributionPieInfo extends StatelessWidget {
   final CostChartAmount? entry;
   final double total;
   final NumberFormat money;
+  final String totalLabel;
+  final double size;
 
-  const _DriverPieInfo({
+  const _DistributionPieInfo({
     required this.entry,
     required this.total,
     required this.money,
+    required this.totalLabel,
+    required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
     final selected = entry;
-    final title = selected?.subtitle ?? selected?.label ?? 'Totale driver';
+    final title = selected?.subtitle ?? selected?.label ?? totalLabel;
     final amount = selected?.totale ?? total;
     final share =
         selected == null || total <= 0 ? null : selected.totale / total;
 
     return Container(
-      width: 124,
-      height: 124,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(size < 112 ? AppSpacing.sm : AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.94),
         shape: BoxShape.circle,
@@ -2872,9 +2887,10 @@ class _DriverPieInfo extends StatelessWidget {
               style: AppTextStyles.captionSmall.copyWith(
                 color: AppColors.grey600,
                 fontWeight: FontWeight.w800,
+                fontSize: size < 112 ? 9 : null,
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            SizedBox(height: size < 112 ? 2 : AppSpacing.xs),
             Text(
               money.format(amount),
               maxLines: 1,
@@ -2883,10 +2899,11 @@ class _DriverPieInfo extends StatelessWidget {
               style: AppTextStyles.titleSmall.copyWith(
                 color: AppColors.grey900,
                 fontWeight: FontWeight.w900,
+                fontSize: size < 112 ? 11 : null,
               ),
             ),
             if (share != null) ...[
-              const SizedBox(height: AppSpacing.xs),
+              SizedBox(height: size < 112 ? 2 : AppSpacing.xs),
               Text(
                 '${(share * 100).toStringAsFixed(1)}% totale',
                 maxLines: 1,
@@ -2895,6 +2912,7 @@ class _DriverPieInfo extends StatelessWidget {
                 style: AppTextStyles.captionSmall.copyWith(
                   color: AppColors.primaryDark,
                   fontWeight: FontWeight.w800,
+                  fontSize: size < 112 ? 9 : null,
                 ),
               ),
               const SizedBox(height: 2),
@@ -2905,6 +2923,7 @@ class _DriverPieInfo extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: AppTextStyles.captionSmall.copyWith(
                   color: AppColors.secondary,
+                  fontSize: size < 112 ? 8 : null,
                 ),
               ),
               Text(
@@ -2914,6 +2933,7 @@ class _DriverPieInfo extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: AppTextStyles.captionSmall.copyWith(
                   color: AppColors.primaryLight,
+                  fontSize: size < 112 ? 8 : null,
                 ),
               ),
             ],
@@ -2924,8 +2944,8 @@ class _DriverPieInfo extends StatelessWidget {
   }
 }
 
-class _DriverPieEmptyChart extends StatelessWidget {
-  const _DriverPieEmptyChart();
+class _DistributionPieEmptyChart extends StatelessWidget {
+  const _DistributionPieEmptyChart();
 
   @override
   Widget build(BuildContext context) {
