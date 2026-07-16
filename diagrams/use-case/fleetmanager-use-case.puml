@@ -1,0 +1,99 @@
+@startuml
+title FleetManager — Use Case Diagram
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F7FAFC
+  BorderColor #2F5597
+  ArrowColor #53657A
+}
+
+actor Driver
+actor Manager
+actor "Backend Supabase" as Supabase
+
+rectangle "Sistema FleetManager" {
+  together {
+    usecase "UC-01\nEffettuare login" as UC01
+
+    package "Funzioni Driver" {
+      usecase "UC-02\nVisualizzare veicoli\ndisponibili" as UC02
+      usecase "UC-03\nRichiedere prenotazione" as UC03
+      usecase "UC-04\nAnnullare propria\nprenotazione" as UC04
+      usecase "UC-05\nEseguire check-up\niniziale" as UC05
+      usecase "UC-06\nRestituire veicolo" as UC06
+      usecase "UC-07\nSegnalare emergenza" as UC07
+      usecase "UC-08\nConsultare notifiche\npersonali" as UC08
+      usecase "UC-09\nVisualizzare costi\npersonali" as UC09
+    }
+
+    package "Funzioni Manager" {
+      usecase "UC-10\nGestire utenti (CRUD)" as UC10
+      usecase "UC-11\nGestire veicoli (CRUD)" as UC11
+      usecase "UC-12\nApprovare/Rifiutare\nprenotazioni" as UC12
+      usecase "UC-13\nPianificare manutenzione" as UC13
+      usecase "UC-14\nChiudere intervento di\nmanutenzione" as UC14
+      usecase "UC-15\nGestire scadenze\ntecniche" as UC15
+      usecase "UC-16\nMonitorare emergenze\nin corso" as UC16
+      usecase "UC-17\nVisualizzare dashboard\ncosti" as UC17
+      usecase "UC-18\nModificare stato\nveicolo" as UC18
+    }
+  }
+
+  usecase "Verificare scadenze\nimminenti" as CHECK
+  usecase "Inviare notifiche" as NOTIFY
+  usecase "Annullare prenotazioni\nin conflitto" as CONFLICT
+}
+
+Driver -- UC01
+Driver -- UC02
+Driver -- UC03
+Driver -- UC04
+Driver -- UC05
+Driver -- UC06
+Driver -- UC07
+Driver -- UC08
+Driver -- UC09
+
+Manager -- UC01
+Manager -- UC10
+Manager -- UC11
+Manager -- UC12
+Manager -- UC13
+Manager -- UC14
+Manager -- UC15
+Manager -- UC16
+Manager -- UC17
+Manager -- UC18
+
+UC03 ..> UC02 : <<include>>
+UC12 ..> UC03 : <<extend>>
+UC12 ..> CONFLICT : <<include>>
+UC12 ..> NOTIFY : <<include>>
+UC12 ..> UC05 : <<extend>>\n[prenotazione confermata]
+UC15 ..> CHECK : <<include>>
+CHECK ..> NOTIFY : <<include>>
+
+Supabase -- UC01
+Supabase -- UC03
+Supabase -- UC05
+Supabase -- UC06
+Supabase -- UC07
+Supabase -- UC08
+Supabase -- UC10
+Supabase -- UC11
+Supabase -- UC12
+Supabase -- UC13
+Supabase -- UC14
+Supabase -- UC15
+Supabase -- UC16
+Supabase -- UC17
+Supabase -- UC18
+
+note bottom of Supabase
+  Persistenza, autenticazione
+  e storage dei file
+end note
+@enduml
+
