@@ -1,0 +1,255 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 @startuml FleetManager_Activity_Prenotazione\
+title FleetManager \'97 Activity diagram: prenotazione di un veicolo\
+\
+skinparam backgroundColor #FFFFFF\
+skinparam shadowing false\
+skinparam dpi 180\
+skinparam defaultFontName Helvetica\
+skinparam defaultFontSize 12\
+skinparam ArrowColor #52677A\
+skinparam ArrowThickness 1.1\
+skinparam activity \{\
+  BackgroundColor #F8FAFC\
+  BorderColor #52677A\
+  FontColor #1F2933\
+  DiamondBackgroundColor #FFF7E8\
+  DiamondBorderColor #A87528\
+  StartColor #1F4E79\
+  EndColor #1F4E79\
+  BarColor #52677A\
+\}\
+skinparam partition \{\
+  BorderColor #8A9BAB\
+  FontColor #17324D\
+  BackgroundColor #FFFFFF\
+\}\
+skinparam note \{\
+  BackgroundColor #FFFBEA\
+  BorderColor #B99A45\
+  FontColor #493F22\
+\}\
+\
+start\
+\
+partition "Conducente" #EDF6FF \{\
+  :Apre \'abPrenota Veicolo\'bb;\
+\}\
+\
+partition "Interfaccia Flutter" #F3F4F6 \{\
+  :Imposta periodo predefinito:\\ndomani 09:00\'9618:00;\
+  :Mostra i veicoli;\
+  note right\
+    Per impostazione iniziale sono mostrati\
+    soltanto i veicoli disponibili.\
+  end note\
+\
+  repeat\
+    :Il conducente seleziona/modifica\\ndata e ora di inizio e fine;\
+    if (Nuovo inizio successivo alla fine?) then (s\'ec)\
+      :Imposta fine = inizio + 1 ora;\
+    endif\
+  repeat while (Periodo da modificare?) is (s\'ec)\
+  ->no;\
+\}\
+\
+partition "FleetProvider" #F2F8EE \{\
+  :isVeicoloDisponibile(targa, inizio, fine);\
+  if (Manutenzione aperta sovrapposta?) then (s\'ec)\
+    :Veicolo non disponibile;\
+  else (no)\
+    if (Prenotazione valida sovrapposta\\nper lo stesso veicolo?) then (s\'ec)\
+      :Veicolo non disponibile;\
+    else (no)\
+      :Veicolo disponibile;\
+    endif\
+  endif\
+  note right\
+    Nel filtro sono ignorate le prenotazioni\
+    con stato annullata, completata o richiesta.\
+  end note\
+\}\
+\
+partition "Interfaccia Flutter" #F3F4F6 \{\
+  if (Veicoli disponibili nel periodo?) then (no)\
+    :Mostra stato vuoto;\
+    if (Mostrare tutti i veicoli?) then (s\'ec)\
+      :Disattiva filtro \'abSolo disponibili\'bb;\
+      :Mostra anche i veicoli occupati\\n(non selezionabili);\
+    endif\
+  endif\
+\
+  :Il conducente seleziona un veicolo libero;\
+  if (Targa selezionata e fine >= inizio?) then (no)\
+    :Pulsante di invio disabilitato;\
+    detach\
+  else (s\'ec)\
+    :Abilita \'abInvia richiesta prenotazione\'bb;\
+  endif\
+\}\
+\
+partition "Conducente" #EDF6FF \{\
+  :Invia la richiesta;\
+\}\
+\
+partition "Interfaccia Flutter" #F3F4F6 \{\
+  if (Utente ancora autenticato?) then (no)\
+    :Mostra errore \'abUtente non loggato\'bb;\
+    stop\
+  endif\
+\}\
+\
+partition "FleetProvider" #F2F8EE \{\
+  :Ripete il controllo di disponibilit\'e0\\ndel veicolo sul periodo scelto;\
+\}\
+\
+partition "Interfaccia Flutter" #F3F4F6 \{\
+  if (Veicolo ancora disponibile?) then (no)\
+    :Mostra dialog \'abVeicolo non disponibile\'bb;\
+    :Richiede un altro orario o veicolo;\
+    stop\
+  endif\
+\}\
+\
+partition "ImpostazioniProvider" #FFF7E8 \{\
+  :ensureLoaded();\
+  :Legge approvazioneRichiesta\\ne checkupObbligatorio;\
+\}\
+\
+partition "FleetProvider" #F2F8EE \{\
+  if (Patente assente o \'abDa inserire\'bb?) then (s\'ec)\
+    :Genera errore \'abPatente mancante\'bb;\
+    partition "Interfaccia Flutter" #F3F4F6 \{\
+      :Mostra SnackBar di errore;\
+    \}\
+    stop\
+  endif\
+\
+  :Imposta isLoading = true;\
+  :Controllo definitivo _isSlotDisponibile();\
+  note right\
+    Questo controllo considera sia il veicolo\
+    sia altre prenotazioni dello stesso driver,\
+    oltre alle manutenzioni aperte.\
+  end note\
+\
+  if (Veicolo o driver occupati?) then (s\'ec)\
+    :Genera errore \'abAuto o Driver occupati\'bb;\
+    :Imposta isLoading = false;\
+    partition "Interfaccia Flutter" #F3F4F6 \{\
+      :Mostra SnackBar di errore;\
+    \}\
+    stop\
+  endif\
+\
+  if (\'c8 richiesta approvazione?) then (s\'ec)\
+    :Crea Prenotazione con stato \'abrichiesta\'bb\\ne tipo \'abutente\'bb;\
+  else (no: auto-conferma)\
+    if (Check-up obbligatorio?) then (s\'ec)\
+      :Crea Prenotazione con stato\\n\'abattesaCheckup\'bb;\
+    else (no)\
+      :Crea Prenotazione con stato\\n\'abconfermata\'bb;\
+    endif\
+  endif\
+\}\
+\
+partition "PrenotazioneService / Supabase" #FFF7E8 \{\
+  :Converte le date in UTC;\
+  :Rimuove idPrenotazione = 0;\
+  :INSERT nella tabella \'abprenotazioni\'bb;\
+\}\
+\
+partition "FleetProvider / NotificaService" #F2F8EE \{\
+  :Notifica la nuova richiesta\\na tutti i Manager;\
+  if (Auto-conferma?) then (s\'ec)\
+    :Notifica subito la conferma al conducente;\
+    if (Check-up obbligatorio?) then (s\'ec)\
+      :Notifica al conducente il check-up richiesto;\
+    endif\
+  endif\
+  :Ricarica dati con inizializzaDati();\
+  :Imposta isLoading = false;\
+\}\
+\
+partition "Interfaccia Flutter" #F3F4F6 \{\
+  if (\'c8 richiesta approvazione?) then (s\'ec)\
+    :Mostra \'abRichiesta inviata!\\nIn attesa di approvazione\'bb;\
+  else (no)\
+    :Mostra \'abPrenotazione\\nconfermata automaticamente!\'bb;\
+  endif\
+  :Chiude la schermata di prenotazione;\
+\}\
+\
+if (\'c8 richiesta approvazione?) then (s\'ec)\
+  partition "Manager" #FDEEEE \{\
+    :Apre la richiesta;\
+    if (Decisione?) then (rifiuta)\
+      partition "FleetProvider / Supabase" #F2F8EE \{\
+        :Aggiorna stato a \'abannullata\'bb;\
+        :Notifica il rifiuto al conducente;\
+        :Ricarica i dati;\
+      \}\
+      stop\
+    else (approva)\
+      partition "FleetProvider / Supabase" #F2F8EE \{\
+        if (Check-up obbligatorio?) then (s\'ec)\
+          :Aggiorna stato a \'abattesaCheckup\'bb;\
+        else (no)\
+          :Aggiorna stato a \'abconfermata\'bb;\
+        endif\
+        :Annulla eventuali altre richieste\\nsovrapposte per lo stesso veicolo;\
+        :Notifica il rifiuto ai conducenti coinvolti;\
+        :Notifica la conferma al richiedente;\
+        if (Check-up richiesto e non gi\'e0 presente?) then (s\'ec)\
+          :Notifica il check-up richiesto;\
+        endif\
+        :Ricarica i dati;\
+      \}\
+    endif\
+  \}\
+endif\
+\
+if (Stato finale \'abattesaCheckup\'bb?) then (s\'ec)\
+  partition "Conducente" #EDF6FF \{\
+    :Compila check-up iniziale;\
+    :Acquisisce 4 foto perimetrali,\\nchecklist, note e firma;\
+  \}\
+  partition "CheckupService / Supabase" #FFF7E8 \{\
+    if (Sono presenti tutte le 4 foto?) then (no)\
+      :Mostra richiesta di completare le foto;\
+      stop\
+    endif\
+    :Carica foto e firma nello storage;\
+    :UPSERT nella tabella \'abcheckups\'bb;\
+    :Aggiorna prenotazione a \'abattiva\'bb;\
+    :Notifica al conducente\\nl'attivazione della prenotazione;\
+    :Ricarica i dati;\
+  \}\
+  :Stato finale \'abattiva\'bb;\
+else (no)\
+  :Stato finale \'abconfermata\'bb;\
+  note right\
+    Nel codice non \'e8 attiva una transizione\
+    temporale automatica da confermata ad attiva.\
+  end note\
+endif\
+\
+stop\
+\
+legend bottom\
+  |= Colore |= Responsabilit\'e0 |\
+  |<#EDF6FF>   | Conducente |\
+  |<#FDEEEE>   | Manager |\
+  |<#F3F4F6>   | Interfaccia Flutter |\
+  |<#F2F8EE>   | Provider e coordinamento |\
+  |<#FFF7E8>   | Impostazioni, servizi e persistenza |\
+endlegend\
+\
+@enduml\
+}

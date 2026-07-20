@@ -1,0 +1,125 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 @startuml FleetManager_Use_Case\
+title FleetManager \'97 Diagramma dei casi d'uso\
+\
+left to right direction\
+skinparam backgroundColor #FFFFFF\
+skinparam shadowing false\
+skinparam dpi 180\
+skinparam defaultFontName Helvetica\
+skinparam defaultFontSize 13\
+skinparam ArrowColor #53616F\
+skinparam ArrowThickness 1.1\
+skinparam actor \{\
+  BackgroundColor #EAF2F8\
+  BorderColor #1F4E79\
+  FontColor #17324D\
+\}\
+skinparam usecase \{\
+  BackgroundColor #F8FAFC\
+  BorderColor #52677A\
+  FontColor #1F2933\
+\}\
+skinparam rectangle \{\
+  BorderColor #8A9BAB\
+  FontColor #17324D\
+  RoundCorner 12\
+\}\
+skinparam packageStyle rectangle\
+skinparam linetype ortho\
+skinparam nodesep 42\
+skinparam ranksep 52\
+\
+actor "Utente autenticato" as User\
+actor "Conducente" as Driver\
+actor "Manager" as Manager\
+Driver -up-|> User\
+Manager -up-|> User\
+\
+rectangle "Sistema FleetManager" as System \{\
+  package "Funzioni comuni" #F3F4F6 \{\
+    usecase "Autenticarsi" as UC_Login\
+    usecase "Consultare dashboard" as UC_Dashboard\
+    usecase "Gestire notifiche" as UC_Notifiche\
+    usecase "Consultare storico\\nprenotazioni" as UC_Storico\
+  \}\
+\
+  package "Prenotazioni e viaggio" #EDF6FF \{\
+    usecase "Gestire il viaggio" as UC_Viaggio\
+    usecase "Prenotare un veicolo" as UC_Prenota\
+    usecase "Verificare disponibilit\'e0" as UC_Disponibilita\
+    usecase "Modificare o annullare\\nuna prenotazione" as UC_ModificaPren\
+    usecase "Eseguire check-up\\niniziale" as UC_Checkup\
+    usecase "Acquisire foto e firma" as UC_Evidenze\
+    usecase "Restituire il veicolo" as UC_Restituzione\
+    usecase "Registrare posizione,\\ncarburante, km e costi" as UC_DatiRientro\
+    usecase "Segnalare emergenza / SOS" as UC_SOS\
+  \}\
+\
+  package "Controllo operativo" #F2F8EE \{\
+    usecase "Coordinare le attivit\'e0\\noperative" as UC_Operativita\
+    usecase "Gestire prenotazioni" as UC_GestPren\
+    usecase "Approvare o rifiutare\\nprenotazioni" as UC_Approva\
+    usecase "Monitorare emergenze\\ne posizione" as UC_Emergenze\
+    usecase "Consultare check-up e\\nrestituzioni" as UC_Controlli\
+  \}\
+\
+  package "Amministrazione flotta" #FFF7E8 \{\
+    usecase "Amministrare la flotta" as UC_Admin\
+    usecase "Gestire veicoli e stato" as UC_Veicoli\
+    usecase "Gestire manutenzioni" as UC_Manutenzioni\
+    usecase "Gestire utenti" as UC_Utenti\
+    usecase "Gestire scadenze" as UC_Scadenze\
+    usecase "Analizzare costi e grafici" as UC_Costi\
+    usecase "Configurare impostazioni\\naziendali" as UC_Impostazioni\
+  \}\
+\}\
+\
+User --> UC_Login\
+User --> UC_Dashboard\
+User --> UC_Notifiche\
+User --> UC_Storico\
+Driver --> UC_Viaggio\
+Manager --> UC_Operativita\
+Manager --> UC_Admin\
+\
+UC_Viaggio ..> UC_Prenota : <<include>>\
+UC_Viaggio ..> UC_ModificaPren : <<include>>\
+UC_Viaggio ..> UC_Checkup : <<include>>\
+UC_Viaggio ..> UC_Restituzione : <<include>>\
+UC_Prenota ..> UC_Disponibilita : <<include>>\
+UC_Checkup ..> UC_Evidenze : <<include>>\
+UC_Restituzione ..> UC_DatiRientro : <<include>>\
+UC_Restituzione ..> UC_Evidenze : <<include>>\
+UC_SOS ..> UC_Restituzione : <<extend>>\
+\
+UC_Operativita ..> UC_GestPren : <<include>>\
+UC_Operativita ..> UC_Emergenze : <<include>>\
+UC_Operativita ..> UC_Controlli : <<include>>\
+UC_GestPren ..> UC_Approva : <<include>>\
+\
+UC_Admin ..> UC_Veicoli : <<include>>\
+UC_Admin ..> UC_Manutenzioni : <<include>>\
+UC_Admin ..> UC_Utenti : <<include>>\
+UC_Admin ..> UC_Scadenze : <<include>>\
+UC_Admin ..> UC_Costi : <<include>>\
+UC_Admin ..> UC_Impostazioni : <<include>>\
+UC_Manutenzioni ..> UC_Veicoli : <<include>>\
+\
+legend bottom\
+  |= Colore |= Area funzionale |\
+  |<#F3F4F6>   | Funzioni comuni |\
+  |<#EDF6FF>   | Prenotazioni e viaggio |\
+  |<#F2F8EE>   | Controllo operativo |\
+  |<#FFF7E8>   | Amministrazione flotta |\
+  | <<include>> | Funzione richiamata dal caso d'uso principale |\
+  | <<extend>>  | Funzione attivata in una condizione specifica |\
+endlegend\
+\
+@enduml}
