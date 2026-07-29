@@ -4,6 +4,8 @@ import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/core/theme/index.dart';
+import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
+
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
 
@@ -109,12 +111,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
-        labelStyle: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : AppColors.primary),
+        labelStyle: AppButtonStyles.chipLabelStyle(isSelected),
         selected: isSelected,
-        selectedColor: AppColors.primary,
+        selectedColor: AppButtonStyles.chipBackground(isSelected),
+        backgroundColor: AppButtonStyles.chipBackground(false),
+        side: AppButtonStyles.chipSide(isSelected),
+        shape: AppButtonStyles.chipShape,
+        padding: AppButtonStyles.chipPadding,
         onSelected: (val) => setState(() => filtroRuolo = val ? ruolo : null),
       ),
     );
@@ -124,11 +127,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final bool isManager = u.ruoloUtente == RuoloUtente.manager;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => _showUserDetails(u),
         leading: CircleAvatar(
-          backgroundColor: isManager ? AppColors.secondaryLight : AppColors.grey50,
+          backgroundColor:
+              isManager ? AppColors.secondaryLight : AppColors.grey50,
           child: Icon(Icons.person,
               color: isManager ? AppColors.secondary : AppColors.primaryDark),
         ),
@@ -142,24 +147,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showUserDetails(Utente u) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("${u.nome} ${u.cognome}"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _infoRow(Icons.email, "Email", u.email),
-            _infoRow(Icons.work, "Ruolo", u.ruoloUtente.name.toUpperCase()),
-            if (u.patente != null)
-              _infoRow(Icons.credit_card, "Patente", u.patente!),
-          ],
-        ),
+      builder: (context) => DetailsPopUp(
+        title: "${u.nome} ${u.cognome}",
+        titleIcon: Icons.person,
+        details: [
+          _infoRow(Icons.email, "Email", u.email),
+          _infoRow(Icons.work, "Ruolo", u.ruoloUtente.name.toUpperCase()),
+          if (u.patente != null)
+            _infoRow(Icons.credit_card, "Patente", u.patente!),
+        ],
+        actionsSectionTitle: "Gestione",
         actions: [
           TextButton(
+            style: AppButtonStyles.text(color: AppColors.error),
             onPressed: () {
               Navigator.pop(context);
               _confirmDelete(u);
             },
-            child: const Text("ELIMINA", style: TextStyle(color: AppColors.error)),
+            child: const Text("ELIMINA"),
           ),
           ElevatedButton(
             onPressed: () {
@@ -236,75 +241,74 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 decoration: const InputDecoration(labelText: "Ruolo"),
               ),
               const SizedBox(height: 25),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: AppColors.primary),
-                onPressed: () async {
-                  final provider = context.read<FleetProvider>();
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final provider = context.read<FleetProvider>();
 
-                  // 1. Validazione dei campi obbligatori
-                  if (nomeController.text.isEmpty ||
-                      emailController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text("Nome ed Email sono obbligatori")),
-                    );
-                    return;
-                  }
+                    // 1. Validazione dei campi obbligatori
+                    if (nomeController.text.isEmpty ||
+                        emailController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Nome ed Email sono obbligatori")),
+                      );
+                      return;
+                    }
 
-                  final navigator = Navigator.of(context);
-                  final messenger = ScaffoldMessenger.of(context);
+                    final navigator = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
 
-                  try {
-                    if (u == null) {
-                      // --- CREAZIONE NUOVO UTENTE ---
-                      // Controllo lunghezza password (limite Supabase)
-                      if (passwordController.text.length < 6) {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  "La password deve essere di almeno 6 caratteri")),
+                    try {
+                      if (u == null) {
+                        // --- CREAZIONE NUOVO UTENTE ---
+                        // Controllo lunghezza password (limite Supabase)
+                        if (passwordController.text.length < 6) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    "La password deve essere di almeno 6 caratteri")),
+                          );
+                          return;
+                        }
+
+                        // Chiamiamo la funzione che crea sia l'Auth che la riga nel DB
+                        await provider.aggiungiNuovoUtente(
+                          email: emailController.text.trim(),
+                          passwordScelta: passwordController.text,
+                          nome: nomeController.text.trim(),
+                          cognome: cognomeController.text.trim(),
+                          ruolo: ruoloSelezionato.name,
+                          patente: patenteController.text.trim(),
                         );
-                        return;
+                      } else {
+                        // --- MODIFICA UTENTE ESISTENTE ---
+                        // Per ora lasciamo la logica che avevi o implementa un update specifico
+                        debugPrint(
+                            "Logica di modifica da implementare se serve");
                       }
 
-                      // Chiamiamo la funzione che crea sia l'Auth che la riga nel DB
-                      await provider.aggiungiNuovoUtente(
-                        email: emailController.text.trim(),
-                        passwordScelta: passwordController.text,
-                        nome: nomeController.text.trim(),
-                        cognome: cognomeController.text.trim(),
-                        ruolo: ruoloSelezionato
-                            .name, 
-                        patente: patenteController.text.trim(),
-                      );
-                    } else {
-                      // --- MODIFICA UTENTE ESISTENTE ---
-                      // Per ora lasciamo la logica che avevi o implementa un update specifico
-                      debugPrint("Logica di modifica da implementare se serve");
+                      // Se tutto è andato bene, chiudiamo il pannello
+                      if (mounted) {
+                        navigator.pop();
+                        messenger.showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text("Operazione completata con successo!")),
+                        );
+                      }
+                    } catch (e) {
+                      // Gestione errori (es: email già registrata o problemi di rete)
+                      if (mounted) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text("Errore: ${e.toString()}")),
+                        );
+                      }
                     }
-
-                    // Se tutto è andato bene, chiudiamo il pannello
-                    if (mounted) {
-                      navigator.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text("Operazione completata con successo!")),
-                      );
-                    }
-                  } catch (e) {
-                    // Gestione errori (es: email già registrata o problemi di rete)
-                    if (mounted) {
-                      messenger.showSnackBar(
-                        SnackBar(content: Text("Errore: ${e.toString()}")),
-                      );
-                    }
-                  }
-                },
-                child:
-                    const Text("SALVA", style: TextStyle(color: AppColors.white)),
+                  },
+                  child: const Text("SALVA"),
+                ),
               ),
             ],
           ),
@@ -323,7 +327,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text("ANNULLA")),
-          TextButton(
+          ElevatedButton(
+            style: AppButtonStyles.elevated(color: AppColors.error),
             onPressed: () async {
               final provider = context.read<FleetProvider>();
               final navigator = Navigator.of(dialogContext);
@@ -334,7 +339,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 // dovrebbe già gestire la rimozione dalla lista o chiamare notifyListeners()
               }
             },
-            child: const Text("ELIMINA", style: TextStyle(color: AppColors.error)),
+            child: const Text("ELIMINA"),
           ),
         ],
       ),
@@ -343,13 +348,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Widget _infoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.primary),
+          Icon(icon, size: 16, color: AppColors.grey400),
           const SizedBox(width: 10),
-          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+          Text(
+            "$label: ",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );

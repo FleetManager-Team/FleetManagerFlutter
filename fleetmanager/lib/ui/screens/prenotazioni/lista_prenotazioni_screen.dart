@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/provider/impostazioni_provider.dart';
 import 'package:fleetmanager/core/theme/index.dart';
+import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
 import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
@@ -162,11 +163,12 @@ class _BookingListScreenState extends State<BookingListScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => _showBookingDetails(p, provider, isManager, driver),
         leading: CircleAvatar(
-          backgroundColor: statusColor.withValues(alpha:0.1),
+          backgroundColor: statusColor.withValues(alpha: 0.1),
           child: Icon(Icons.calendar_month, color: statusColor),
         ),
         title: Text("Targa: ${p.targa}",
@@ -177,7 +179,8 @@ class _BookingListScreenState extends State<BookingListScreen> {
             Text("Inizio: ${DateFormat('dd/MM HH:mm').format(p.dataInizio)}"),
             if (isManager && driver != null)
               Text("Driver: ${driver.nome} ${driver.cognome}",
-                  style: const TextStyle(fontSize: 12, color: AppColors.grey500)),
+                  style:
+                      const TextStyle(fontSize: 12, color: AppColors.grey500)),
           ],
         ),
         trailing: _buildStatusTag(p.statoPrenotazione, statusColor),
@@ -194,34 +197,27 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLarge)),
-        title: const Text("Dettaglio Prenotazione"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _detailRow(Icons.directions_car, "Veicolo", p.targa),
-            _detailRow(Icons.person, "Driver", nomeDriver),
-            _detailRow(Icons.access_time, "Dalle",
-                DateFormat('dd/MM/yy HH:mm').format(p.dataInizio)),
-            _detailRow(Icons.access_time_filled, "Alle",
-                DateFormat('dd/MM/yy HH:mm').format(p.dataFine)),
-            const Divider(height: 30),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
-              child: Text(p.statoPrenotazione.name.toUpperCase(),
-                  style: TextStyle(
-                      color: statusColor, fontWeight: FontWeight.bold)),
-            ),
-          ],
+      builder: (dialogContext) => DetailsPopUp(
+        title: "Dettaglio Prenotazione",
+        titleIcon: Icons.event_note,
+        details: [
+          _detailRow(Icons.directions_car, "Veicolo", p.targa),
+          _detailRow(Icons.person, "Driver", nomeDriver),
+          _detailRow(Icons.access_time, "Dalle",
+              DateFormat('dd/MM/yy HH:mm').format(p.dataInizio)),
+          _detailRow(Icons.access_time_filled, "Alle",
+              DateFormat('dd/MM/yy HH:mm').format(p.dataFine)),
+        ],
+        extraSectionTitle: "Stato",
+        extraContent: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            p.statoPrenotazione.name.toUpperCase(),
+            style: AppTextStyles.labelLarge.copyWith(color: statusColor),
+          ),
         ),
+        actionsSectionTitle: "Richiesta",
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("CHIUDI")),
           if (isManager &&
               p.statoPrenotazione == StatoPrenotazione.richiesta) ...[
             _actionButton("RIFIUTA", AppColors.error, () async {
@@ -247,29 +243,25 @@ class _BookingListScreenState extends State<BookingListScreen> {
 
   Widget _actionButton(String label, Color color, Function() onPressed) {
     return ElevatedButton(
-      style: ElevatedButton.styleFrom(backgroundColor: color),
+      style: AppButtonStyles.elevated(color: color),
       onPressed: onPressed,
-      child: Text(label, style: const TextStyle(color: AppColors.white)),
+      child: Text(label),
     );
   }
 
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
-              Text(value,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w500, fontSize: 14)),
-            ],
+          Icon(icon, size: 16, color: AppColors.grey400),
+          const SizedBox(width: 10),
+          Text(
+            "$label: ",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );
@@ -278,8 +270,9 @@ class _BookingListScreenState extends State<BookingListScreen> {
   Widget _buildStatusTag(StatoPrenotazione stato, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge)),
+      decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge)),
       child: Text(
         stato.name.toUpperCase(),
         style: const TextStyle(

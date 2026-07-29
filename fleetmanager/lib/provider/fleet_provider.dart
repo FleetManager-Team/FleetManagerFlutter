@@ -315,6 +315,15 @@ class FleetProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> emailRegistrata(String email) async {
+    final response = await supabase
+        .from('utenti')
+        .select('id_utente')
+        .eq('email', email.trim().toLowerCase())
+        .maybeSingle();
+    return response != null;
+  }
+
   /// --- LOGICA NOTIFICHE ---
   Future<void> segnaNotificaLetta(int id) async {
     try {

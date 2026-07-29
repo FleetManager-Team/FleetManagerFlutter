@@ -472,30 +472,19 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
 
     return ChoiceChip(
       label: Text(_periodPresetLabel(preset)),
-      avatar: const Icon(
+      avatar: Icon(
         Icons.calendar_today_outlined,
         size: 16,
-        color: AppColors.primaryDark,
+        color: AppButtonStyles.chipForeground(selected),
       ),
       selected: selected,
-      selectedColor: AppColors.primaryLight.withValues(alpha: 0.08),
-      backgroundColor: AppColors.white,
-      labelStyle: AppTextStyles.labelMedium.copyWith(
-        color: AppColors.primaryDark,
-        fontWeight: FontWeight.w700,
-      ),
-      side: BorderSide(
-        color: selected ? AppColors.primaryLight : AppColors.border,
-        width: selected ? 1.5 : 1,
-      ),
+      selectedColor: AppButtonStyles.chipBackground(selected),
+      backgroundColor: AppButtonStyles.chipBackground(false),
+      labelStyle: AppButtonStyles.chipLabelStyle(selected),
+      side: AppButtonStyles.chipSide(selected),
       onSelected: (_) => _setPreset(preset),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      shape: AppButtonStyles.chipShape,
+      padding: AppButtonStyles.chipPadding,
     );
   }
 
@@ -543,27 +532,18 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
       avatar: Icon(
         icon,
         size: 18,
-        color: selected ? activeColor : AppColors.grey600,
+        color: AppButtonStyles.chipForeground(selected, color: activeColor),
       ),
       label: Text(label),
       selected: selected,
-      selectedColor: activeColor.withValues(alpha: 0.18),
-      checkmarkColor: activeColor,
-      labelStyle: AppTextStyles.labelMedium.copyWith(
-        color: selected ? AppColors.grey900 : AppColors.grey700,
-        fontWeight: FontWeight.w700,
-      ),
-      side: BorderSide(
-        color: selected ? activeColor : AppColors.border,
-      ),
+      selectedColor:
+          AppButtonStyles.chipBackground(selected, color: activeColor),
+      checkmarkColor: AppColors.white,
+      labelStyle: AppButtonStyles.chipLabelStyle(selected, color: activeColor),
+      side: AppButtonStyles.chipSide(selected, color: activeColor),
       onSelected: onSelected,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      shape: AppButtonStyles.chipShape,
+      padding: AppButtonStyles.chipPadding,
     );
   }
 
@@ -854,18 +834,16 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
                 ),
               ),
               actions: [
-                IconButton(
-                  tooltip: 'Annulla',
-                  icon: const Icon(Icons.close_rounded),
+                TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('ANNULLA'),
                 ),
-                IconButton(
-                  tooltip: 'Applica',
-                  icon: const Icon(Icons.check_rounded),
+                ElevatedButton(
                   onPressed: () => Navigator.pop(
                     dialogContext,
                     DateTimeRange(start: start, end: end),
                   ),
+                  child: const Text('APPLICA'),
                 ),
               ],
             );
@@ -1045,7 +1023,7 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
                 children: [
                   Icon(titleIcon, color: AppColors.primaryDark),
                   const SizedBox(width: AppSpacing.sm),
-                  Text(title),
+                  Expanded(child: Text(title)),
                 ],
               ),
               contentPadding: const EdgeInsets.fromLTRB(
@@ -1103,18 +1081,16 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
                 ),
               ),
               actions: [
-                IconButton(
-                  tooltip: 'Annulla',
-                  icon: const Icon(Icons.close_rounded),
+                TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('ANNULLA'),
                 ),
-                IconButton(
-                  tooltip: 'Applica',
-                  icon: const Icon(Icons.check_rounded),
+                ElevatedButton(
                   onPressed: () {
                     onApply(selected);
                     Navigator.pop(dialogContext);
                   },
+                  child: const Text('APPLICA'),
                 ),
               ],
             );

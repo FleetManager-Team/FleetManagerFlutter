@@ -221,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           boxShadow: [
             BoxShadow(
-              color: Colors.green..withValues(alpha:0.2),
+              color: Colors.green..withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -236,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   "VEICOLO IN USO",
                   style: TextStyle(
-                      color: AppColors.white..withValues(alpha:0.7),
+                      color: AppColors.white..withValues(alpha: 0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.1),
@@ -273,9 +273,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.white,
-                        foregroundColor: AppColors.success),
+                    style: AppButtonStyles.elevated(
+                      color: AppColors.white,
+                      foregroundColor: AppColors.success,
+                    ),
                     child: const Text("RESTITUISCI VEICOLO"),
                   ),
                 ),
@@ -296,12 +297,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error,
-                      foregroundColor: AppColors.white,
-                      shape: const CircleBorder(),
-                      padding: EdgeInsets.zero,
-                      elevation: 2,
+                    style: AppButtonStyles.elevated(
+                      color: AppColors.error,
+                    ).copyWith(
+                      shape: const WidgetStatePropertyAll(CircleBorder()),
+                      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
                     ),
                     child: const Icon(
                       Icons.warning_amber_rounded,
@@ -384,9 +384,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const NuovaPrenotazioneScreen())),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.white,
-                  foregroundColor: AppColors.primaryDark),
+              style: AppButtonStyles.elevated(
+                color: AppColors.white,
+                foregroundColor: AppColors.primaryDark,
+              ),
               child: const Text("NUOVA PRENOTAZIONE"),
             ),
           ),
@@ -481,7 +482,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                 : null,
             leading: CircleAvatar(
-              backgroundColor: _getStatusColor(p, provider)..withValues(alpha:0.1),
+              backgroundColor: _getStatusColor(p, provider)
+                ..withValues(alpha: 0.1),
               child: Icon(Icons.calendar_today,
                   color: _getStatusColor(p, provider), size: 20),
             ),
@@ -505,7 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       // FIX: colore con opacità per rendere il testo leggibile
-                      color: AppColors.secondary..withValues(alpha:0.15),
+                      color: AppColors.secondary..withValues(alpha: 0.15),
                       border: Border.all(color: AppColors.secondary, width: 1),
                       borderRadius:
                           BorderRadius.circular(AppSpacing.radiusDefault),
@@ -955,8 +957,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       },
                       icon: const Icon(Icons.camera_enhance),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.white,
+                      style: AppButtonStyles.elevated(
+                        color: AppColors.white,
                         foregroundColor: AppColors.secondary,
                       ),
                       label: const Text("INIZIA ISPEZIONE E PARTI"),
@@ -968,8 +970,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             daRitirare!.idPrenotazione);
                       },
                       icon: const Icon(Icons.directions_car),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.white,
+                      style: AppButtonStyles.elevated(
+                        color: AppColors.white,
                         foregroundColor: AppColors.secondary,
                       ),
                       label: const Text("PARTI SUBITO"),
@@ -1048,7 +1050,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
         boxShadow: [
           BoxShadow(
-            color: Colors.red..withValues(alpha:0.3),
+            color: Colors.red..withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -1081,7 +1083,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? "Un driver ha segnalato un guasto o incidente. Verifica subito la posizione."
                 : "Hai segnalato un'emergenza per il veicolo ${prenotazione.targa}. Completa i dati appena possibile.",
             style: TextStyle(
-                color: AppColors.white..withValues(alpha:0.7), fontSize: 14),
+              color: AppColors.white.withValues(alpha: 0.7),
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 15),
           // FIX: SizedBox per vincolare la larghezza del bottone nell'emergency card
@@ -1089,13 +1093,9 @@ class _HomeScreenState extends State<HomeScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.white,
+              style: AppButtonStyles.elevated(
+                color: AppColors.white,
                 foregroundColor: AppColors.error,
-                textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusDefault)),
               ),
               child: Text(
                   isManager ? "VEDI DETTAGLI E MAPPA" : "COMPLETA PROCEDURA"),

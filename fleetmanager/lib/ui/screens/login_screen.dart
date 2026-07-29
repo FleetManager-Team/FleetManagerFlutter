@@ -18,6 +18,8 @@ class _LoginScreenState extends State<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _emailLoginError;
+  String? _passwordLoginError;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -69,15 +71,29 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleLogin() async {
+    setState(() {
+      _emailLoginError = null;
+      _passwordLoginError = null;
+    });
+
     if (_formKey.currentState!.validate()) {
       final provider = context.read<FleetProvider>();
+      final email = _emailController.text.trim().toLowerCase();
+      final password = _passwordController.text;
 
       try {
+        final emailEsistente = await provider.emailRegistrata(email);
+        if (!emailEsistente) {
+          if (mounted) {
+            setState(() {
+              _emailLoginError = 'Email non associata a nessun account';
+            });
+          }
+          return;
+        }
+
         // 1. Esegui il login su Supabase
-        final success = await provider.login(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
+        final success = await provider.login(email, password);
 
         if (success) {
           // 2. Carica i dati dal database prima di entrare
@@ -107,26 +123,29 @@ class _LoginScreenState extends State<LoginScreen>
         } else {
           // 4. Gestione errore credenziali
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Email o password errati'),
-                backgroundColor: Theme.of(context).colorScheme.error,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusDefault)),
-              ),
-            );
+            setState(() {
+              _passwordLoginError = 'Password errata';
+            });
           }
         }
-      } catch (e) {
+      } on AuthException {
+        if (mounted) {
+          setState(() {
+            _passwordLoginError = 'Password errata';
+          });
+        }
+      } catch (_) {
         // 5. Gestione errori di rete/connessione
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Errore di connessione: $e'),
-              backgroundColor: AppColors.secondary..withValues(alpha: 0.1),
+              content: const Text(
+                  'Errore di connessione. Riprova tra qualche istante.'),
+              backgroundColor: Theme.of(context).colorScheme.error,
               behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+              ),
             ),
           );
         }
@@ -169,17 +188,16 @@ class _LoginScreenState extends State<LoginScreen>
                 final navigator = Navigator.of(dialogContext);
                 final provider = context.read<FleetProvider>();
 
-                final success =
-                    await provider.recuperaPassword(
-                          email,
-                          redirectTo: kIsWeb
-                              ? Uri.base.origin + Uri.base.path
-                              : "io.supabase.flutter://reset-callback/",
-                        );
+                final success = await provider.recuperaPassword(
+                  email,
+                  redirectTo: kIsWeb
+                      ? Uri.base.origin + Uri.base.path
+                      : "io.supabase.flutter://reset-callback/",
+                );
 
                 if (!mounted) return;
 
-                navigator.pop(); 
+                navigator.pop();
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text(success
@@ -210,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              theme.colorScheme.primary.withValues(alpha:0.1),
+              theme.colorScheme.primary.withValues(alpha: 0.1),
               theme.colorScheme.surface,
             ],
           ),
@@ -263,9 +281,15 @@ class _LoginScreenState extends State<LoginScreen>
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              onChanged: (_) {
+                                if (_emailLoginError != null) {
+                                  setState(() => _emailLoginError = null);
+                                }
+                              },
                               decoration: InputDecoration(
                                 labelText: 'Email',
                                 hintText: 'Inserisci la tua email',
+                                errorText: _emailLoginError,
                                 prefixIcon: const Icon(Icons.email),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
@@ -294,9 +318,15 @@ class _LoginScreenState extends State<LoginScreen>
                             TextFormField(
                               controller: _passwordController,
                               obscureText: true,
+                              onChanged: (_) {
+                                if (_passwordLoginError != null) {
+                                  setState(() => _passwordLoginError = null);
+                                }
+                              },
                               decoration: InputDecoration(
                                 labelText: 'Password',
                                 hintText: 'Inserisci la password',
+                                errorText: _passwordLoginError,
                                 prefixIcon: const Icon(Icons.lock),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
@@ -314,9 +344,6 @@ class _LoginScreenState extends State<LoginScreen>
                                         _emailController.text == 'b')) {
                                   return null;
                                 }
-                                if (value.length < 6) {
-                                  return 'Password troppo corta';
-                                }
                                 return null;
                               },
                             ),
@@ -328,13 +355,6 @@ class _LoginScreenState extends State<LoginScreen>
                               height: 50,
                               child: ElevatedButton(
                                 onPressed: isLoading ? null : _handleLogin,
-                                style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        AppSpacing.radiusDefault),
-                                  ),
-                                  elevation: 2,
-                                ),
                                 child: isLoading
                                     ? const SizedBox(
                                         height: 20,
@@ -467,13 +487,6 @@ class _LoginScreenState extends State<LoginScreen>
               child: const Text("Annulla"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusDefault)),
-              ),
               onPressed: () async {
                 if (formKeyReset.currentState!.validate()) {
                   try {

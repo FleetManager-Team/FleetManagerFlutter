@@ -97,13 +97,13 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
-        labelStyle: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isSelected ? Colors.white : AppColors.primaryDark),
+        labelStyle: AppButtonStyles.chipLabelStyle(isSelected),
         selected: isSelected,
-        selectedColor: AppColors.primaryDark,
-        backgroundColor: AppColors.grey50,
+        selectedColor: AppButtonStyles.chipBackground(isSelected),
+        backgroundColor: AppButtonStyles.chipBackground(false),
+        side: AppButtonStyles.chipSide(isSelected),
+        shape: AppButtonStyles.chipShape,
+        padding: AppButtonStyles.chipPadding,
         onSelected: (val) =>
             setState(() => filtroSelezionato = val ? stato : null),
       ),
@@ -126,13 +126,14 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => _showVehicleDetails(v),
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
-            color: _getStatusColor(v.statoVeicolo).withValues(alpha:0.1),
+            color: _getStatusColor(v.statoVeicolo).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           ),
           child: Icon(
@@ -208,10 +209,9 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           _detailRow(Icons.info_outline, "Stato",
               v.statoVeicolo.nameToDisplay.toUpperCase()),
         ],
-        extraSectionTitle: isManager ? "GESTIONE STATO" : "PROSSIMO IMPEGNO",
+        extraSectionTitle: isManager ? null : "PROSSIMO IMPEGNO",
         extraContent: isManager
-            ? _buildManagerActions(
-                v, provider) // Sezione speciale per il Manager
+            ? null
             : (prossima != null
                 ? Column(
                     children: [
@@ -233,16 +233,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                         color: AppColors.success,
                         fontStyle: FontStyle.italic),
                   )),
+        actionsSectionTitle: isManager ? "Gestione stato" : "Prenotazione",
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("CHIUDI")),
-
+          if (isManager) _buildManagerActions(v, provider),
           // Bottone Prenota (solo per Driver e se disponibile)
           if (!isManager && v.statoVeicolo == StatoVeicolo.disponibile)
             ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.primaryDark),
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -251,8 +247,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                       builder: (_) => const NuovaPrenotazioneScreen()),
                 );
               },
-              child: const Text("PRENOTA ORA",
-                  style: TextStyle(color: AppColors.white)),
+              child: const Text("PRENOTA ORA"),
             ),
         ],
       ),
@@ -266,98 +261,48 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
 
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 8),
-
-        // 1. TASTO ARANCIONE (Sempre presente)
-        // Serve per aprire il form e programmare l'intervento tecnico
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.build_circle_outlined, color: AppColors.white),
-            label: const Text("METTI IN MANUTENZIONE",
-                style: TextStyle(
-                    color: AppColors.white, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
-            ),
-            onPressed: () {
-              Navigator.pop(context); // Chiude il popup dei dettagli
-              _showMaintenanceFormFromVehicle(
-                  context, v); // Apre il form di inserimento
-            },
-          ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.build_circle_outlined),
+          label: const Text("MANUTENZIONE"),
+          style: AppButtonStyles.outlined(color: AppColors.secondary),
+          onPressed: () {
+            Navigator.pop(context); // Chiude il popup dei dettagli
+            _showMaintenanceFormFromVehicle(
+                context, v); // Apre il form di inserimento
+          },
         ),
-
-        const SizedBox(height: 12),
-
-        // 3. TASTO ELIMINA (Rosso, con conferma)
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.delete_forever_outlined,
-                color: AppColors.error),
-            label: const Text("RIMUOVI DALLA FLOTTA",
-                style: TextStyle(
-                    color: AppColors.error, fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              side: const BorderSide(color: AppColors.error, width: 1.5),
-              shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.radiusDefault)),
-            ),
-            onPressed: () => _confermaEliminazioneVeicolo(context, v, provider),
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.delete_forever_outlined),
+          label: const Text("RIMUOVI DALLA FLOTTA"),
+          style: AppButtonStyles.outlined(color: AppColors.error),
+          onPressed: () => _confermaEliminazioneVeicolo(context, v, provider),
         ),
-
-        const SizedBox(height: 12),
-
+        const SizedBox(height: AppSpacing.sm),
         // 2. TASTO DINAMICO (Cambia in base allo stato)
-        SizedBox(
-          width: double.infinity,
-          child: isAttualmenteFermo
-              ? ElevatedButton.icon(
-                  // STATO: RIPRISTINA (Verde)
-                  icon: const Icon(Icons.check_circle_outline,
-                      color: AppColors.white),
-                  label: const Text("RIPRISTINA DISPONIBILITÀ",
-                      style: TextStyle(
-                          color: AppColors.white, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
-                  ),
-                  onPressed: () async {
-                    await provider.aggiornaStatoVeicolo(
-                        v.targa, StatoVeicolo.disponibile);
-                    if (mounted) Navigator.pop(context);
-                  },
-                )
-              : OutlinedButton.icon(
-                  // STATO: SEGNALA FUORI SERVIZIO (Bordo Rosso)
-                  icon: const Icon(Icons.error_outline, color: AppColors.error),
-                  label: const Text("SEGNALA FUORI SERVIZIO",
-                      style: TextStyle(
-                          color: AppColors.error, fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.error, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
-                  ),
-                  onPressed: () async {
-                    await provider.aggiornaStatoVeicolo(
-                        v.targa, StatoVeicolo.fuoriServizio);
-                    if (mounted) Navigator.pop(context);
-                  },
-                ),
-        ),
+        isAttualmenteFermo
+            ? ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text("RIPRISTINA DISPONIBILITA'"),
+                style: AppButtonStyles.elevated(color: AppColors.success),
+                onPressed: () async {
+                  await provider.aggiornaStatoVeicolo(
+                      v.targa, StatoVeicolo.disponibile);
+                  if (mounted) Navigator.pop(context);
+                },
+              )
+            : OutlinedButton.icon(
+                icon: const Icon(Icons.error_outline),
+                label: const Text("FUORI SERVIZIO"),
+                style: AppButtonStyles.outlined(color: AppColors.error),
+                onPressed: () async {
+                  await provider.aggiornaStatoVeicolo(
+                      v.targa, StatoVeicolo.fuoriServizio);
+                  if (mounted) Navigator.pop(context);
+                },
+              ),
       ],
     );
   }
@@ -380,6 +325,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 16, color: AppColors.grey400),
           const SizedBox(width: 10),
@@ -479,41 +425,39 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 onChanged: (val) => tipoSelezionato = val!,
               ),
               const SizedBox(height: 30),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: AppColors.primary,
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final provider = context.read<FleetProvider>();
+
+                    try {
+                      await provider.aggiungiNuovoVeicolo(
+                        targa: targaController.text,
+                        marca: marcaController.text,
+                        modello: modelloController.text,
+                        tipo: tipoSelezionato.name,
+                        anno: annoController.text,
+                        kmAttuali: kmController.text,
+                      );
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Veicolo aggiunto con successo!")),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Errore: ${e.toString()}")),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text("SALVA VEICOLO"),
                 ),
-                onPressed: () async {
-                  final provider = context.read<FleetProvider>();
-
-                  try {
-                    await provider.aggiungiNuovoVeicolo(
-                      targa: targaController.text,
-                      marca: marcaController.text,
-                      modello: modelloController.text,
-                      tipo: tipoSelezionato.name,
-                      anno: annoController.text,
-                      kmAttuali: kmController.text,
-                    );
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Veicolo aggiunto con successo!")),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Errore: ${e.toString()}")),
-                      );
-                    }
-                  }
-                },
-                child: const Text("SALVA VEICOLO",
-                    style: TextStyle(color: AppColors.white)),
               ),
               const SizedBox(height: 20),
             ],
@@ -538,7 +482,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
             child: const Text("ANNULLA"),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: AppButtonStyles.elevated(color: AppColors.error),
             onPressed: () async {
               Navigator.pop(dialogContext);
               final messenger = ScaffoldMessenger.of(context);
@@ -562,8 +506,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                 }
               }
             },
-            child: const Text("RIMUOVI",
-                style: TextStyle(color: AppColors.white)),
+            child: const Text("RIMUOVI"),
           ),
         ],
       ),
@@ -651,9 +594,6 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   maxLines: 2),
               const SizedBox(height: 20),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: AppColors.white),
                 onPressed: () async {
                   final dataCompleta = DateTime(
                       dataSelezionata.year,
@@ -673,7 +613,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
 
                   if (context.mounted) Navigator.pop(context);
                 },
-                child: const Text("CONFERMA E METTI IN SERVICE"),
+                child: const Text("CONFERMA SERVICE"),
               ),
             ],
           ),

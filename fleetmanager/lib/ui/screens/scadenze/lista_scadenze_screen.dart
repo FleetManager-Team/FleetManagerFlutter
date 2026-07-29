@@ -2,6 +2,7 @@ import 'package:fleetmanager/models/enums/tipo_scadenza.dart';
 import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/scadenza.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -179,56 +180,54 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     required int urgenti,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.grey100,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.grey300,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 16,
-                color: isSelected ? AppColors.white : AppColors.grey600),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppColors.white : AppColors.textPrimary,
-              ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: AppButtonStyles.chipPadding,
+          decoration: ShapeDecoration(
+            color: AppButtonStyles.chipBackground(isSelected),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+              side: AppButtonStyles.chipSide(isSelected),
             ),
-            // Badge rosso se ci sono urgenti
-            if (urgenti > 0) ...[
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: AppButtonStyles.chipForeground(isSelected),
+              ),
               const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.white.withValues(alpha:0.3)
-                      : AppColors.error,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$urgenti',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected ? AppColors.white : AppColors.white,
+              Text(label, style: AppButtonStyles.chipLabelStyle(isSelected)),
+              if (urgenti > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.white.withValues(alpha: 0.22)
+                        : AppColors.error,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$urgenti',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.white,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -280,7 +279,9 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
         side: BorderSide(
-          color: isClosed ? AppColors.grey300 : urgenzaColor.withValues(alpha: 0.3),
+          color: isClosed
+              ? AppColors.grey300
+              : urgenzaColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -424,50 +425,73 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     }
   }
 
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.grey400),
+          const SizedBox(width: 10),
+          Text(
+            "$label: ",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
+    );
+  }
+
   // --- DIALOG DETTAGLIO ---
   void _mostraDettagliScadenza(Scadenza scadenza) {
     final provider = context.read<FleetProvider>();
-    
+    final details = <Widget>[
+      _detailRow(
+        Icons.event,
+        "Data scadenza",
+        DateFormat('dd/MM/yyyy').format(scadenza.data),
+      ),
+      _detailRow(
+        Icons.notifications,
+        "Notificata",
+        scadenza.notificata ? 'Si' : 'No',
+      ),
+      if (scadenza.descrizione != null && scadenza.descrizione!.isNotEmpty)
+        _detailRow(Icons.description, "Descrizione", scadenza.descrizione!),
+    ];
+    final closedDetails = scadenza.chiusa
+        ? Column(
+            children: [
+              _detailRow(
+                Icons.event_available,
+                "Data chiusura",
+                DateFormat('dd/MM/yyyy').format(scadenza.dataChiusura!),
+              ),
+              _detailRow(
+                Icons.euro,
+                "Costo",
+                "${scadenza.costoChiusura?.toStringAsFixed(2) ?? '0.00'} EUR",
+              ),
+              _detailRow(
+                Icons.notes,
+                "Dettagli",
+                scadenza.dettagliChiusura ?? 'N/A',
+              ),
+            ],
+          )
+        : null;
+
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text("${_labelTipo(scadenza.tipoScadenza)} - ${scadenza.targa}"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  "Data scadenza: ${DateFormat('dd/MM/yyyy').format(scadenza.data)}"),
-              const SizedBox(height: AppSpacing.sm),
-              Text("Notificata: ${scadenza.notificata ? 'Sì' : 'No'}"),
-              if (scadenza.descrizione != null &&
-                  scadenza.descrizione!.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Text("Descrizione: ${scadenza.descrizione}"),
-              ],
-              if (scadenza.chiusa) ...[
-                const Divider(),
-                const SizedBox(height: AppSpacing.sm),
-                const Text("INTERVENTO CHIUSO",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: AppColors.success)),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                    "Data chiusura: ${DateFormat('dd/MM/yyyy').format(scadenza.dataChiusura!)}"),
-                Text(
-                    "Costo: €${scadenza.costoChiusura?.toStringAsFixed(2) ?? '0.00'}"),
-                const SizedBox(height: AppSpacing.sm),
-                Text("Dettagli: ${scadenza.dettagliChiusura ?? 'N/A'}"),
-              ],
-            ],
-          ),
-        ),
+      builder: (dialogContext) => DetailsPopUp(
+        title: "${_labelTipo(scadenza.tipoScadenza)} - ${scadenza.targa}",
+        titleIcon: _iconTipo(scadenza.tipoScadenza),
+        details: details,
+        extraSectionTitle: closedDetails == null ? null : "Intervento chiuso",
+        extraContent: closedDetails,
+        actionsSectionTitle: "Gestione",
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text("Chiudi"),
-          ),
           if (!scadenza.chiusa) ...[
             if (!scadenza.notificata)
               ElevatedButton(
@@ -476,8 +500,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   await provider.segnaScadenzaNotificata(scadenza.idScadenza);
                   if (mounted) navigator.pop();
                 },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.warning),
+                style: AppButtonStyles.elevated(color: AppColors.warning),
                 child: const Text("Notificata"),
               ),
             ElevatedButton(
@@ -485,7 +508,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 Navigator.pop(dialogContext);
                 _mostraFormModificaScadenza(context, scadenza);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.info),
+              style: AppButtonStyles.elevated(color: AppColors.info),
               child: const Text("Modifica"),
             ),
             ElevatedButton(
@@ -493,8 +516,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 Navigator.pop(dialogContext);
                 _mostraFormChiusuraIntervento(context, scadenza);
               },
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+              style: AppButtonStyles.elevated(color: AppColors.success),
               child: const Text("Chiudi"),
             ),
             ElevatedButton(
@@ -517,7 +539,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   }
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              style: AppButtonStyles.elevated(color: AppColors.error),
               child: const Text("Elimina"),
             ),
           ],
@@ -933,7 +955,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            style: AppButtonStyles.elevated(color: AppColors.success),
             child: const Text("Completa"),
           ),
         ],
@@ -1010,10 +1032,11 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.info.withValues(alpha:0.08),
+                      color: AppColors.info.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: AppColors.info.withValues(alpha:0.3), width: 1),
+                          color: AppColors.info.withValues(alpha: 0.3),
+                          width: 1),
                     ),
                     child: Row(
                       children: [
@@ -1045,10 +1068,9 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                         child: OutlinedButton(
                           onPressed:
                               mesi > 1 ? () => aggiornaData(mesi - 1) : null,
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                          style: AppButtonStyles.outlined().copyWith(
+                            padding:
+                                const WidgetStatePropertyAll(EdgeInsets.zero),
                           ),
                           child: const Icon(Icons.remove, size: 18),
                         ),
@@ -1067,10 +1089,9 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                         height: 40,
                         child: OutlinedButton(
                           onPressed: () => aggiornaData(mesi + 1),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                          style: AppButtonStyles.outlined().copyWith(
+                            padding:
+                                const WidgetStatePropertyAll(EdgeInsets.zero),
                           ),
                           child: const Icon(Icons.add, size: 18),
                         ),
@@ -1082,20 +1103,19 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   Wrap(
                     spacing: 8,
                     children: _scorciatoieMesi(scadenzaChiusa.tipoScadenza)
-                        .map((m) => GestureDetector(
-                              onTap: () => aggiornaData(m),
-                              child: Chip(
-                                label: Text("$m mesi"),
-                                backgroundColor: mesi == m
-                                    ? AppColors.primary
-                                    : AppColors.grey100,
-                                labelStyle: TextStyle(
-                                  fontSize: 12,
-                                  color: mesi == m
-                                      ? AppColors.white
-                                      : AppColors.textPrimary,
-                                ),
-                              ),
+                        .map((m) => ChoiceChip(
+                              label: Text("$m mesi"),
+                              selected: mesi == m,
+                              selectedColor:
+                                  AppButtonStyles.chipBackground(mesi == m),
+                              backgroundColor:
+                                  AppButtonStyles.chipBackground(false),
+                              labelStyle:
+                                  AppButtonStyles.chipLabelStyle(mesi == m),
+                              side: AppButtonStyles.chipSide(mesi == m),
+                              shape: AppButtonStyles.chipShape,
+                              padding: AppButtonStyles.chipPadding,
+                              onSelected: (_) => aggiornaData(m),
                             ))
                         .toList(),
                   ),
@@ -1131,7 +1151,8 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                       color: AppColors.success.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: AppColors.success.withValues(alpha: 0.3), width: 1),
+                          color: AppColors.success.withValues(alpha: 0.3),
+                          width: 1),
                     ),
                     child: Row(
                       children: [
@@ -1199,8 +1220,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                 },
                 icon: const Icon(Icons.add_task),
                 label: const Text("Crea scadenza"),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary),
+                style: AppButtonStyles.elevated(),
               ),
             ],
           );
@@ -1235,8 +1255,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                style: AppButtonStyles.elevated(color: AppColors.error),
                 child: const Text("Elimina"),
               ),
             ],

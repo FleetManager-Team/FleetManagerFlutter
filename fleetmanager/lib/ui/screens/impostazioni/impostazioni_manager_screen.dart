@@ -86,7 +86,8 @@ class ImpostazioniManagerScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),
             child: const Row(
               children: [
@@ -138,7 +139,8 @@ class ImpostazioniManagerScreen extends StatelessWidget {
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: (value ? activeColor : AppColors.grey400).withValues(alpha: 0.12),
+            color: (value ? activeColor : AppColors.grey400)
+                .withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           ),
           child: Icon(icon,

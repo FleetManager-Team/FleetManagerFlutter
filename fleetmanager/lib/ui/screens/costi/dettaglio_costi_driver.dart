@@ -395,7 +395,8 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Movimenti per giorno', style: AppTextStyles.headlineSmall),
+          const Text('Movimenti per giorno',
+              style: AppTextStyles.headlineSmall),
           const SizedBox(height: AppSpacing.md),
           ...entries.map((entry) {
             final spesa = entry.value;
@@ -479,26 +480,16 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
       avatar: Icon(
         Icons.calendar_today_outlined,
         size: 16,
-        color: selected ? AppColors.white : AppColors.primaryDark,
+        color: AppButtonStyles.chipForeground(selected),
       ),
       selected: selected,
-      selectedColor: AppColors.primaryDark,
-      backgroundColor: AppColors.white,
-      labelStyle: AppTextStyles.labelMedium.copyWith(
-        color: selected ? AppColors.white : AppColors.primaryDark,
-        fontWeight: FontWeight.w700,
-      ),
-      side: BorderSide(
-        color: selected ? AppColors.primaryDark : AppColors.border,
-      ),
+      selectedColor: AppButtonStyles.chipBackground(selected),
+      backgroundColor: AppButtonStyles.chipBackground(false),
+      labelStyle: AppButtonStyles.chipLabelStyle(selected),
+      side: AppButtonStyles.chipSide(selected),
       onSelected: (_) => _setPreset(preset),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      shape: AppButtonStyles.chipShape,
+      padding: AppButtonStyles.chipPadding,
     );
   }
 
@@ -513,27 +504,18 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
       avatar: Icon(
         icon,
         size: 18,
-        color: selected ? activeColor : AppColors.grey600,
+        color: AppButtonStyles.chipForeground(selected, color: activeColor),
       ),
       label: Text(label),
       selected: selected,
-      selectedColor: activeColor.withValues(alpha: 0.18),
-      checkmarkColor: activeColor,
-      labelStyle: AppTextStyles.labelMedium.copyWith(
-        color: selected ? AppColors.grey900 : AppColors.grey700,
-        fontWeight: FontWeight.w700,
-      ),
-      side: BorderSide(
-        color: selected ? activeColor : AppColors.border,
-      ),
+      selectedColor:
+          AppButtonStyles.chipBackground(selected, color: activeColor),
+      checkmarkColor: AppColors.white,
+      labelStyle: AppButtonStyles.chipLabelStyle(selected, color: activeColor),
+      side: AppButtonStyles.chipSide(selected, color: activeColor),
       onSelected: onSelected,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
+      shape: AppButtonStyles.chipShape,
+      padding: AppButtonStyles.chipPadding,
     );
   }
 
@@ -666,9 +648,8 @@ class _DettaglioCostiDriverState extends State<DettaglioCostiDriver> {
   }
 
   Widget _legendRow(String label, Color color) {
-    final disabled =
-        (label == 'Carburante' && !_mostraCarburante) ||
-            (label == 'Pedaggi' && !_mostraPedaggi);
+    final disabled = (label == 'Carburante' && !_mostraCarburante) ||
+        (label == 'Pedaggi' && !_mostraPedaggi);
 
     return Row(
       children: [

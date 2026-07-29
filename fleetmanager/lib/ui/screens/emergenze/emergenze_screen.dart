@@ -94,13 +94,14 @@ class EmergenzeScreen extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.error..withValues(alpha:0.1),
+            color: AppColors.error..withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
           ),
           child: Icon(
@@ -136,7 +137,8 @@ class EmergenzeScreen extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       child: ListTile(
         onTap: () => Navigator.push(
           context,
@@ -193,10 +195,10 @@ class EmergenzeScreen extends StatelessWidget {
   Widget _buildEmptyCard(String message) {
     return Card(
       elevation: 0,
-      color: Colors.white..withValues(alpha:0.5),
+      color: Colors.white..withValues(alpha: 0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-        side: BorderSide(color: Colors.grey..withValues(alpha:0.2)),
+        side: BorderSide(color: Colors.grey..withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),

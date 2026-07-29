@@ -204,7 +204,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.camera_alt, 
+                    const Icon(Icons.camera_alt,
                         color: AppColors.grey500, size: 32),
                     const SizedBox(height: 8),
                     Text(label,
@@ -305,12 +305,7 @@ class _CheckingVeicoloScreenState extends State<CheckingVeicoloScreen> {
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.grey800,
-          foregroundColor: AppColors.white,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
-        ),
+        style: AppButtonStyles.elevated(color: AppColors.grey800),
         onPressed: _submitForm,
         child:
             const Text("INVIA ISPEZIONE", style: AppTextStyles.headlineSmall),

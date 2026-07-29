@@ -33,12 +33,21 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime(2030),
       locale: const Locale('it', 'IT'),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      cancelText: 'Annulla',
+      confirmText: 'Conferma data',
+      helpText: isStart ? 'Inizio prenotazione' : 'Fine prenotazione',
+      builder: _buildDatePickerTheme,
     );
 
     if (pickedDate != null && mounted) {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(isStart ? _inizio : _fine),
+        cancelText: 'Annulla',
+        confirmText: 'Conferma ora',
+        helpText: isStart ? 'Ora di ritiro' : 'Ora di riconsegna',
+        builder: _buildTimePickerTheme,
       );
 
       if (pickedTime != null) {
@@ -71,6 +80,87 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
     }
   }
 
+  Widget _buildDatePickerTheme(BuildContext context, Widget? child) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: AppColors.primary,
+          onPrimary: AppColors.white,
+          surface: AppColors.white,
+          onSurface: AppColors.textPrimary,
+        ),
+        dialogTheme: DialogThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+          ),
+        ),
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: AppColors.white,
+          headerBackgroundColor: AppColors.primary,
+          headerForegroundColor: AppColors.white,
+          headerHelpStyle: AppTextStyles.labelMedium.copyWith(
+            color: AppColors.white.withValues(alpha: 0.78),
+            fontWeight: FontWeight.w700,
+          ),
+          headerHeadlineStyle: AppTextStyles.headlineMedium.copyWith(
+            color: AppColors.white,
+            fontWeight: FontWeight.w800,
+          ),
+          dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return AppColors.white;
+            if (states.contains(WidgetState.disabled)) return AppColors.grey400;
+            return AppColors.textPrimary;
+          }),
+          dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return AppColors.primary;
+            }
+            return Colors.transparent;
+          }),
+          todayForegroundColor:
+              WidgetStateProperty.all<Color>(AppColors.primary),
+          todayBorder: const BorderSide(color: AppColors.primary, width: 1.2),
+          cancelButtonStyle: AppButtonStyles.text(color: AppColors.grey700),
+          confirmButtonStyle: AppButtonStyles.elevated(),
+        ),
+      ),
+      child: child ?? const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildTimePickerTheme(BuildContext context, Widget? child) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: AppColors.primary,
+          onPrimary: AppColors.white,
+          surface: AppColors.white,
+          onSurface: AppColors.textPrimary,
+        ),
+        dialogTheme: DialogThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+          ),
+        ),
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: AppColors.white,
+          hourMinuteColor: AppColors.primary.withValues(alpha: 0.08),
+          hourMinuteTextColor: AppColors.primary,
+          dayPeriodColor: AppColors.primary.withValues(alpha: 0.08),
+          dayPeriodTextColor: AppColors.primary,
+          dialHandColor: AppColors.primary,
+          dialBackgroundColor: AppColors.grey100,
+          entryModeIconColor: AppColors.primary,
+          cancelButtonStyle: AppButtonStyles.text(color: AppColors.grey700),
+          confirmButtonStyle: AppButtonStyles.elevated(),
+        ),
+      ),
+      child: child ?? const SizedBox.shrink(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FleetProvider>();
@@ -78,8 +168,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
 
     final veicoliFiltrati = _soloDisponibili
         ? veicoli
-            .where((v) =>
-                provider.isVeicoloDisponibile(v.targa, _inizio, _fine))
+            .where(
+                (v) => provider.isVeicoloDisponibile(v.targa, _inizio, _fine))
             .toList()
         : veicoli;
 
@@ -117,7 +207,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                               icon: Icons.login,
                               color: AppColors.success,
                               label: "Inizio",
-                              value: DateFormat('dd/MM/yy HH:mm').format(_inizio),
+                              value:
+                                  DateFormat('dd/MM/yy HH:mm').format(_inizio),
                               onTap: () => _selectDateTime(true),
                             ),
                           ),
@@ -179,8 +270,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                           itemCount: veicoliFiltrati.length,
                           itemBuilder: (context, index) {
                             final v = veicoliFiltrati[index];
-                            final disponibile =
-                                provider.isVeicoloDisponibile(v.targa, _inizio, _fine);
+                            final disponibile = provider.isVeicoloDisponibile(
+                                v.targa, _inizio, _fine);
                             final isSelected = _targaSelezionata == v.targa;
                             return _buildVehicleRow(
                                 v, disponibile, isSelected, provider);
@@ -224,20 +315,11 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    AppSpacing.radiusMedium)),
-                          ),
                           onPressed: (_targaSelezionata == null ||
                                   _fine.isBefore(_inizio))
                               ? null
                               : () => _confermaPrenotazione(provider),
-                          child: const Text("INVIA RICHIESTA PRENOTAZIONE",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const Text("INVIA RICHIESTA PRENOTAZIONE"),
                         ),
                       ),
                     ],
@@ -255,38 +337,34 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
     required String value,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
+    return OutlinedButton(
+      onPressed: onTap,
+      style: AppButtonStyles.outlined(color: color).copyWith(
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: color,
-                          fontWeight: FontWeight.bold)),
-                  Text(value,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                ],
-              ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTextStyles.labelSmall),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-            Icon(Icons.edit_calendar_outlined, color: color, size: 14),
-          ],
-        ),
+          ),
+          const Icon(Icons.edit_calendar_outlined, size: 14),
+        ],
       ),
     );
   }
@@ -303,7 +381,9 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
         side: isSelected
             ? const BorderSide(color: AppColors.primary, width: 2)
             : BorderSide(
-                color: disponibile ? Colors.transparent : AppColors.error.withValues(alpha: 0.3),
+                color: disponibile
+                    ? Colors.transparent
+                    : AppColors.error.withValues(alpha: 0.3),
                 width: 1),
       ),
       child: ListTile(
@@ -337,8 +417,7 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
@@ -353,7 +432,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
             ),
             if (isSelected) ...[
               const SizedBox(width: 6),
-              const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+              const Icon(Icons.check_circle,
+                  color: AppColors.primary, size: 20),
             ],
           ],
         ),
@@ -388,8 +468,8 @@ class _NuovaPrenotazioneScreenState extends State<NuovaPrenotazioneScreen> {
     try {
       if (provider.utenteLoggato == null) throw "Utente non loggato";
 
-      final veicolo = provider.veicoli
-          .firstWhere((v) => v.targa == _targaSelezionata);
+      final veicolo =
+          provider.veicoli.firstWhere((v) => v.targa == _targaSelezionata);
 
       final disponibile =
           provider.isVeicoloDisponibile(veicolo.targa, _inizio, _fine);

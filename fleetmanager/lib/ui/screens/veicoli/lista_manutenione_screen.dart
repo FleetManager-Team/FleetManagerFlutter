@@ -119,7 +119,8 @@ class _MaintenanceDashboardScreenState
       decoration: BoxDecoration(
         color: AppColors.white,
         boxShadow: [
-          BoxShadow(color: AppColors.grey900.withValues(alpha:0.05), blurRadius: 10)
+          BoxShadow(
+              color: AppColors.grey900.withValues(alpha: 0.05), blurRadius: 10)
         ],
       ),
       child: Column(
@@ -176,7 +177,8 @@ class _MaintenanceDashboardScreenState
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: isFuture ? FontWeight.normal : FontWeight.bold,
-                    color: isFuture ? Colors.orange[900] : AppColors.secondary)),
+                    color:
+                        isFuture ? Colors.orange[900] : AppColors.secondary)),
           ],
         ),
         trailing: const Icon(Icons.chevron_right),
@@ -216,13 +218,13 @@ class _MaintenanceDashboardScreenState
             ),
           ],
         ),
+        actionsSectionTitle: "Intervento",
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("CHIUDI")),
           if (provider.utenteLoggato?.ruoloUtente == RuoloUtente.manager)
-            IconButton(
-              icon: const Icon(Icons.edit, color: AppColors.secondary),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.edit),
+              label: const Text("MODIFICA"),
+              style: AppButtonStyles.outlined(color: AppColors.secondary),
               onPressed: () {
                 Navigator.pop(dialogContext);
                 _showMaintenanceForm(context,
@@ -238,8 +240,7 @@ class _MaintenanceDashboardScreenState
                   nuoviKm: nuoviKm);
               if (mounted) navigator.pop();
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success, foregroundColor: AppColors.white),
+            style: AppButtonStyles.elevated(color: AppColors.success),
             child: const Text("RIENTRO VEICOLO"),
           ),
         ],
@@ -351,33 +352,37 @@ class _MaintenanceDashboardScreenState
                       labelText: "Descrizione", border: OutlineInputBorder()),
                   maxLines: 2),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final dataCompleta = DateTime(
-                      dataSelezionata.year,
-                      dataSelezionata.month,
-                      dataSelezionata.day,
-                      oraSelezionata.hour,
-                      oraSelezionata.minute);
-                  final navigator = Navigator.of(sheetContext);
-                  if (isEditing) {
-                    await provider.modificaManutenzione(
-                        idManutenzione: manutenzioneEsistente.idManutenzione,
-                        descrizione: descController.text,
-                        luogo: luogoController.text,
-                        data: dataCompleta,
-                        tipo: tipoSelezionato);
-                  } else {
-                    await provider.programmareManutenzione(veicoloSelezionato!,
-                        dataCompleta, tipoSelezionato, descController.text,
-                        luogo: luogoController.text);
-                  }
-                  navigator.pop();
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: AppColors.white),
-                child: Text(isEditing ? "SALVA MODIFICHE" : "PROGRAMMA"),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final dataCompleta = DateTime(
+                        dataSelezionata.year,
+                        dataSelezionata.month,
+                        dataSelezionata.day,
+                        oraSelezionata.hour,
+                        oraSelezionata.minute);
+                    final navigator = Navigator.of(sheetContext);
+                    if (isEditing) {
+                      await provider.modificaManutenzione(
+                          idManutenzione: manutenzioneEsistente.idManutenzione,
+                          descrizione: descController.text,
+                          luogo: luogoController.text,
+                          data: dataCompleta,
+                          tipo: tipoSelezionato);
+                    } else {
+                      await provider.programmareManutenzione(
+                          veicoloSelezionato!,
+                          dataCompleta,
+                          tipoSelezionato,
+                          descController.text,
+                          luogo: luogoController.text);
+                    }
+                    navigator.pop();
+                  },
+                  style: AppButtonStyles.elevated(color: AppColors.secondary),
+                  child: Text(isEditing ? "SALVA MODIFICHE" : "PROGRAMMA"),
+                ),
               ),
             ],
           ),
@@ -389,12 +394,18 @@ class _MaintenanceDashboardScreenState
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [
-        Icon(icon, size: 16, color: Colors.grey),
-        const SizedBox(width: 8),
-        Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold)),
-        Text(value)
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.grey400),
+          const SizedBox(width: 10),
+          Text(
+            "$label: ",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
     );
   }
 

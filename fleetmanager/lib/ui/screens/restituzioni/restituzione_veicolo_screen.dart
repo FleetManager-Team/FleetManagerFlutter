@@ -212,7 +212,9 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
     return [
       const Text("Localizzazione e Guasto",
           style: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.error)),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.error)),
       const SizedBox(height: 15),
       _buildPosizioneField(),
       const SizedBox(height: 15),
@@ -283,9 +285,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
             _descrizioneDanniController, "Descrizione danni", Icons.edit_note,
             maxLines: 3),
         _buildPhotoSelector(
-          imp.fotoDanniObbligatoria
-              ? "Foto Danno *"
-              : "Foto Danno (opzionale)",
+          imp.fotoDanniObbligatoria ? "Foto Danno *" : "Foto Danno (opzionale)",
           _fotoDanni,
           "danni",
         ),
@@ -331,7 +331,8 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       decoration: InputDecoration(
         labelText: "Chilometri attuali",
         prefixIcon: const Icon(Icons.speed),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault)),
       ),
       validator: (v) {
         if (v == null || v.isEmpty) return "Inserisci i KM";
@@ -564,8 +565,8 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text("Errore: $e"), backgroundColor: AppColors.error));
+      scaffoldMessenger.showSnackBar(SnackBar(
+          content: Text("Errore: $e"), backgroundColor: AppColors.error));
     }
   }
 
@@ -575,11 +576,7 @@ class _RestituzioneVeicoloScreenState extends State<RestituzioneVeicoloScreen> {
       height: 50,
       child: ElevatedButton(
         onPressed: _submitForm,
-        style: ElevatedButton.styleFrom(
-            backgroundColor: color,
-            foregroundColor: AppColors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMedium))),
+        style: AppButtonStyles.elevated(color: color),
         child: Text(
             widget.isEmergenza
                 ? "INVIA SEGNALAZIONE SOS"

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'app_button_styles.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
+import 'app_text_styles.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
@@ -25,7 +27,7 @@ class AppTheme {
         outline: AppColors.border,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      
+
       // AppBar Theme
       appBarTheme: const AppBarTheme(
         elevation: 0,
@@ -107,67 +109,20 @@ class AppTheme {
 
       // Button Themes
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.textOnPrimary,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
-        ),
+        style: AppButtonStyles.elevated(),
       ),
 
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
-          side: const BorderSide(color: AppColors.border, width: 1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
-        ),
+        style: AppButtonStyles.outlined(),
       ),
 
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightSmall),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusDefault),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
-        ),
+        style: AppButtonStyles.text(),
       ),
 
       // Icon Button Theme
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          foregroundColor: AppColors.primary,
-        ),
+        style: AppButtonStyles.icon(),
       ),
 
       // Divider Theme
@@ -178,48 +133,42 @@ class AppTheme {
       ),
 
       // FloatingActionButton Theme
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textOnPrimary,
-        elevation: 4,
-        highlightElevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        ),
-      ),
+      floatingActionButtonTheme: AppButtonStyles.floatingActionButton(),
 
       // Chip Theme
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.surfaceVariant,
+        backgroundColor: AppColors.surface,
         disabledColor: AppColors.grey200,
         selectedColor: AppColors.primary,
         secondarySelectedColor: AppColors.secondary,
-        labelPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        ),
+        labelStyle: AppButtonStyles.chipLabelStyle(false),
+        secondaryLabelStyle: AppButtonStyles.chipLabelStyle(true),
+        labelPadding: EdgeInsets.zero,
+        padding: AppButtonStyles.chipPadding,
+        shape: AppButtonStyles.chipShape,
         side: const BorderSide(color: AppColors.border),
+        showCheckmark: false,
       ),
 
       // Dialog Theme
-      // dialogTheme: DialogTheme(
-      //   elevation: 4,
-      //   shape: RoundedRectangleBorder(
-      //     borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-      //   ),
-      //   contentTextStyle: const TextStyle(
-      //     fontSize: 14,
-      //     fontWeight: FontWeight.w400,
-      //     color: AppColors.textPrimary,
-      //   ),
-      // ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.white,
+        elevation: 8,
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.xxl,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
+        ),
+        titleTextStyle: AppTextStyles.headlineMedium.copyWith(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w800,
+        ),
+        contentTextStyle: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textPrimary,
+        ),
+      ),
 
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
@@ -251,7 +200,7 @@ class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primary..withValues(alpha:0.5);
+            return AppColors.primary.withValues(alpha: 0.5);
           }
           return AppColors.grey300;
         }),
