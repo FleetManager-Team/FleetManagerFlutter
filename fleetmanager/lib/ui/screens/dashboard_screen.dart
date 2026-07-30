@@ -25,6 +25,7 @@ import 'package:fleetmanager/models/prenotazione.dart';
 import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/ui/screens/login_screen.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/nuova_prenotazione_screen.dart';
+import 'package:fleetmanager/ui/widgets/form_pop_up.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -771,46 +772,52 @@ class _HomeScreenState extends State<HomeScreen> {
   void _mostraDialogModifica(BuildContext context, Prenotazione p) async {
     DateTime inizio = p.dataInizio;
     DateTime fine = p.dataFine;
-    await showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (ctx) => StatefulBuilder(
-            builder: (context, setModalState) => Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Text("Modifica Orari",
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    _buildDateTimePickerTile(
-                        label: "Inizio",
-                        dateTime: inizio,
-                        onTap: () async {
-                          final p = await _selezionaDataEOra(context, inizio);
-                          if (p != null) setModalState(() => inizio = p);
-                        }),
-                    _buildDateTimePickerTile(
-                        label: "Fine",
-                        dateTime: fine,
-                        onTap: () async {
-                          final p = await _selezionaDataEOra(context, fine);
-                          if (p != null) setModalState(() => fine = p);
-                        }),
-                    // FIX: SizedBox per vincolare larghezza del bottone nel modal
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                          onPressed: () async {
-                            if (fine.isBefore(inizio)) return;
-                            Navigator.pop(ctx);
-                            await context
-                                .read<FleetProvider>()
-                                .modificaPrenotazione(
-                                    p.idPrenotazione, inizio, fine);
-                          },
-                          child: const Text("SALVA")),
-                    ),
-                  ]),
-                )));
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setModalState) => FormPopUp(
+          title: "Modifica Orari",
+          titleIcon: Icons.event_available,
+          sectionTitle: "Periodo prenotazione",
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDateTimePickerTile(
+                  label: "Inizio",
+                  dateTime: inizio,
+                  onTap: () async {
+                    final p = await _selezionaDataEOra(context, inizio);
+                    if (p != null) setModalState(() => inizio = p);
+                  }),
+              _buildDateTimePickerTile(
+                  label: "Fine",
+                  dateTime: fine,
+                  onTap: () async {
+                    final p = await _selezionaDataEOra(context, fine);
+                    if (p != null) setModalState(() => fine = p);
+                  }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("ANNULLA"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (fine.isBefore(inizio)) return;
+                Navigator.pop(dialogContext);
+                await context
+                    .read<FleetProvider>()
+                    .modificaPrenotazione(p.idPrenotazione, inizio, fine);
+              },
+              child: const Text("SALVA"),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _mostraDialogAnnullamento(BuildContext context, Prenotazione p) {

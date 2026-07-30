@@ -14,6 +14,7 @@ import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
 import 'package:fleetmanager/ui/widgets/app_filter_chip.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
+import 'package:fleetmanager/ui/widgets/form_pop_up.dart';
 
 class VehicleListScreen extends StatefulWidget {
   const VehicleListScreen({super.key});
@@ -374,47 +375,44 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     final annoController =
         TextEditingController(text: DateTime.now().year.toString());
     TipoVeicolo tipoSelezionato = TipoVeicolo.auto;
+    final provider = context.read<FleetProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 20,
-          right: 20,
-          top: 20,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setModalState) => FormPopUp(
+          title: "Nuovo Veicolo",
+          titleIcon: Icons.directions_car,
+          content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text("AGGIUNGI NUOVO VEICOLO",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 20),
               TextField(
                   controller: targaController,
                   decoration: const InputDecoration(labelText: "Targa")),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: marcaController,
                   decoration: const InputDecoration(labelText: "Marca")),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: modelloController,
                   decoration: const InputDecoration(labelText: "Modello")),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: annoController,
                 decoration:
                     const InputDecoration(labelText: "Anno Immatricolazione"),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: kmController,
                   decoration:
                       const InputDecoration(labelText: "Kilometri attuali"),
                   keyboardType: TextInputType.number),
-              const SizedBox(height: 15),
+              const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<TipoVeicolo>(
                 initialValue: tipoSelezionato,
                 decoration: const InputDecoration(labelText: "Tipo Veicolo"),
@@ -422,46 +420,45 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                     .map((t) => DropdownMenuItem(
                         value: t, child: Text(t.name.toUpperCase())))
                     .toList(),
-                onChanged: (val) => tipoSelezionato = val!,
+                onChanged: (val) => setModalState(() => tipoSelezionato = val!),
               ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final provider = context.read<FleetProvider>();
-
-                    try {
-                      await provider.aggiungiNuovoVeicolo(
-                        targa: targaController.text,
-                        marca: marcaController.text,
-                        modello: modelloController.text,
-                        tipo: tipoSelezionato.name,
-                        anno: annoController.text,
-                        kmAttuali: kmController.text,
-                      );
-
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text("Veicolo aggiunto con successo!")),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Errore: ${e.toString()}")),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text("SALVA VEICOLO"),
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("ANNULLA"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await provider.aggiungiNuovoVeicolo(
+                    targa: targaController.text,
+                    marca: marcaController.text,
+                    modello: modelloController.text,
+                    tipo: tipoSelezionato.name,
+                    anno: annoController.text,
+                    kmAttuali: kmController.text,
+                  );
+
+                  if (context.mounted) {
+                    Navigator.pop(dialogContext);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                          content: Text("Veicolo aggiunto con successo!")),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text("Errore: ${e.toString()}")),
+                    );
+                  }
+                }
+              },
+              child: const Text("SALVA VEICOLO"),
+            ),
+          ],
         ),
       ),
     );
@@ -521,29 +518,17 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
     DateTime dataSelezionata = DateTime.now();
     TimeOfDay oraSelezionata = TimeOfDay.now();
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              left: 20,
-              right: 20,
-              top: 20),
-          child: Column(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setModalState) => FormPopUp(
+          title: "Programma Intervento: ${v.targa}",
+          titleIcon: Icons.build,
+          sectionTitle: "Intervento",
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text("Programma Intervento: ${v.targa}",
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-
-              // Data e Ora
               Row(
                 children: [
                   Expanded(
@@ -563,7 +548,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.access_time),
@@ -579,44 +564,44 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: luogoController,
                   decoration: const InputDecoration(
                       labelText: "Officina / Luogo",
                       border: OutlineInputBorder())),
-              const SizedBox(height: 15),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: descController,
                   decoration: const InputDecoration(
                       labelText: "Descrizione guasto/intervento",
                       border: OutlineInputBorder()),
                   maxLines: 2),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final dataCompleta = DateTime(
-                      dataSelezionata.year,
-                      dataSelezionata.month,
-                      dataSelezionata.day,
-                      oraSelezionata.hour,
-                      oraSelezionata.minute);
-
-                  // Chiamata al metodo del provider che già usi nella dashboard
-                  await provider.programmareManutenzione(
-                      v,
-                      dataCompleta,
-                      TipoManutenzione
-                          .ordinaria, // Puoi aggiungere un dropdown se vuoi distinguere
-                      descController.text,
-                      luogo: luogoController.text);
-
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text("CONFERMA SERVICE"),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("ANNULLA"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final dataCompleta = DateTime(
+                    dataSelezionata.year,
+                    dataSelezionata.month,
+                    dataSelezionata.day,
+                    oraSelezionata.hour,
+                    oraSelezionata.minute);
+
+                await provider.programmareManutenzione(v, dataCompleta,
+                    TipoManutenzione.ordinaria, descController.text,
+                    luogo: luogoController.text);
+
+                if (context.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text("CONFERMA SERVICE"),
+            ),
+          ],
         ),
       ),
     );

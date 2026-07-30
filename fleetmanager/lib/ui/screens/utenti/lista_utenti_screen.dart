@@ -6,6 +6,7 @@ import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/ui/widgets/app_filter_chip.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
+import 'package:fleetmanager/ui/widgets/form_pop_up.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -184,40 +185,35 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final passwordController = TextEditingController();
     final patenteController = TextEditingController(text: u?.patente ?? "");
     RuoloUtente ruoloSelezionato = u?.ruoloUtente ?? RuoloUtente.driver;
+    final provider = context.read<FleetProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              left: 20,
-              right: 20,
-              top: 20),
-          child: Column(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setModalState) => FormPopUp(
+          title: u == null ? "Nuovo Utente" : "Modifica Utente",
+          titleIcon: Icons.person_add_alt_1,
+          content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(u == null ? "Nuovo Utente" : "Modifica Utente",
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 15),
               TextField(
                   controller: nomeController,
                   decoration: const InputDecoration(labelText: "Nome")),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: cognomeController,
                   decoration: const InputDecoration(labelText: "Cognome")),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: emailController,
                   decoration: const InputDecoration(labelText: "Email")),
               if (u == null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: passwordController,
-                  obscureText: true, // Nasconde i caratteri
+                  obscureText: true,
                   decoration: const InputDecoration(
                     labelText: "Password Temporanea",
                     hintText: "Minimo 6 caratteri",
@@ -225,10 +221,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
               ],
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: patenteController,
                   decoration:
                       const InputDecoration(labelText: "Patente (opzionale)")),
+              const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<RuoloUtente>(
                 initialValue: ruoloSelezionato,
                 items: [RuoloUtente.driver, RuoloUtente.manager]
@@ -239,78 +237,65 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     setModalState(() => ruoloSelezionato = val!),
                 decoration: const InputDecoration(labelText: "Ruolo"),
               ),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final provider = context.read<FleetProvider>();
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("ANNULLA"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nomeController.text.isEmpty ||
+                    emailController.text.isEmpty) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                        content: Text("Nome ed Email sono obbligatori")),
+                  );
+                  return;
+                }
 
-                    // 1. Validazione dei campi obbligatori
-                    if (nomeController.text.isEmpty ||
-                        emailController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                try {
+                  if (u == null) {
+                    if (passwordController.text.length < 6) {
+                      messenger.showSnackBar(
                         const SnackBar(
-                            content: Text("Nome ed Email sono obbligatori")),
+                            content: Text(
+                                "La password deve essere di almeno 6 caratteri")),
                       );
                       return;
                     }
 
-                    final navigator = Navigator.of(context);
-                    final messenger = ScaffoldMessenger.of(context);
+                    await provider.aggiungiNuovoUtente(
+                      email: emailController.text.trim(),
+                      passwordScelta: passwordController.text,
+                      nome: nomeController.text.trim(),
+                      cognome: cognomeController.text.trim(),
+                      ruolo: ruoloSelezionato.name,
+                      patente: patenteController.text.trim(),
+                    );
+                  } else {
+                    debugPrint("Logica di modifica da implementare se serve");
+                  }
 
-                    try {
-                      if (u == null) {
-                        // --- CREAZIONE NUOVO UTENTE ---
-                        // Controllo lunghezza password (limite Supabase)
-                        if (passwordController.text.length < 6) {
-                          messenger.showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    "La password deve essere di almeno 6 caratteri")),
-                          );
-                          return;
-                        }
-
-                        // Chiamiamo la funzione che crea sia l'Auth che la riga nel DB
-                        await provider.aggiungiNuovoUtente(
-                          email: emailController.text.trim(),
-                          passwordScelta: passwordController.text,
-                          nome: nomeController.text.trim(),
-                          cognome: cognomeController.text.trim(),
-                          ruolo: ruoloSelezionato.name,
-                          patente: patenteController.text.trim(),
-                        );
-                      } else {
-                        // --- MODIFICA UTENTE ESISTENTE ---
-                        // Per ora lasciamo la logica che avevi o implementa un update specifico
-                        debugPrint(
-                            "Logica di modifica da implementare se serve");
-                      }
-
-                      // Se tutto è andato bene, chiudiamo il pannello
-                      if (mounted) {
-                        navigator.pop();
-                        messenger.showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text("Operazione completata con successo!")),
-                        );
-                      }
-                    } catch (e) {
-                      // Gestione errori (es: email già registrata o problemi di rete)
-                      if (mounted) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text("Errore: ${e.toString()}")),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text("SALVA"),
-                ),
-              ),
-            ],
-          ),
+                  if (mounted && dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                          content: Text("Operazione completata con successo!")),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text("Errore: ${e.toString()}")),
+                    );
+                  }
+                }
+              },
+              child: const Text("SALVA"),
+            ),
+          ],
         ),
       ),
     );

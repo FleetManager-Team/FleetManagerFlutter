@@ -10,6 +10,7 @@ import 'package:fleetmanager/models/manutenzione.dart';
 import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
+import 'package:fleetmanager/ui/widgets/form_pop_up.dart';
 
 class MaintenanceDashboardScreen extends StatefulWidget {
   const MaintenanceDashboardScreen({super.key});
@@ -275,43 +276,36 @@ class _MaintenanceDashboardScreenState
     DateTime dataSelezionata = manutenzioneEsistente?.data ?? DateTime.now();
     TimeOfDay oraSelezionata = TimeOfDay.fromDateTime(dataSelezionata);
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              left: 20,
-              right: 20,
-              top: 20),
-          child: Column(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setModalState) => FormPopUp(
+          title: isEditing ? "Modifica Intervento" : "Nuova Manutenzione",
+          titleIcon: Icons.build,
+          sectionTitle: "Intervento",
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(isEditing ? "Modifica Intervento" : "Nuova Manutenzione",
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 20),
               DropdownButtonFormField<Veicolo>(
                 initialValue: veicoloSelezionato,
                 items: veicoliDisponibili
                     .map(
                         (v) => DropdownMenuItem(value: v, child: Text(v.targa)))
                     .toList(),
-                onChanged: isEditing ? null : (val) => veicoloSelezionato = val,
+                onChanged: isEditing
+                    ? null
+                    : (val) => setModalState(() => veicoloSelezionato = val),
                 decoration: const InputDecoration(
                     labelText: "Veicolo", border: OutlineInputBorder()),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      child: Text(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
                           DateFormat('dd/MM/yyyy').format(dataSelezionata)),
                       onPressed: () async {
                         final picked = await showDatePicker(
@@ -325,10 +319,11 @@ class _MaintenanceDashboardScreenState
                       },
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: OutlinedButton(
-                      child: Text(oraSelezionata.format(context)),
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.access_time),
+                      label: Text(oraSelezionata.format(context)),
                       onPressed: () async {
                         final picked = await showTimePicker(
                             context: context, initialTime: oraSelezionata);
@@ -340,52 +335,53 @@ class _MaintenanceDashboardScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: luogoController,
                   decoration: const InputDecoration(
                       labelText: "Officina", border: OutlineInputBorder())),
-              const SizedBox(height: 15),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: descController,
                   decoration: const InputDecoration(
                       labelText: "Descrizione", border: OutlineInputBorder()),
                   maxLines: 2),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final dataCompleta = DateTime(
-                        dataSelezionata.year,
-                        dataSelezionata.month,
-                        dataSelezionata.day,
-                        oraSelezionata.hour,
-                        oraSelezionata.minute);
-                    final navigator = Navigator.of(sheetContext);
-                    if (isEditing) {
-                      await provider.modificaManutenzione(
-                          idManutenzione: manutenzioneEsistente.idManutenzione,
-                          descrizione: descController.text,
-                          luogo: luogoController.text,
-                          data: dataCompleta,
-                          tipo: tipoSelezionato);
-                    } else {
-                      await provider.programmareManutenzione(
-                          veicoloSelezionato!,
-                          dataCompleta,
-                          tipoSelezionato,
-                          descController.text,
-                          luogo: luogoController.text);
-                    }
-                    navigator.pop();
-                  },
-                  style: AppButtonStyles.elevated(color: AppColors.secondary),
-                  child: Text(isEditing ? "SALVA MODIFICHE" : "PROGRAMMA"),
-                ),
-              ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("ANNULLA"),
+            ),
+            ElevatedButton(
+              style: AppButtonStyles.elevated(color: AppColors.secondary),
+              onPressed: () async {
+                if (!isEditing && veicoloSelezionato == null) return;
+
+                final dataCompleta = DateTime(
+                    dataSelezionata.year,
+                    dataSelezionata.month,
+                    dataSelezionata.day,
+                    oraSelezionata.hour,
+                    oraSelezionata.minute);
+
+                if (isEditing) {
+                  await provider.modificaManutenzione(
+                      idManutenzione: manutenzioneEsistente.idManutenzione,
+                      descrizione: descController.text,
+                      luogo: luogoController.text,
+                      data: dataCompleta,
+                      tipo: tipoSelezionato);
+                } else {
+                  await provider.programmareManutenzione(veicoloSelezionato!,
+                      dataCompleta, tipoSelezionato, descController.text,
+                      luogo: luogoController.text);
+                }
+                if (context.mounted) Navigator.pop(dialogContext);
+              },
+              child: Text(isEditing ? "SALVA MODIFICHE" : "PROGRAMMA"),
+            ),
+          ],
         ),
       ),
     );
