@@ -478,6 +478,7 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
         color: AppButtonStyles.chipForeground(selected),
       ),
       selected: selected,
+      color: AppButtonStyles.chipColor(selected),
       selectedColor: AppButtonStyles.chipBackground(selected),
       backgroundColor: AppButtonStyles.chipBackground(false),
       labelStyle: AppButtonStyles.chipLabelStyle(selected),
@@ -536,6 +537,7 @@ class _GraficiCostiScreenState extends State<GraficiCostiScreen> {
       ),
       label: Text(label),
       selected: selected,
+      color: AppButtonStyles.chipColor(selected, color: activeColor),
       selectedColor:
           AppButtonStyles.chipBackground(selected, color: activeColor),
       checkmarkColor: AppColors.white,

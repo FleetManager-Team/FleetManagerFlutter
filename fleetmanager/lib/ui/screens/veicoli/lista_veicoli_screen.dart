@@ -12,6 +12,7 @@ import 'package:fleetmanager/models/enums/stato_veicolo.dart';
 import 'package:fleetmanager/models/enums/tipo_veicolo.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/models/veicolo.dart';
+import 'package:fleetmanager/ui/widgets/app_filter_chip.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
 
 class VehicleListScreen extends StatefulWidget {
@@ -73,39 +74,37 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   }
 
   Widget _buildFilterBar() {
-    return Container(
-      height: 60,
+    return SizedBox(
+      height: AppButtonStyles.filterBarHeight,
       width: double.infinity,
-      color: AppColors.white,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: AppButtonStyles.filterBarPadding,
         children: [
-          _filterChip(null, "TUTTI"),
-          _filterChip(StatoVeicolo.disponibile, "DISPONIBILI"),
-          _filterChip(StatoVeicolo.prenotato, "PRENOTATI"),
-          _filterChip(StatoVeicolo.inManutenzione, "IN SERVICE"),
-          _filterChip(StatoVeicolo.fuoriServizio, "NON DISPONIBILI"),
+          _filterChip(null, "TUTTI", Icons.grid_view_rounded),
+          _filterChip(
+              StatoVeicolo.disponibile, "DISPONIBILI", Icons.directions_car),
+          _filterChip(
+              StatoVeicolo.prenotato, "PRENOTATI", Icons.event_available),
+          _filterChip(StatoVeicolo.inManutenzione, "IN SERVICE", Icons.build),
+          _filterChip(
+              StatoVeicolo.fuoriServizio, "NON DISPONIBILI", Icons.block),
         ],
       ),
     );
   }
 
-  Widget _filterChip(StatoVeicolo? stato, String label) {
+  Widget _filterChip(StatoVeicolo? stato, String label, IconData icon) {
     final isSelected = filtroSelezionato == stato;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        labelStyle: AppButtonStyles.chipLabelStyle(isSelected),
+      padding: const EdgeInsets.only(right: AppButtonStyles.filterChipGap),
+      child: AppFilterChip(
+        icon: icon,
+        label: label,
         selected: isSelected,
-        selectedColor: AppButtonStyles.chipBackground(isSelected),
-        backgroundColor: AppButtonStyles.chipBackground(false),
-        side: AppButtonStyles.chipSide(isSelected),
-        shape: AppButtonStyles.chipShape,
-        padding: AppButtonStyles.chipPadding,
-        onSelected: (val) =>
-            setState(() => filtroSelezionato = val ? stato : null),
+        onTap: () => setState(() {
+          filtroSelezionato = isSelected ? null : stato;
+        }),
       ),
     );
   }
@@ -238,7 +237,8 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           if (isManager) _buildManagerActions(v, provider),
           // Bottone Prenota (solo per Driver e se disponibile)
           if (!isManager && v.statoVeicolo == StatoVeicolo.disponibile)
-            ElevatedButton(
+            OutlinedButton(
+              style: AppButtonStyles.outlined(),
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -274,19 +274,12 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
           },
         ),
         const SizedBox(height: AppSpacing.sm),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.delete_forever_outlined),
-          label: const Text("RIMUOVI DALLA FLOTTA"),
-          style: AppButtonStyles.outlined(color: AppColors.error),
-          onPressed: () => _confermaEliminazioneVeicolo(context, v, provider),
-        ),
-        const SizedBox(height: AppSpacing.sm),
         // 2. TASTO DINAMICO (Cambia in base allo stato)
         isAttualmenteFermo
-            ? ElevatedButton.icon(
+            ? OutlinedButton.icon(
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text("RIPRISTINA DISPONIBILITA'"),
-                style: AppButtonStyles.elevated(color: AppColors.success),
+                style: AppButtonStyles.outlined(color: AppColors.success),
                 onPressed: () async {
                   await provider.aggiornaStatoVeicolo(
                       v.targa, StatoVeicolo.disponibile);
@@ -303,6 +296,13 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
                   if (mounted) Navigator.pop(context);
                 },
               ),
+        const SizedBox(height: AppSpacing.sm),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.delete_forever_outlined),
+          label: const Text("RIMUOVI DALLA FLOTTA"),
+          style: AppButtonStyles.outlined(color: AppColors.error),
+          onPressed: () => _confermaEliminazioneVeicolo(context, v, provider),
+        ),
       ],
     );
   }

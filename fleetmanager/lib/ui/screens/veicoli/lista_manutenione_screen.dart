@@ -231,7 +231,7 @@ class _MaintenanceDashboardScreenState
                     manutenzioneEsistente: intervento);
               },
             ),
-          ElevatedButton(
+          OutlinedButton(
             onPressed: () async {
               int nuoviKm = int.tryParse(kmController.text) ?? v.km;
               final navigator = Navigator.of(dialogContext);
@@ -240,7 +240,7 @@ class _MaintenanceDashboardScreenState
                   nuoviKm: nuoviKm);
               if (mounted) navigator.pop();
             },
-            style: AppButtonStyles.elevated(color: AppColors.success),
+            style: AppButtonStyles.outlined(color: AppColors.success),
             child: const Text("RIENTRO VEICOLO"),
           ),
         ],

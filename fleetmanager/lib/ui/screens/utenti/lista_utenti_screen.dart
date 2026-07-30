@@ -4,6 +4,7 @@ import 'package:fleetmanager/models/utente.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
 import 'package:fleetmanager/core/theme/index.dart';
+import 'package:fleetmanager/ui/widgets/app_filter_chip.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
 
 class UserManagementScreen extends StatefulWidget {
@@ -90,35 +91,32 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Widget _buildFilterBar() {
-    return Container(
-      height: 60,
-      color: AppColors.white,
+    return SizedBox(
+      height: AppButtonStyles.filterBarHeight,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: AppButtonStyles.filterBarPadding,
         children: [
-          _filterChip(null, "TUTTI"),
-          _filterChip(RuoloUtente.driver, "DRIVER"),
-          _filterChip(RuoloUtente.manager, "MANAGER"),
+          _filterChip(null, "TUTTI", Icons.groups_rounded),
+          _filterChip(RuoloUtente.driver, "DRIVER", Icons.person),
+          _filterChip(
+              RuoloUtente.manager, "MANAGER", Icons.admin_panel_settings),
         ],
       ),
     );
   }
 
-  Widget _filterChip(RuoloUtente? ruolo, String label) {
+  Widget _filterChip(RuoloUtente? ruolo, String label, IconData icon) {
     final isSelected = filtroRuolo == ruolo;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        labelStyle: AppButtonStyles.chipLabelStyle(isSelected),
+      padding: const EdgeInsets.only(right: AppButtonStyles.filterChipGap),
+      child: AppFilterChip(
+        icon: icon,
+        label: label,
         selected: isSelected,
-        selectedColor: AppButtonStyles.chipBackground(isSelected),
-        backgroundColor: AppButtonStyles.chipBackground(false),
-        side: AppButtonStyles.chipSide(isSelected),
-        shape: AppButtonStyles.chipShape,
-        padding: AppButtonStyles.chipPadding,
-        onSelected: (val) => setState(() => filtroRuolo = val ? ruolo : null),
+        onTap: () => setState(() {
+          filtroRuolo = isSelected ? null : ruolo;
+        }),
       ),
     );
   }
@@ -158,15 +156,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ],
         actionsSectionTitle: "Gestione",
         actions: [
-          TextButton(
-            style: AppButtonStyles.text(color: AppColors.error),
+          OutlinedButton(
+            style: AppButtonStyles.outlined(color: AppColors.error),
             onPressed: () {
               Navigator.pop(context);
               _confirmDelete(u);
             },
             child: const Text("ELIMINA"),
           ),
-          ElevatedButton(
+          OutlinedButton(
+            style: AppButtonStyles.outlined(color: AppColors.info),
             onPressed: () {
               Navigator.pop(context);
               _showUserForm(context, u);

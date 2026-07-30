@@ -2,6 +2,7 @@ import 'package:fleetmanager/models/enums/tipo_scadenza.dart';
 import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/scadenza.dart';
 import 'package:fleetmanager/provider/fleet_provider.dart';
+import 'package:fleetmanager/ui/widgets/app_filter_chip.dart';
 import 'package:fleetmanager/ui/widgets/details_pop_up.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -137,38 +138,34 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
 
   Widget _buildChipFilterBar(
       Map<TipoScadenza, int> contatoriUrgenti, int totaleUrgenti) {
-    return Container(
-      color: AppColors.white,
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-      child: SingleChildScrollView(
+    return SizedBox(
+      height: AppButtonStyles.filterBarHeight,
+      width: double.infinity,
+      child: ListView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // Chip "Tutti"
-            _buildFilterChip(
-              label: "Tutti",
-              icon: Icons.grid_view_rounded,
-              isSelected: filtroSelezionato == null,
-              urgenti: totaleUrgenti,
-              onTap: () => setState(() => filtroSelezionato = null),
-            ),
-            const SizedBox(width: 8),
-            // Chip per ogni tipo
-            ...TipoScadenza.values.map((tipo) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: _buildFilterChip(
-                  label: _labelTipo(tipo),
-                  icon: _iconTipo(tipo),
-                  isSelected: filtroSelezionato == tipo,
-                  urgenti: contatoriUrgenti[tipo] ?? 0,
-                  onTap: () => setState(() => filtroSelezionato = tipo),
-                ),
-              );
-            }),
-          ],
-        ),
+        padding: AppButtonStyles.filterBarPadding,
+        children: [
+          _buildFilterChip(
+            label: "TUTTI",
+            icon: Icons.grid_view_rounded,
+            isSelected: filtroSelezionato == null,
+            urgenti: totaleUrgenti,
+            onTap: () => setState(() => filtroSelezionato = null),
+          ),
+          ...TipoScadenza.values.map((tipo) {
+            return Padding(
+              padding:
+                  const EdgeInsets.only(left: AppButtonStyles.filterChipGap),
+              child: _buildFilterChip(
+                label: _labelTipo(tipo).toUpperCase(),
+                icon: _iconTipo(tipo),
+                isSelected: filtroSelezionato == tipo,
+                urgenti: contatoriUrgenti[tipo] ?? 0,
+                onTap: () => setState(() => filtroSelezionato = tipo),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -180,56 +177,13 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
     required int urgenti,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: AppButtonStyles.chipPadding,
-          decoration: ShapeDecoration(
-            color: AppButtonStyles.chipBackground(isSelected),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-              side: AppButtonStyles.chipSide(isSelected),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: AppButtonStyles.chipForeground(isSelected),
-              ),
-              const SizedBox(width: 6),
-              Text(label, style: AppButtonStyles.chipLabelStyle(isSelected)),
-              if (urgenti > 0) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.white.withValues(alpha: 0.22)
-                        : AppColors.error,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '$urgenti',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    final text = urgenti > 0 ? "$label ($urgenti)" : label;
+
+    return AppFilterChip(
+      icon: icon,
+      label: text,
+      selected: isSelected,
+      onTap: onTap,
     );
   }
 
@@ -494,32 +448,32 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
         actions: [
           if (!scadenza.chiusa) ...[
             if (!scadenza.notificata)
-              ElevatedButton(
+              OutlinedButton(
                 onPressed: () async {
                   final navigator = Navigator.of(dialogContext);
                   await provider.segnaScadenzaNotificata(scadenza.idScadenza);
                   if (mounted) navigator.pop();
                 },
-                style: AppButtonStyles.elevated(color: AppColors.warning),
+                style: AppButtonStyles.outlined(color: AppColors.warning),
                 child: const Text("Notificata"),
               ),
-            ElevatedButton(
+            OutlinedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
                 _mostraFormModificaScadenza(context, scadenza);
               },
-              style: AppButtonStyles.elevated(color: AppColors.info),
+              style: AppButtonStyles.outlined(color: AppColors.info),
               child: const Text("Modifica"),
             ),
-            ElevatedButton(
+            OutlinedButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
                 _mostraFormChiusuraIntervento(context, scadenza);
               },
-              style: AppButtonStyles.elevated(color: AppColors.success),
+              style: AppButtonStyles.outlined(color: AppColors.success),
               child: const Text("Chiudi"),
             ),
-            ElevatedButton(
+            OutlinedButton(
               onPressed: () async {
                 final navigator = Navigator.of(dialogContext);
                 final messenger = ScaffoldMessenger.of(dialogContext);
@@ -539,7 +493,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                   }
                 }
               },
-              style: AppButtonStyles.elevated(color: AppColors.error),
+              style: AppButtonStyles.outlined(color: AppColors.error),
               child: const Text("Elimina"),
             ),
           ],
@@ -1106,6 +1060,7 @@ class _ListaScadenzeScreenState extends State<ListaScadenzeScreen> {
                         .map((m) => ChoiceChip(
                               label: Text("$m mesi"),
                               selected: mesi == m,
+                              color: AppButtonStyles.chipColor(mesi == m),
                               selectedColor:
                                   AppButtonStyles.chipBackground(mesi == m),
                               backgroundColor:

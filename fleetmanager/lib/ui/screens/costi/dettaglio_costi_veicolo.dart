@@ -490,6 +490,7 @@ class _DettaglioCostiVeicoloState extends State<DettaglioCostiVeicolo> {
         color: AppButtonStyles.chipForeground(selected),
       ),
       selected: selected,
+      color: AppButtonStyles.chipColor(selected),
       selectedColor: AppButtonStyles.chipBackground(selected),
       backgroundColor: AppButtonStyles.chipBackground(false),
       labelStyle: AppButtonStyles.chipLabelStyle(selected),
@@ -515,6 +516,7 @@ class _DettaglioCostiVeicoloState extends State<DettaglioCostiVeicolo> {
       ),
       label: Text(label),
       selected: selected,
+      color: AppButtonStyles.chipColor(selected, color: activeColor),
       selectedColor:
           AppButtonStyles.chipBackground(selected, color: activeColor),
       checkmarkColor: AppColors.white,

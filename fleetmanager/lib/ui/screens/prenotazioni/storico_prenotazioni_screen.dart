@@ -7,6 +7,7 @@ import 'package:fleetmanager/core/theme/index.dart';
 import 'package:fleetmanager/models/enums/stato_prenotazione.dart';
 import 'package:fleetmanager/models/enums/ruolo_utente.dart';
 import 'package:fleetmanager/ui/screens/prenotazioni/dettaglio_prenotazione_manager.dart';
+import 'package:fleetmanager/ui/widgets/app_filter_chip.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -85,45 +86,33 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   }
 
   Widget _buildFilterBar() {
-    return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.grey900.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2))
-        ],
-      ),
+    return SizedBox(
+      height: AppButtonStyles.filterBarHeight,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: AppButtonStyles.filterBarPadding,
         children: [
-          _filterChip(null, "TUTTE"),
-          _filterChip(StatoPrenotazione.completata, "COMPLETATE"),
-          _filterChip(StatoPrenotazione.annullata, "ANNULLATE"),
+          _filterChip(null, "TUTTE", Icons.history),
+          _filterChip(
+              StatoPrenotazione.completata, "COMPLETATE", Icons.check_circle),
+          _filterChip(StatoPrenotazione.annullata, "ANNULLATE", Icons.cancel),
         ],
       ),
     );
   }
 
-  Widget _filterChip(StatoPrenotazione? stato, String label) {
+  Widget _filterChip(StatoPrenotazione? stato, String label, IconData icon) {
     final isSelected = filtroStato == stato;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
+      padding: const EdgeInsets.only(right: AppButtonStyles.filterChipGap),
+      child: AppFilterChip(
+        icon: icon,
+        label: label,
         selected: isSelected,
-        onSelected: (val) => setState(() => filtroStato = val ? stato : null),
-        selectedColor: AppButtonStyles.chipBackground(isSelected,
-            color: AppColors.grey800),
-        backgroundColor: AppButtonStyles.chipBackground(false),
-        labelStyle: AppButtonStyles.chipLabelStyle(isSelected,
-            color: AppColors.grey800),
-        side: AppButtonStyles.chipSide(isSelected, color: AppColors.grey800),
-        shape: AppButtonStyles.chipShape,
-        padding: AppButtonStyles.chipPadding,
+        color: AppColors.grey800,
+        onTap: () => setState(() {
+          filtroStato = isSelected ? null : stato;
+        }),
       ),
     );
   }

@@ -242,8 +242,8 @@ class _BookingListScreenState extends State<BookingListScreen> {
   }
 
   Widget _actionButton(String label, Color color, Function() onPressed) {
-    return ElevatedButton(
-      style: AppButtonStyles.elevated(color: color),
+    return OutlinedButton(
+      style: AppButtonStyles.outlined(color: color),
       onPressed: onPressed,
       child: Text(label),
     );
