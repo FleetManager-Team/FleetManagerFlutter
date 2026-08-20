@@ -105,7 +105,7 @@ class NotificheScreen extends StatelessWidget {
                             ),
                           ),
                           subtitle: Text(
-                            DateFormat('dd/MM HH:mm').format(n.dataInvio),
+                            DateFormat('dd/MM HH:mm').format(n.dataInvio.toLocal()),
                             style: const TextStyle(
                                 fontSize: 12, color: AppColors.grey600),
                           ),

@@ -176,7 +176,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Inizio: ${DateFormat('dd/MM HH:mm').format(p.dataInizio)}"),
+            Text("Inizio: ${DateFormat('dd/MM HH:mm').format(p.dataInizio.toLocal())}"),
             if (isManager && driver != null)
               Text("Driver: ${driver.nome} ${driver.cognome}",
                   style:
@@ -204,9 +204,9 @@ class _BookingListScreenState extends State<BookingListScreen> {
           _detailRow(Icons.directions_car, "Veicolo", p.targa),
           _detailRow(Icons.person, "Driver", nomeDriver),
           _detailRow(Icons.access_time, "Dalle",
-              DateFormat('dd/MM/yy HH:mm').format(p.dataInizio)),
-          _detailRow(Icons.access_time_filled, "Alle",
-              DateFormat('dd/MM/yy HH:mm').format(p.dataFine)),
+              DateFormat('dd/MM/yy HH:mm').format(p.dataInizio.toLocal())),
+            _detailRow(Icons.access_time_filled, "Alle",
+              DateFormat('dd/MM/yy HH:mm').format(p.dataFine.toLocal())),
         ],
         extraSectionTitle: "Stato",
         extraContent: Align(

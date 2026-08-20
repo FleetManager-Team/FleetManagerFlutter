@@ -770,8 +770,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- LOGICA DIALOG ---
   void _mostraDialogModifica(BuildContext context, Prenotazione p) async {
-    DateTime inizio = p.dataInizio;
-    DateTime fine = p.dataFine;
+    DateTime inizio = p.dataInizio.toLocal();
+    DateTime fine = p.dataFine.toLocal();
 
     await showDialog(
       context: context,
@@ -851,7 +851,8 @@ class _HomeScreenState extends State<HomeScreen> {
         lastDate: DateTime.now().add(const Duration(days: 365)));
     if (d == null || !context.mounted) return null;
     final t = await showTimePicker(
-        context: context, initialTime: TimeOfDay.fromDateTime(iniziale));
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(iniziale.toLocal()));
     if (t == null) return null;
     return DateTime(d.year, d.month, d.day, t.hour, t.minute);
   }
@@ -862,7 +863,7 @@ class _HomeScreenState extends State<HomeScreen> {
       required VoidCallback onTap}) {
     return ListTile(
         title: Text(label),
-        subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(dateTime)),
+        subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(dateTime.toLocal())),
         trailing: const Icon(Icons.edit),
         onTap: onTap);
   }

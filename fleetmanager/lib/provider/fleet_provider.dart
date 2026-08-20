@@ -670,8 +670,8 @@ class FleetProvider with ChangeNotifier {
         throw Exception('Sovrapposizione.');
       }
       await supabase.from('prenotazioni').update({
-        'data_inizio': nuovoInizio.toIso8601String(),
-        'data_fine': nuovaFine.toIso8601String(),
+        'data_inizio': nuovoInizio.toUtc().toIso8601String(),
+        'data_fine': nuovaFine.toUtc().toIso8601String(),
         'stato': 'richiesta'
       }).eq('id_prenotazione', idPrenotazione);
 
